@@ -71,7 +71,7 @@ function isNetworkError(error: unknown): boolean {
 
 /**
  * Initialize Convex Auth in a Svelte component tree. Call this once in
- * your root layout, instead of (or in addition to) `setupConvex()`.
+ * your root layout, after `setupConvex()`.
  *
  * This sets up:
  * - JWT token management (storage, refresh, sync across tabs)
@@ -121,7 +121,6 @@ export function setupConvexAuth(client: ConvexClient, convexUrl: string) {
 
 		for (let retry = 0; retry <= RETRY_BACKOFF.length; retry++) {
 			try {
-				// Call the auth:signIn action without auth (unauthenticated call)
 				/* eslint-disable @typescript-eslint/no-explicit-any -- Convex Auth internal actions are untyped */
 				const signInArgs =
 					'code' in args
@@ -150,35 +149,49 @@ export function setupConvexAuth(client: ConvexClient, convexUrl: string) {
 		return tokens !== null;
 	}
 
-	// ── Set up client.setAuth for token feeding ──────────────────
+	// ── fetchToken callback for client.setAuth ───────────────────
+	// This is called by the Convex client when it needs a token.
 
-	client.setAuth(
-		async ({ forceRefreshToken }) => {
-			if (forceRefreshToken) {
-				const refreshToken = storageGet(REFRESH_TOKEN_STORAGE_KEY);
-				if (refreshToken !== null) {
-					try {
-						await verifyCodeAndSetToken({ refreshToken });
-					} catch {
-						// Refresh failed — clear tokens
-						setToken({ shouldStore: true, tokens: null });
-						return null;
-					}
-					return token;
+	async function fetchToken({
+		forceRefreshToken
+	}: {
+		forceRefreshToken: boolean;
+	}): Promise<string | null | undefined> {
+		if (forceRefreshToken) {
+			const refreshToken = storageGet(REFRESH_TOKEN_STORAGE_KEY);
+			if (refreshToken !== null) {
+				try {
+					await verifyCodeAndSetToken({ refreshToken });
+				} catch {
+					setToken({ shouldStore: true, tokens: null });
+					return null;
 				}
-				return null;
+				return token;
 			}
-			return token;
-		},
-		(isAuthenticated) => {
-			// When Convex confirms auth state change, ensure loading is done
-			if (!isAuthenticated && token !== null) {
-				// Server rejected our token
-				setToken({ shouldStore: true, tokens: null });
-			}
-			isLoading = false;
+			return null;
 		}
-	);
+		return token;
+	}
+
+	function onAuthChange(isAuthenticated: boolean) {
+		if (!isAuthenticated && token !== null) {
+			// Server rejected our token
+			setToken({ shouldStore: true, tokens: null });
+		}
+		isLoading = false;
+	}
+
+	/**
+	 * Re-register setAuth with the Convex client. This triggers a
+	 * fresh fetchToken call, which lets the WebSocket authenticate
+	 * with the newly stored JWT.
+	 */
+	function refreshClientAuth() {
+		client.setAuth(fetchToken, onAuthChange);
+	}
+
+	// Initial registration
+	refreshClientAuth();
 
 	// ── Sign in ──────────────────────────────────────────────────
 
@@ -200,26 +213,28 @@ export function setupConvexAuth(client: ConvexClient, convexUrl: string) {
 		const verifier = storageGet(VERIFIER_STORAGE_KEY) ?? undefined;
 		storageRemove(VERIFIER_STORAGE_KEY);
 
+		// Use an unauthenticated HTTP client for sign-in calls so
+		// they work before the user has a valid session.
+		const httpClient = new ConvexHttpClient(convexUrl);
+
 		/* eslint-disable @typescript-eslint/no-explicit-any -- Convex Auth internal actions are untyped */
-		const result: any = await client.action(
-			'auth:signIn' as any,
-			{
-				provider,
-				params: paramsObj,
-				verifier
-			} as never
-		);
+		const result: any = await (httpClient as any).action('auth:signIn' as any, {
+			provider,
+			params: paramsObj,
+			verifier
+		});
 		/* eslint-enable @typescript-eslint/no-explicit-any */
 
 		if (result.redirect !== undefined) {
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state
 			const url = new URL(result.redirect as string);
 			storageSet(VERIFIER_STORAGE_KEY, result.verifier!);
-			// Redirect the browser to the OAuth provider
 			window.location.href = url.toString();
 			return { signingIn: false, redirect: url };
 		} else if (result.tokens !== undefined) {
 			setToken({ shouldStore: true, tokens: result.tokens });
+			// Re-register auth so the Convex client picks up the new token
+			refreshClientAuth();
 			return { signingIn: result.tokens !== null };
 		}
 
@@ -236,6 +251,8 @@ export function setupConvexAuth(client: ConvexClient, convexUrl: string) {
 			// Ignore — usually means already signed out
 		}
 		setToken({ shouldStore: true, tokens: null });
+		// Re-register so the Convex client clears its auth
+		refreshClientAuth();
 	}
 
 	// ── Initialize: read from storage or handle OAuth code ───────
@@ -251,21 +268,26 @@ export function setupConvexAuth(client: ConvexClient, convexUrl: string) {
 			url.searchParams.delete('code');
 			window.history.replaceState({}, '', url.pathname + url.search + url.hash);
 
-			signIn(undefined as unknown as string, { code }).catch(() => {
-				// If code verification fails, fall back to reading storage
-				const stored = storageGet(JWT_STORAGE_KEY);
-				setToken({
-					shouldStore: false,
-					tokens: stored ? { token: stored } : null
+			verifyCodeAndSetToken({ code })
+				.then(() => refreshClientAuth())
+				.catch(() => {
+					const stored = storageGet(JWT_STORAGE_KEY);
+					setToken({
+						shouldStore: false,
+						tokens: stored ? { token: stored } : null
+					});
+					refreshClientAuth();
 				});
-			});
 		} else {
 			// Normal load — read token from storage
 			const stored = storageGet(JWT_STORAGE_KEY);
-			setToken({
-				shouldStore: false,
-				tokens: stored ? { token: stored } : null
-			});
+			if (stored) {
+				setToken({ shouldStore: false, tokens: { token: stored } });
+				// Re-register so the client fetches this token
+				refreshClientAuth();
+			} else {
+				setToken({ shouldStore: false, tokens: null });
+			}
 		}
 
 		// Listen for storage changes from other tabs
@@ -276,6 +298,7 @@ export function setupConvexAuth(client: ConvexClient, convexUrl: string) {
 					shouldStore: false,
 					tokens: value ? { token: value } : null
 				});
+				refreshClientAuth();
 			}
 		}
 
