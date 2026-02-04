@@ -9,7 +9,7 @@
 	import { markdown } from '@codemirror/lang-markdown';
 	import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 	import { searchKeymap } from '@codemirror/search';
-	import { vim, getCM } from '@replit/codemirror-vim';
+	import { vim, getCM, Vim } from '@replit/codemirror-vim';
 	import { tokyoNight } from '$lib/components/ui/codemirror-theme';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 	import { parseTask } from '$lib/parser';
@@ -39,6 +39,9 @@
 	let editorContainer: HTMLDivElement | undefined = $state();
 	let view: EditorView | undefined = $state();
 	let preview: ParsedTask | null = $state(null);
+
+	/** Current vim mode label for the status line. */
+	let vimModeLabel = $state('NORMAL');
 
 	// Compartment for dynamically toggling vim mode
 	const vimCompartment = new Compartment();
@@ -75,9 +78,45 @@
 		};
 	}
 
-	/** Focus the editor. */
+	/** Read the current vim mode from the adapter state. */
+	function readVimMode(editorView: EditorView): string {
+		const cm = getCM(editorView);
+		const vs = cm?.state?.vim;
+		if (!vs) return 'NORMAL';
+		if (vs.insertMode) return 'INSERT';
+		if (vs.visualMode) {
+			if (vs.visualBlock) return 'V-BLOCK';
+			return 'VISUAL';
+		}
+		return 'NORMAL';
+	}
+
+	/**
+	 * In vim mode, Escape in normal mode should blur the editor.
+	 * We listen on keydown *before* vim processes the key so we can
+	 * check the mode at press-time: if already NORMAL, blur.
+	 */
+	function handleVimEscape(e: KeyboardEvent) {
+		if (!viMode || !view) return;
+		if (e.key !== 'Escape') return;
+		const mode = readVimMode(view);
+		if (mode === 'NORMAL') {
+			e.preventDefault();
+			view.contentDOM.blur();
+		}
+	}
+
+	/** Programmatically enter vim insert mode. */
+	function enterInsertMode(editorView: EditorView) {
+		const cm = getCM(editorView);
+		if (cm) Vim.handleKey(cm, 'i', 'mapping');
+	}
+
+	/** Focus the editor (enters insert mode when vim is active). */
 	export function focus(): void {
-		view?.focus();
+		if (!view) return;
+		view.focus();
+		if (viMode) enterInsertMode(view);
 	}
 
 	/** Get the current editor content. */
@@ -149,6 +188,10 @@
 					preview = null;
 				}
 			}
+			// Track vim mode changes on every update
+			if (viMode) {
+				vimModeLabel = readVimMode(update.view);
+			}
 		});
 
 		const state = EditorState.create({
@@ -177,8 +220,13 @@
 			patchVimDialog(view);
 		}
 
+		// Blur on Escape when already in normal mode (capture phase
+		// so we see the mode *before* vim processes the keypress).
+		editorContainer.addEventListener('keydown', handleVimEscape, true);
+
 		if (autofocus) {
 			view.focus();
+			if (viMode) enterInsertMode(view);
 		}
 
 		// Parse initial content if present
@@ -187,6 +235,7 @@
 		}
 
 		return () => {
+			editorContainer!.removeEventListener('keydown', handleVimEscape, true);
 			view?.destroy();
 		};
 	});
@@ -225,6 +274,23 @@
 		class="border border-border bg-bg-dark focus-within:border-primary"
 		bind:this={editorContainer}
 	></div>
+
+	<!-- Vim status line -->
+	{#if viMode}
+		<div
+			class="-mt-2 flex items-center justify-between border-x border-b border-border bg-surface-1 px-2 py-0.5"
+		>
+			<span
+				class="font-mono text-xs font-bold"
+				class:text-green={vimModeLabel === 'NORMAL'}
+				class:text-primary={vimModeLabel === 'INSERT'}
+				class:text-magenta={vimModeLabel === 'VISUAL' ||
+					vimModeLabel === 'V-BLOCK'}
+			>
+				-- {vimModeLabel} --
+			</span>
+		</div>
+	{/if}
 
 	<!-- Live preview bar -->
 	{#if preview}
