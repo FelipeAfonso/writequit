@@ -4,6 +4,7 @@
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import { isEditableTarget } from '$lib/utils/keys';
+	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 	import TaskEditor from '$lib/components/tasks/TaskEditor.svelte';
 	import TaskStatusBadge from '$lib/components/tasks/TaskStatusBadge.svelte';
 	import TagBadge from '$lib/components/tags/TagBadge.svelte';
@@ -20,6 +21,20 @@
 	const task = useQuery(api.tasks.get, () => ({ id: taskId as any }));
 
 	let isEditing = $state(false);
+	let editor: TaskEditor | undefined = $state();
+
+	// Register editor commands when editing
+	$effect(() => {
+		if (isEditing && editor) {
+			commandPalette.registerActions({
+				editorSubmit: () => editor?.submit() ?? false,
+				editorBlur: () => editor?.blur()
+			});
+			return () => {
+				commandPalette.unregisterActions(['editorSubmit', 'editorBlur']);
+			};
+		}
+	});
 
 	/** Format a UTC ms timestamp. */
 	function formatDate(ms: number): string {
@@ -168,6 +183,7 @@
 		<!-- Editor or content display -->
 		{#if isEditing}
 			<TaskEditor
+				bind:this={editor}
 				initialContent={task.data.rawContent}
 				onsubmit={handleUpdate}
 				placeholder="Edit your task..."

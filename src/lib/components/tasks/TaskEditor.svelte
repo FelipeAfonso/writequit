@@ -135,11 +135,17 @@
 	}
 
 	/** Submit handler: extract content, call callback, clear editor. */
-	function submit(): void {
+	export function submit(): boolean {
 		const content = getContent().trim();
-		if (content.length === 0) return;
+		if (content.length === 0) return false;
 		onsubmit?.(content);
 		clear();
+		return true;
+	}
+
+	/** Blur the editor. */
+	export function blur(): void {
+		view?.contentDOM.blur();
 	}
 
 	/** Build the escape keymap — only used when vim is OFF. */

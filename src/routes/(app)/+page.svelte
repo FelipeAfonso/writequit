@@ -30,11 +30,18 @@
 			focusEditor: () => editor?.focus(),
 			setSearch: (query: string) => {
 				searchQuery = query;
-			}
+			},
+			editorSubmit: () => editor?.submit() ?? false,
+			editorBlur: () => editor?.blur()
 		});
 
 		return () => {
-			commandPalette.unregisterActions(['focusEditor', 'setSearch']);
+			commandPalette.unregisterActions([
+				'focusEditor',
+				'setSearch',
+				'editorSubmit',
+				'editorBlur'
+			]);
 		};
 	});
 

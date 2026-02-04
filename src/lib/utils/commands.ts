@@ -19,6 +19,10 @@ export interface CommandContext {
 	focusEditor?: () => void;
 	/** Set the search query filter (only available on the tasks page). */
 	setSearch?: (query: string) => void;
+	/** Submit the current editor content (save). */
+	editorSubmit?: () => boolean;
+	/** Blur the editor (quit). */
+	editorBlur?: () => void;
 }
 
 export interface Command {
@@ -70,8 +74,40 @@ export const commands: Command[] = [
 		}
 	},
 	{
-		name: 'quit',
-		aliases: ['q!', 'q', 'wq', 'wq!', 'quit'],
+		name: 'w',
+		aliases: ['w'],
+		description: 'save editor content',
+		args: 'none',
+		execute(_args, ctx) {
+			if (!ctx.editorSubmit) return 'no active editor';
+			if (!ctx.editorSubmit()) return 'nothing to save';
+			ctx.focusEditor?.();
+		}
+	},
+	{
+		name: 'wq',
+		aliases: ['wq'],
+		description: 'save and close editor',
+		args: 'none',
+		execute(_args, ctx) {
+			if (!ctx.editorSubmit) return 'no active editor';
+			ctx.editorSubmit();
+			ctx.editorBlur?.();
+		}
+	},
+	{
+		name: 'q',
+		aliases: ['q'],
+		description: 'close editor',
+		args: 'none',
+		execute(_args, ctx) {
+			if (!ctx.editorBlur) return 'no active editor';
+			ctx.editorBlur();
+		}
+	},
+	{
+		name: 'q!',
+		aliases: ['q!'],
 		description: 'sign out',
 		args: 'none',
 		execute(_args, ctx) {
