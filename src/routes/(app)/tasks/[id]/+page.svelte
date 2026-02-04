@@ -92,10 +92,43 @@
 		}
 	}
 
+	// Two-key sequence state for dd / cc
+	let pendingKey = $state('');
+	let pendingTimer: ReturnType<typeof setTimeout> | undefined;
+
 	function handleKeydown(e: KeyboardEvent) {
 		if (isEditableTarget(e)) return;
+		if (commandPalette.isOpen) return;
 
-		if (e.key === 'Backspace' || e.key === 'h' || e.key === 'ArrowLeft') {
+		// Second key of a two-key sequence
+		if (pendingKey) {
+			const combo = pendingKey + e.key;
+			pendingKey = '';
+			clearTimeout(pendingTimer);
+
+			if (combo === 'dd') {
+				e.preventDefault();
+				handleDelete();
+				return;
+			}
+			if (combo === 'cc') {
+				e.preventDefault();
+				isEditing = true;
+				return;
+			}
+			// Unknown combo — fall through
+		}
+
+		// Start a two-key sequence
+		if (e.key === 'd' || e.key === 'c') {
+			pendingKey = e.key;
+			pendingTimer = setTimeout(() => {
+				pendingKey = '';
+			}, 500);
+			return;
+		}
+
+		if (e.key === 'Backspace') {
 			e.preventDefault();
 			history.back();
 		}
