@@ -8,6 +8,7 @@
 	import TaskEditor from '$lib/components/tasks/TaskEditor.svelte';
 	import TaskStatusBadge from '$lib/components/tasks/TaskStatusBadge.svelte';
 	import TagBadge from '$lib/components/tags/TagBadge.svelte';
+	import Markdown from '$lib/components/ui/Markdown.svelte';
 
 	const client = useConvexClient();
 
@@ -224,12 +225,7 @@
 				{viMode}
 			/>
 		{:else}
-			<!-- Raw markdown content display -->
-			<div
-				class="font-mono text-sm leading-relaxed whitespace-pre-wrap text-fg-dark"
-			>
-				{task.data.rawContent}
-			</div>
+			<Markdown content={task.data.rawContent} />
 		{/if}
 	{/if}
 </div>
