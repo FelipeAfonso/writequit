@@ -55,6 +55,15 @@
 		{ value: 'done', label: 'done', icon: 'x' }
 	];
 
+	function cycleFilter(direction: -1 | 1) {
+		const currentIdx = statusOptions.findIndex(
+			(o) => o.value === activeStatusFilter
+		);
+		const nextIdx =
+			(currentIdx + direction + statusOptions.length) % statusOptions.length;
+		activeStatusFilter = statusOptions[nextIdx].value;
+	}
+
 	async function handleStatusChange(id: string) {
 		const task = tasks.data?.find((t: { _id: string }) => t._id === id);
 		if (!task) return;
@@ -139,6 +148,8 @@
 				window.location.href = `/tasks/${id}`;
 			}}
 			onstatuschange={handleStatusChange}
+			onfilterprev={() => cycleFilter(-1)}
+			onfilternext={() => cycleFilter(1)}
 		/>
 	{/if}
 </div>

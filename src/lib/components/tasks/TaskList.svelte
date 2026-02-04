@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { isEditableTarget } from '$lib/utils/keys';
 	import TaskCard from './TaskCard.svelte';
 
 	interface Tag {
@@ -27,6 +28,10 @@
 		ontaskclick?: (id: string) => void;
 		/** Called when a task's status toggle is clicked. */
 		onstatuschange?: (id: string) => void;
+		/** Called on h/ArrowLeft — cycle filter left. */
+		onfilterprev?: () => void;
+		/** Called on l/ArrowRight — cycle filter right. */
+		onfilternext?: () => void;
 	}
 
 	let {
@@ -34,7 +39,9 @@
 		tagsMap,
 		emptyMessage = 'No tasks found.',
 		ontaskclick,
-		onstatuschange
+		onstatuschange,
+		onfilterprev,
+		onfilternext
 	}: Props = $props();
 
 	/** Resolve tag IDs to tag objects using the provided map. */
@@ -46,7 +53,124 @@
 		}
 		return resolved;
 	}
+
+	// ── Keyboard navigation ──
+	let selectedIndex = $state(-1);
+	let pendingG = $state(false);
+	let gTimer: ReturnType<typeof setTimeout> | undefined;
+	let listEl: HTMLDivElement | undefined = $state();
+
+	// Reset selection when tasks change
+	$effect(() => {
+		// Access tasks.length to create a dependency
+		if (tasks.length === 0) {
+			selectedIndex = -1;
+		} else if (selectedIndex >= tasks.length) {
+			selectedIndex = tasks.length - 1;
+		}
+	});
+
+	function clamp(idx: number): number {
+		if (tasks.length === 0) return -1;
+		return Math.max(0, Math.min(idx, tasks.length - 1));
+	}
+
+	/** Scroll the selected card into view. */
+	function scrollToSelected(idx: number) {
+		if (!listEl || idx < 0) return;
+		const cards = listEl.children;
+		if (cards[idx]) {
+			(cards[idx] as HTMLElement).scrollIntoView({
+				block: 'nearest',
+				behavior: 'smooth'
+			});
+		}
+	}
+
+	function moveTo(idx: number) {
+		selectedIndex = clamp(idx);
+		scrollToSelected(selectedIndex);
+	}
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (isEditableTarget(e)) return;
+
+		// Filter cycling works even when the list is empty
+		switch (e.key) {
+			case 'h':
+			case 'ArrowLeft':
+				if (onfilterprev) {
+					e.preventDefault();
+					onfilterprev();
+				}
+				return;
+
+			case 'l':
+			case 'ArrowRight':
+				if (onfilternext) {
+					e.preventDefault();
+					onfilternext();
+				}
+				return;
+		}
+
+		// Everything below requires tasks
+		if (tasks.length === 0) return;
+
+		// gg sequence: jump to first
+		if (pendingG) {
+			pendingG = false;
+			clearTimeout(gTimer);
+			if (e.key === 'g') {
+				e.preventDefault();
+				moveTo(0);
+			}
+			return;
+		}
+
+		switch (e.key) {
+			case 'j':
+			case 'ArrowDown':
+				e.preventDefault();
+				moveTo(selectedIndex < 0 ? 0 : selectedIndex + 1);
+				break;
+
+			case 'k':
+			case 'ArrowUp':
+				e.preventDefault();
+				moveTo(selectedIndex < 0 ? 0 : selectedIndex - 1);
+				break;
+
+			case 'Enter':
+				if (selectedIndex >= 0 && tasks[selectedIndex]) {
+					e.preventDefault();
+					ontaskclick?.(tasks[selectedIndex]._id);
+				}
+				break;
+
+			case 'x':
+				if (selectedIndex >= 0 && tasks[selectedIndex]) {
+					e.preventDefault();
+					onstatuschange?.(tasks[selectedIndex]._id);
+				}
+				break;
+
+			case 'G':
+				e.preventDefault();
+				moveTo(tasks.length - 1);
+				break;
+
+			case 'g':
+				pendingG = true;
+				gTimer = setTimeout(() => {
+					pendingG = false;
+				}, 500);
+				break;
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 {#if tasks.length === 0}
 	<div
@@ -55,8 +179,8 @@
 		{emptyMessage}
 	</div>
 {:else}
-	<div class="flex flex-col gap-px">
-		{#each tasks as task (task._id)}
+	<div class="flex flex-col gap-px" bind:this={listEl}>
+		{#each tasks as task, i (task._id)}
 			<TaskCard
 				id={task._id}
 				title={task.title}
@@ -64,9 +188,17 @@
 				dueDate={task.dueDate}
 				tags={resolveTags(task.tagIds)}
 				createdAt={task.createdAt}
+				selected={i === selectedIndex}
 				onclick={ontaskclick}
 				{onstatuschange}
 			/>
 		{/each}
 	</div>
+
+	<!-- Selection hint -->
+	{#if selectedIndex >= 0}
+		<div class="mt-2 font-mono text-xs text-fg-muted">
+			{selectedIndex + 1}/{tasks.length}
+		</div>
+	{/if}
 {/if}

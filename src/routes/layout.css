@@ -86,6 +86,7 @@
  * Global base styles — dark mode only
  */
 html {
+	font-size: 20px;
 	color-scheme: dark;
 }
 

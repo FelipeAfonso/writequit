@@ -76,6 +76,13 @@
 					submit();
 					return true;
 				}
+			},
+			{
+				key: 'Escape',
+				run: (v) => {
+					v.contentDOM.blur();
+					return true;
+				}
 			}
 		]);
 

@@ -15,6 +15,8 @@
 		dueDate?: number;
 		tags?: Tag[];
 		createdAt: number;
+		/** Whether this card is keyboard-selected. */
+		selected?: boolean;
 		/** Called when the task card is clicked (navigate to detail). */
 		onclick?: (id: string) => void;
 		/** Called when the status checkbox area is clicked. */
@@ -28,6 +30,7 @@
 		dueDate,
 		tags = [],
 		createdAt,
+		selected = false,
 		onclick,
 		onstatuschange
 	}: Props = $props();
@@ -53,13 +56,15 @@
 </script>
 
 <div
-	class="group flex w-full cursor-pointer items-start gap-3 border border-border bg-surface-0 px-3 py-2.5 text-left font-mono transition-colors hover:border-border-highlight hover:bg-surface-1"
+	class="group flex w-full cursor-pointer items-start gap-3 border px-3 py-2.5 text-left font-mono transition-colors {selected
+		? 'border-primary bg-surface-1'
+		: 'border-border bg-surface-0 hover:border-border-highlight hover:bg-surface-1'}"
 	onclick={() => onclick?.(id)}
 	onkeydown={(e) => {
 		if (e.key === 'Enter' || e.key === ' ') onclick?.(id);
 	}}
 	role="button"
-	tabindex="0"
+	tabindex={selected ? 0 : -1}
 >
 	<!-- Status toggle area -->
 	<button
@@ -118,7 +123,9 @@
 
 	<!-- Created date (right side) -->
 	<span
-		class="shrink-0 text-xs text-fg-muted opacity-0 transition-opacity group-hover:opacity-100"
+		class="shrink-0 text-xs text-fg-muted transition-opacity {selected
+			? 'opacity-100'
+			: 'opacity-0 group-hover:opacity-100'}"
 	>
 		{formatDate(createdAt)}
 	</span>
