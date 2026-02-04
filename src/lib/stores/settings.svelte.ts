@@ -4,6 +4,11 @@
  * All settings live under a single `wq:settings` key as JSON.
  * Reactive via Svelte 5 runes — reads/writes are fine-grained.
  * SSR-safe: falls back to defaults when localStorage is unavailable.
+ *
+ * Server-side user settings (from Convex) control the *defaults*
+ * applied on page load.  The `applyServerDefaults` function resets
+ * the filters to the server-defined defaults unless the setting is
+ * "lastUsed", in which case the localStorage value is preserved.
  */
 
 const STORAGE_KEY = 'wq:settings';
@@ -41,11 +46,17 @@ function save(settings: Settings): void {
 	}
 }
 
+export interface ServerDefaults {
+	defaultStatusFilter: 'lastUsed' | 'all' | 'inbox' | 'active' | 'done';
+	defaultTagFilter: 'lastUsed' | 'all';
+}
+
 function createSettings() {
 	const initial = load();
 
 	let statusFilter = $state<Settings['statusFilter']>(initial.statusFilter);
 	let activeTagIds = $state<string[]>(initial.activeTagIds);
+	let _defaultsApplied = $state(false);
 
 	function persist() {
 		save({ statusFilter, activeTagIds });
@@ -69,7 +80,29 @@ function createSettings() {
 		},
 
 		/** Persist current state (call after mutating activeTagIds in place). */
-		persist
+		persist,
+
+		/**
+		 * Apply server-side defaults once per session.
+		 *
+		 * - If `defaultStatusFilter` is not "lastUsed", override the current
+		 *   status filter with that value.
+		 * - If `defaultTagFilter` is "all", reset activeTagIds to [].
+		 * - Only runs once — subsequent calls are no-ops.
+		 */
+		applyServerDefaults(defaults: ServerDefaults) {
+			if (_defaultsApplied) return;
+			_defaultsApplied = true;
+
+			if (defaults.defaultStatusFilter !== 'lastUsed') {
+				statusFilter = defaults.defaultStatusFilter;
+				persist();
+			}
+			if (defaults.defaultTagFilter === 'all') {
+				activeTagIds = [];
+				persist();
+			}
+		}
 	};
 }
 

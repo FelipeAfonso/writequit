@@ -61,6 +61,15 @@ export const commands: Command[] = [
 		}
 	},
 	{
+		name: 'user',
+		aliases: ['user', 'u'],
+		description: 'go to user settings',
+		args: 'none',
+		execute() {
+			goto('/user');
+		}
+	},
+	{
 		name: 'quit',
 		aliases: ['q!', 'q', 'wq', 'wq!', 'quit'],
 		description: 'sign out',

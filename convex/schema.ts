@@ -22,6 +22,22 @@ export default defineSchema({
 		.index('by_userId', ['userId'])
 		.index('by_name_userId', ['name', 'userId']),
 
+	userSettings: defineTable({
+		userId: v.id('users'),
+		/** Use vim keybindings in the task editor. */
+		viMode: v.boolean(),
+		/** Default status filter when loading the tasks page. */
+		defaultStatusFilter: v.union(
+			v.literal('lastUsed'),
+			v.literal('all'),
+			v.literal('inbox'),
+			v.literal('active'),
+			v.literal('done')
+		),
+		/** Default tag filter when loading the tasks page. */
+		defaultTagFilter: v.union(v.literal('lastUsed'), v.literal('all'))
+	}).index('by_userId', ['userId']),
+
 	tasks: defineTable({
 		/** The original markdown string — source of truth. */
 		rawContent: v.string(),

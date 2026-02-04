@@ -5,10 +5,11 @@
 		placeholder as cmPlaceholder,
 		keymap
 	} from '@codemirror/view';
-	import { EditorState } from '@codemirror/state';
+	import { EditorState, Compartment } from '@codemirror/state';
 	import { markdown } from '@codemirror/lang-markdown';
 	import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 	import { searchKeymap } from '@codemirror/search';
+	import { vim } from '@replit/codemirror-vim';
 	import { tokyoNight } from '$lib/components/ui/codemirror-theme';
 	import { parseTask } from '$lib/parser';
 	import type { ParsedTask } from '$lib/parser';
@@ -22,18 +23,24 @@
 		placeholder?: string;
 		/** Whether the editor should autofocus on mount. */
 		autofocus?: boolean;
+		/** Enable vim keybindings in the editor. */
+		viMode?: boolean;
 	}
 
 	let {
 		onsubmit,
 		initialContent = '',
 		placeholder = '# Task title\nDescribe your task... +tag due:tomorrow',
-		autofocus = true
+		autofocus = true,
+		viMode = false
 	}: Props = $props();
 
 	let editorContainer: HTMLDivElement | undefined = $state();
 	let view: EditorView | undefined = $state();
 	let preview: ParsedTask | null = $state(null);
+
+	// Compartment for dynamically toggling vim mode
+	const vimCompartment = new Compartment();
 
 	/** Focus the editor. */
 	export function focus(): void {
@@ -63,6 +70,22 @@
 		clear();
 	}
 
+	/** Build the escape keymap — only used when vim is OFF. */
+	function makeEscapeKeymap() {
+		return keymap.of([
+			{
+				key: 'Escape',
+				run: (v) => {
+					v.contentDOM.blur();
+					return true;
+				}
+			}
+		]);
+	}
+
+	// Compartment for the escape keymap (disabled when vim is on)
+	const escapeCompartment = new Compartment();
+
 	onMount(() => {
 		if (!editorContainer) return;
 
@@ -79,13 +102,6 @@
 				mac: 'Cmd-Enter',
 				run: () => {
 					submit();
-					return true;
-				}
-			},
-			{
-				key: 'Escape',
-				run: (v) => {
-					v.contentDOM.blur();
 					return true;
 				}
 			}
@@ -105,7 +121,9 @@
 		const state = EditorState.create({
 			doc: initialContent,
 			extensions: [
+				vimCompartment.of(viMode ? vim() : []),
 				submitKeymap,
+				escapeCompartment.of(viMode ? [] : makeEscapeKeymap()),
 				keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
 				history(),
 				markdown(),
@@ -133,6 +151,17 @@
 		return () => {
 			view?.destroy();
 		};
+	});
+
+	// React to viMode prop changes and reconfigure the compartments
+	$effect(() => {
+		if (!view) return;
+		view.dispatch({
+			effects: [
+				vimCompartment.reconfigure(viMode ? vim() : []),
+				escapeCompartment.reconfigure(viMode ? [] : makeEscapeKeymap())
+			]
+		});
 	});
 
 	/**

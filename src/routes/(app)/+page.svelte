@@ -12,6 +12,18 @@
 	let editor: TaskEditor | undefined = $state();
 	let searchQuery = $state('');
 
+	// ── Server-side user settings ──────────────────────────────────
+	const userSettings = useQuery(api.users.getSettings, {});
+
+	// Apply server defaults to the local settings once on load
+	$effect(() => {
+		if (userSettings.data) {
+			settings.applyServerDefaults(userSettings.data);
+		}
+	});
+
+	let viMode = $derived(userSettings.data?.viMode ?? false);
+
 	// Register page-specific command actions
 	$effect(() => {
 		commandPalette.registerActions({
@@ -197,6 +209,7 @@
 		bind:this={editor}
 		onsubmit={handleCreateTask}
 		autofocus={false}
+		{viMode}
 	/>
 
 	<!-- Filters -->

@@ -12,6 +12,10 @@
 
 	let taskId = $derived(page.params.id);
 
+	// Server-side user settings for vi mode
+	const userSettings = useQuery(api.users.getSettings, {});
+	let viMode = $derived(userSettings.data?.viMode ?? false);
+
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const task = useQuery(api.tasks.get, () => ({ id: taskId as any }));
 
@@ -168,6 +172,7 @@
 				onsubmit={handleUpdate}
 				placeholder="Edit your task..."
 				autofocus={true}
+				{viMode}
 			/>
 		{:else}
 			<!-- Raw markdown content display -->

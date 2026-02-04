@@ -84,7 +84,8 @@
 
 			const routes: Record<string, string> = {
 				t: '/',
-				a: '/tags'
+				a: '/tags',
+				u: '/user'
 			};
 
 			if (routes[e.key]) {
@@ -141,6 +142,24 @@
 						</a>
 					{/each}
 				</nav>
+				<a
+					href="/user"
+					class="border px-2 py-1 font-mono text-xs transition-colors"
+					class:border-primary={isActive('/user')}
+					class:text-primary={isActive('/user')}
+					class:bg-surface-2={isActive('/user')}
+					class:border-transparent={!isActive('/user')}
+					class:text-fg-muted={!isActive('/user')}
+					class:hover:text-fg-dark={!isActive('/user')}
+					class:hover:border-border={!isActive('/user')}
+					title="user settings (g u)"
+				>
+					<span class="opacity-60">@</span>
+					user
+					<span class="ml-1 hidden text-fg-muted opacity-50 sm:inline">
+						g u
+					</span>
+				</a>
 				<button
 					onclick={() => signOut()}
 					class="border border-transparent px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-red hover:text-red"
@@ -218,6 +237,14 @@
 										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
 									>
 										g a
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">go to user</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										g u
 									</kbd>
 								</div>
 							</div>
