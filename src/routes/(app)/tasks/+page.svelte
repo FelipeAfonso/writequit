@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { SvelteMap } from 'svelte/reactivity';
+	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import TaskList from '$lib/components/tasks/TaskList.svelte';
@@ -10,7 +10,7 @@
 	const client = useConvexClient();
 
 	let activeStatusFilter: TaskStatus | 'all' = $state('all');
-	let activeTagFilter: string | null = $state(null);
+	let activeTagIds = new SvelteSet<string>();
 
 	/** Build query args based on the active status filter. */
 	let queryArgs = $derived(
@@ -35,14 +35,26 @@
 		return map;
 	});
 
-	/** Filter tasks by tag (client-side). */
+	/** Filter tasks by tags (client-side, inclusive/AND — must have ALL selected tags). */
 	let filteredTasks = $derived.by(() => {
 		if (!tasks.data) return [];
-		if (activeTagFilter === null) return tasks.data;
+		if (activeTagIds.size === 0) return tasks.data;
 		return tasks.data.filter((t: { tagIds: string[] }) =>
-			t.tagIds.includes(activeTagFilter!)
+			[...activeTagIds].every((id) => t.tagIds.includes(id))
 		);
 	});
+
+	function toggleTag(tagId: string) {
+		if (activeTagIds.has(tagId)) {
+			activeTagIds.delete(tagId);
+		} else {
+			activeTagIds.add(tagId);
+		}
+	}
+
+	function clearTags() {
+		activeTagIds.clear();
+	}
 
 	const statusOptions: {
 		value: TaskStatus | 'all';
@@ -126,10 +138,9 @@
 		{#if allTags.data && allTags.data.length > 0}
 			<TagFilter
 				tags={allTags.data}
-				selectedTagId={activeTagFilter}
-				onselect={(tagId) => {
-					activeTagFilter = tagId;
-				}}
+				selectedTagIds={activeTagIds}
+				ontoggle={toggleTag}
+				onclear={clearTags}
 			/>
 		{/if}
 	</div>
@@ -150,6 +161,15 @@
 			onstatuschange={handleStatusChange}
 			onfilterprev={() => cycleFilter(-1)}
 			onfilternext={() => cycleFilter(1)}
+			tagIds={allTags.data?.map((t) => t._id) ?? []}
+			ontagtoggle={(index) => {
+				if (index === 0) {
+					clearTags();
+				} else {
+					const tag = allTags.data?.[index - 1];
+					if (tag) toggleTag(tag._id);
+				}
+			}}
 		/>
 	{/if}
 </div>

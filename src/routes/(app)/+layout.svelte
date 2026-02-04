@@ -254,6 +254,37 @@
 										gg / G
 									</kbd>
 								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">toggle tag</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										t 1-9
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">clear tags</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										t 0
+									</kbd>
+								</div>
+							</div>
+						</div>
+						<div>
+							<h3 class="mb-2 font-mono text-xs font-bold text-fg-muted">
+								task detail
+							</h3>
+							<div class="flex flex-col gap-1.5">
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">go back</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										Backspace
+									</kbd>
+								</div>
 							</div>
 						</div>
 					</div>

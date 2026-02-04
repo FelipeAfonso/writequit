@@ -32,6 +32,10 @@
 		onfilterprev?: () => void;
 		/** Called on l/ArrowRight — cycle filter right. */
 		onfilternext?: () => void;
+		/** Ordered list of tag IDs for t+number toggling. */
+		tagIds?: string[];
+		/** Called on t+number — toggle tag by index. 0 = clear all. */
+		ontagtoggle?: (index: number) => void;
 	}
 
 	let {
@@ -41,7 +45,9 @@
 		ontaskclick,
 		onstatuschange,
 		onfilterprev,
-		onfilternext
+		onfilternext,
+		tagIds = [],
+		ontagtoggle
 	}: Props = $props();
 
 	/** Resolve tag IDs to tag objects using the provided map. */
@@ -57,7 +63,9 @@
 	// ── Keyboard navigation ──
 	let selectedIndex = $state(-1);
 	let pendingG = $state(false);
+	let pendingT = $state(false);
 	let gTimer: ReturnType<typeof setTimeout> | undefined;
+	let tTimer: ReturnType<typeof setTimeout> | undefined;
 	let listEl: HTMLDivElement | undefined = $state();
 
 	// Reset selection when tasks change
@@ -95,6 +103,18 @@
 	function handleKeydown(e: KeyboardEvent) {
 		if (isEditableTarget(e)) return;
 
+		// t+number sequence: toggle tag filter
+		if (pendingT) {
+			pendingT = false;
+			clearTimeout(tTimer);
+			const num = parseInt(e.key, 10);
+			if (!isNaN(num) && ontagtoggle) {
+				e.preventDefault();
+				ontagtoggle(num);
+			}
+			return;
+		}
+
 		// Filter cycling works even when the list is empty
 		switch (e.key) {
 			case 'h':
@@ -110,6 +130,15 @@
 				if (onfilternext) {
 					e.preventDefault();
 					onfilternext();
+				}
+				return;
+
+			case 't':
+				if (ontagtoggle && tagIds.length > 0) {
+					pendingT = true;
+					tTimer = setTimeout(() => {
+						pendingT = false;
+					}, 500);
 				}
 				return;
 		}
@@ -171,6 +200,14 @@
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
+
+{#if pendingT}
+	<div
+		class="fixed right-4 bottom-4 z-50 border border-border-highlight bg-surface-1 px-3 py-1.5 font-mono text-xs text-primary"
+	>
+		t-
+	</div>
+{/if}
 
 {#if tasks.length === 0}
 	<div

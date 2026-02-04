@@ -10,22 +10,15 @@
 
 	interface Props {
 		tags: Tag[];
-		/** Currently selected tag ID, or null for "all". */
-		selectedTagId: string | null;
-		/** Called when a tag filter is toggled. Null means "show all". */
-		onselect?: (tagId: string | null) => void;
+		/** Set of currently selected tag IDs. Empty means "all". */
+		selectedTagIds: Set<string>;
+		/** Called when a tag is toggled. */
+		ontoggle?: (tagId: string) => void;
+		/** Called to clear all tag filters. */
+		onclear?: () => void;
 	}
 
-	let { tags, selectedTagId, onselect }: Props = $props();
-
-	function handleSelect(tagId: string | null) {
-		// Toggle: clicking the same tag again deselects it
-		if (tagId === selectedTagId) {
-			onselect?.(null);
-		} else {
-			onselect?.(tagId);
-		}
-	}
+	let { tags, selectedTagIds, ontoggle, onclear }: Props = $props();
 </script>
 
 {#if tags.length > 0}
@@ -33,21 +26,23 @@
 		<button
 			type="button"
 			class="border px-1.5 py-0.5 font-mono text-xs transition-colors"
-			class:border-primary={selectedTagId === null}
-			class:text-primary={selectedTagId === null}
-			class:border-border={selectedTagId !== null}
-			class:text-fg-muted={selectedTagId !== null}
-			onclick={() => handleSelect(null)}
+			class:border-primary={selectedTagIds.size === 0}
+			class:text-primary={selectedTagIds.size === 0}
+			class:border-border={selectedTagIds.size > 0}
+			class:text-fg-muted={selectedTagIds.size > 0}
+			onclick={() => onclear?.()}
 		>
+			<span class="opacity-50">0</span>
 			all
 		</button>
-		{#each tags as tag (tag._id)}
+		{#each tags as tag, i (tag._id)}
 			<TagBadge
 				name={tag.name}
 				color={tag.color}
 				type={tag.type}
-				active={selectedTagId === tag._id}
-				onclick={() => handleSelect(tag._id)}
+				active={selectedTagIds.has(tag._id)}
+				index={i + 1}
+				onclick={() => ontoggle?.(tag._id)}
 			/>
 		{/each}
 	</div>

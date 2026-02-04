@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
+	import { isEditableTarget } from '$lib/utils/keys';
 	import TaskEditor from '$lib/components/tasks/TaskEditor.svelte';
 	import TaskStatusBadge from '$lib/components/tasks/TaskStatusBadge.svelte';
 	import TagBadge from '$lib/components/tags/TagBadge.svelte';
@@ -71,7 +72,18 @@
 			console.error('Failed to delete task:', error);
 		}
 	}
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (isEditableTarget(e)) return;
+
+		if (e.key === 'Backspace' || e.key === 'h' || e.key === 'ArrowLeft') {
+			e.preventDefault();
+			history.back();
+		}
+	}
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="mx-auto flex max-w-3xl flex-col gap-6 p-6">
 	<!-- Back link -->
@@ -79,7 +91,8 @@
 		href="/tasks"
 		class="inline-flex items-center gap-1 font-mono text-xs text-fg-muted transition-colors hover:text-fg-dark"
 	>
-		&lt;- back to tasks
+		&lt;- back
+		<span class="opacity-50">(Backspace)</span>
 	</a>
 
 	{#if task.isLoading}

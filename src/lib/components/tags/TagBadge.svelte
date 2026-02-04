@@ -9,6 +9,8 @@
 		onclick?: () => void;
 		/** Whether this tag is currently active/selected in a filter. */
 		active?: boolean;
+		/** Keyboard shortcut index to display (1-9). */
+		index?: number;
 	}
 
 	let {
@@ -17,7 +19,8 @@
 		type,
 		showPrefix = true,
 		onclick,
-		active = false
+		active = false,
+		index
 	}: Props = $props();
 
 	/** Map tag types to default colors when no custom color is set. */
@@ -41,6 +44,7 @@
 		style="border-color: {resolvedColor}; color: {resolvedColor};"
 		onclick={() => onclick?.()}
 	>
+		{#if index !== undefined}<span class="opacity-40">{index}</span>{/if}
 		{#if showPrefix}<span class="opacity-50">+</span>{/if}{name}
 	</button>
 {:else}
