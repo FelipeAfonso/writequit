@@ -118,8 +118,9 @@ export const tokyoNightTheme = EditorView.theme(
 	{ dark: true }
 );
 
-/** Syntax highlighting colors for markdown content. */
+/** Syntax highlighting colors for markdown + embedded code. */
 const tokyoNightHighlightStyle = HighlightStyle.define([
+	// ── Markdown ────────────────────────────────────────────────
 	{ tag: t.heading1, color: '#7aa2f7', fontWeight: 'bold', fontSize: '1.4em' },
 	{ tag: t.heading2, color: '#7dcfff', fontWeight: 'bold', fontSize: '1.2em' },
 	{ tag: t.heading3, color: '#bb9af7', fontWeight: 'bold', fontSize: '1.1em' },
@@ -137,10 +138,72 @@ const tokyoNightHighlightStyle = HighlightStyle.define([
 	{ tag: t.quote, color: '#565f89', fontStyle: 'italic' },
 	{ tag: t.list, color: '#ff9e64' },
 	{ tag: t.separator, color: '#3b4261' },
-	{ tag: t.comment, color: '#565f89' },
-	{ tag: t.meta, color: '#565f89' },
+	{ tag: t.contentSeparator, color: '#3b4261' },
 	{ tag: t.processingInstruction, color: '#e0af68' },
-	{ tag: t.contentSeparator, color: '#3b4261' }
+
+	// ── Code: keywords & control flow ──────────────────────────
+	{ tag: t.keyword, color: '#bb9af7' },
+	{ tag: t.controlKeyword, color: '#bb9af7' },
+	{ tag: t.operatorKeyword, color: '#89ddff' },
+	{ tag: t.definitionKeyword, color: '#bb9af7' },
+	{ tag: t.moduleKeyword, color: '#bb9af7' },
+
+	// ── Code: identifiers & definitions ────────────────────────
+	{ tag: t.variableName, color: '#c0caf5' },
+	{ tag: t.definition(t.variableName), color: '#c0caf5' },
+	{ tag: t.function(t.variableName), color: '#7aa2f7' },
+	{ tag: t.definition(t.function(t.variableName)), color: '#7aa2f7' },
+	{ tag: t.propertyName, color: '#73daca' },
+	{ tag: t.function(t.propertyName), color: '#7aa2f7' },
+	{ tag: t.definition(t.propertyName), color: '#73daca' },
+	{ tag: t.special(t.variableName), color: '#7dcfff' },
+
+	// ── Code: types & classes ──────────────────────────────────
+	{ tag: t.typeName, color: '#2ac3de' },
+	{ tag: t.className, color: '#2ac3de' },
+	{ tag: t.namespace, color: '#2ac3de' },
+	{ tag: t.macroName, color: '#7aa2f7' },
+	{ tag: t.labelName, color: '#73daca' },
+
+	// ── Code: literals ─────────────────────────────────────────
+	{ tag: t.string, color: '#9ece6a' },
+	{ tag: t.special(t.string), color: '#9ece6a' },
+	{ tag: t.regexp, color: '#b4f9f8' },
+	{ tag: t.number, color: '#ff9e64' },
+	{ tag: t.bool, color: '#ff9e64' },
+	{ tag: t.null, color: '#ff9e64' },
+	{ tag: t.atom, color: '#ff9e64' },
+
+	// ── Code: operators & punctuation ──────────────────────────
+	{ tag: t.operator, color: '#89ddff' },
+	{ tag: t.punctuation, color: '#89ddff' },
+	{ tag: t.paren, color: '#c0caf5' },
+	{ tag: t.squareBracket, color: '#c0caf5' },
+	{ tag: t.brace, color: '#c0caf5' },
+	{ tag: t.derefOperator, color: '#c0caf5' },
+	{ tag: t.separator, color: '#89ddff' },
+
+	// ── Code: comments & meta ──────────────────────────────────
+	{ tag: t.comment, color: '#565f89', fontStyle: 'italic' },
+	{ tag: t.lineComment, color: '#565f89', fontStyle: 'italic' },
+	{ tag: t.blockComment, color: '#565f89', fontStyle: 'italic' },
+	{ tag: t.docComment, color: '#565f89', fontStyle: 'italic' },
+	{ tag: t.meta, color: '#565f89' },
+	{ tag: t.annotation, color: '#e0af68' },
+	{ tag: t.attributeName, color: '#bb9af7' },
+	{ tag: t.attributeValue, color: '#9ece6a' },
+
+	// ── Code: tags (HTML/JSX) ──────────────────────────────────
+	{ tag: t.tagName, color: '#f7768e' },
+	{ tag: t.angleBracket, color: '#89ddff' },
+	{ tag: t.self, color: '#f7768e' },
+
+	// ── Code: misc ─────────────────────────────────────────────
+	{ tag: t.escape, color: '#89ddff' },
+	{ tag: t.inserted, color: '#9ece6a' },
+	{ tag: t.deleted, color: '#f7768e' },
+	{ tag: t.changed, color: '#e0af68' },
+	{ tag: t.invalid, color: '#f7768e', textDecoration: 'underline' }
 ]);
 
 /** Combined extension: theme + syntax highlighting. */
