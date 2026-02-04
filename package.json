@@ -55,6 +55,7 @@
 		"convex": "^1.31.7",
 		"convex-svelte": "^0.0.12",
 		"dompurify": "^3.3.1",
-		"marked": "^17.0.1"
+		"marked": "^17.0.1",
+		"shiki": "^3.22.0"
 	}
 }

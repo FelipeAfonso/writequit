@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { marked } from 'marked';
+	import { Marked } from 'marked';
+	import { createHighlighter, type Highlighter } from 'shiki';
 	import DOMPurify from 'dompurify';
 
 	interface Props {
@@ -9,7 +10,76 @@
 
 	let { content }: Props = $props();
 
-	let html = $derived(DOMPurify.sanitize(marked.parse(content) as string));
+	let html = $state('');
+
+	// Lazy singleton highlighter
+	let highlighterPromise: Promise<Highlighter> | null = null;
+
+	function getHighlighter(): Promise<Highlighter> {
+		if (!highlighterPromise) {
+			highlighterPromise = createHighlighter({
+				themes: ['tokyo-night'],
+				langs: [
+					'typescript',
+					'javascript',
+					'html',
+					'css',
+					'json',
+					'bash',
+					'python',
+					'rust',
+					'go',
+					'sql',
+					'yaml',
+					'markdown',
+					'svelte',
+					'tsx',
+					'jsx'
+				]
+			});
+		}
+		return highlighterPromise;
+	}
+
+	async function renderMarkdown(source: string): Promise<string> {
+		const highlighter = await getHighlighter();
+		const loadedLangs = highlighter.getLoadedLanguages();
+
+		const md = new Marked();
+
+		md.use({
+			renderer: {
+				code({ text, lang }) {
+					const language = lang && loadedLangs.includes(lang) ? lang : 'text';
+
+					if (language === 'text') {
+						// Fallback: no highlighting, just escape HTML
+						const escaped = text
+							.replace(/&/g, '&amp;')
+							.replace(/</g, '&lt;')
+							.replace(/>/g, '&gt;');
+						return `<pre><code>${escaped}</code></pre>`;
+					}
+
+					return highlighter.codeToHtml(text, {
+						lang: language,
+						theme: 'tokyo-night'
+					});
+				}
+			}
+		});
+
+		const raw = await md.parse(source);
+		return DOMPurify.sanitize(raw, {
+			ADD_ATTR: ['style'] // shiki uses inline styles for colors
+		});
+	}
+
+	$effect(() => {
+		renderMarkdown(content).then((result) => {
+			html = result;
+		});
+	});
 </script>
 
 <!-- eslint-disable svelte/no-at-html-tags -- sanitized with DOMPurify -->
@@ -92,11 +162,32 @@
 		margin: 0.5em 0;
 	}
 
+	/* shiki generates a pre > code structure */
 	.markdown :global(pre code) {
 		background: none;
 		border: none;
 		padding: 0;
 		color: var(--color-fg-dark);
+		font-size: inherit;
+	}
+
+	/* shiki wraps code in .shiki pre — override its bg to match */
+	.markdown :global(.shiki) {
+		background-color: var(--color-bg-dark) !important;
+		border: 1px solid var(--color-border);
+		padding: 0.75em 1em;
+		overflow-x: auto;
+		margin: 0.5em 0;
+		font-family: 'Iosevka', ui-monospace, monospace;
+		font-size: inherit;
+		line-height: 1.6;
+	}
+
+	.markdown :global(.shiki code) {
+		background: none;
+		border: none;
+		padding: 0;
+		font-size: inherit;
 	}
 
 	.markdown :global(blockquote) {

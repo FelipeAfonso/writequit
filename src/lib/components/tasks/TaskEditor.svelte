@@ -7,6 +7,7 @@
 	} from '@codemirror/view';
 	import { EditorState, Compartment } from '@codemirror/state';
 	import { markdown } from '@codemirror/lang-markdown';
+	import { languages } from '@codemirror/language-data';
 	import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 	import { searchKeymap } from '@codemirror/search';
 	import { vim, getCM, Vim } from '@replit/codemirror-vim';
@@ -208,7 +209,7 @@
 				escapeCompartment.of(viMode ? [] : makeEscapeKeymap()),
 				keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
 				history(),
-				markdown(),
+				markdown({ codeLanguages: languages }),
 				tokyoNight,
 				cmPlaceholder(placeholder),
 				updateListener,
