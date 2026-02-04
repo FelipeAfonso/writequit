@@ -24,8 +24,7 @@
 	}
 
 	const nav: NavItem[] = [
-		{ href: '/', label: 'inbox', icon: '>', shortcut: 'g i' },
-		{ href: '/tasks', label: 'tasks', icon: '*', shortcut: 'g t' },
+		{ href: '/', label: 'tasks', icon: '*', shortcut: 'g t' },
 		{ href: '/tags', label: 'tags', icon: '#', shortcut: 'g a' }
 	];
 
@@ -62,8 +61,7 @@
 			clearTimeout(gTimer);
 
 			const routes: Record<string, string> = {
-				i: '/',
-				t: '/tasks',
+				t: '/',
 				a: '/tags'
 			};
 
@@ -165,16 +163,6 @@
 								navigation
 							</h3>
 							<div class="flex flex-col gap-1.5">
-								<div class="flex items-center justify-between">
-									<span class="font-mono text-sm text-fg-dark">
-										go to inbox
-									</span>
-									<kbd
-										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
-									>
-										g i
-									</kbd>
-								</div>
 								<div class="flex items-center justify-between">
 									<span class="font-mono text-sm text-fg-dark">
 										go to tasks

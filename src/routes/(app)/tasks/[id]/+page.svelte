@@ -67,7 +67,7 @@
 	async function handleDelete() {
 		try {
 			await client.mutation(api.tasks.remove, { id: taskId as any }); // eslint-disable-line @typescript-eslint/no-explicit-any -- Convex ID from route param
-			goto('/tasks');
+			goto('/');
 		} catch (error) {
 			console.error('Failed to delete task:', error);
 		}
@@ -88,7 +88,7 @@
 <div class="mx-auto flex max-w-3xl flex-col gap-6 p-6">
 	<!-- Back link -->
 	<a
-		href="/tasks"
+		href="/"
 		class="inline-flex items-center gap-1 font-mono text-xs text-fg-muted transition-colors hover:text-fg-dark"
 	>
 		&lt;- back
