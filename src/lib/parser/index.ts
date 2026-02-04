@@ -24,8 +24,15 @@
 export type { ParsedTask } from './types.js';
 export { extractTitle } from './title.js';
 export { extractTags } from './tags.js';
-export { extractDueDate } from './dueDate.js';
+export {
+	extractDueDate,
+	parseISODate,
+	parseRelativeDate,
+	utcMidnight
+} from './dueDate.js';
 export { stripMetadata } from './strip.js';
+export { parseTimeLog } from './timeRange.js';
+export type { ParsedTimeLog } from './timeRange.js';
 
 import type { ParsedTask } from './types.js';
 import { extractTitle } from './title.js';

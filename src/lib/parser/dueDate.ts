@@ -79,8 +79,10 @@ function matchesPrefix(text: string, i: number, prefix: string): boolean {
  * Returns `null` if the format is invalid or the date doesn't exist.
  *
  * Validates character-by-character — no regex.
+ *
+ * Exported for reuse by the time-range parser.
  */
-function parseISODate(value: string): number | null {
+export function parseISODate(value: string): number | null {
 	// Must be exactly 10 characters: YYYY-MM-DD
 	if (value.length !== 10) return null;
 
@@ -170,15 +172,19 @@ const DAY_NAMES: Record<string, number> = {
  *
  * Supported keywords:
  *   - `today`
+ *   - `yesterday`
  *   - `tomorrow`
  *   - `next-week` (next Monday)
  *   - Day names: `monday` … `sunday` (next occurrence)
  *   - Short day names: `mon` … `sun` (next occurrence)
+ *
+ * Exported for reuse by the time-range parser.
  */
-function parseRelativeDate(value: string, now: number): number | null {
+export function parseRelativeDate(value: string, now: number): number | null {
 	const today = utcMidnight(now);
 
 	if (value === 'today') return today;
+	if (value === 'yesterday') return today - 86_400_000;
 	if (value === 'tomorrow') return today + 86_400_000;
 	if (value === 'next-week') return nextDayOfWeek(today, 1); // Next Monday
 
@@ -200,8 +206,12 @@ function nextDayOfWeek(todayMidnight: number, targetDay: number): number {
 	return todayMidnight + daysAhead * 86_400_000;
 }
 
-/** Truncate a timestamp to UTC midnight. */
-function utcMidnight(timestamp: number): number {
+/**
+ * Truncate a timestamp to UTC midnight.
+ *
+ * Exported for reuse by the time-range parser.
+ */
+export function utcMidnight(timestamp: number): number {
 	const d = new Date(timestamp);
 	return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
 }

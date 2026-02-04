@@ -7,6 +7,8 @@
  */
 
 import { goto } from '$app/navigation';
+import { parseTimeLog } from '$lib/parser/timeRange';
+import { extractTags } from '$lib/parser/tags';
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -23,6 +25,20 @@ export interface CommandContext {
 	editorSubmit?: () => boolean;
 	/** Blur the editor (quit). */
 	editorBlur?: () => void;
+	/** Log a completed time session. */
+	logSession?: (args: {
+		startTime: number;
+		endTime: number;
+		description?: string;
+		tags: string[];
+	}) => Promise<void>;
+	/** Start a live timer. */
+	startTimer?: (args: {
+		description?: string;
+		tags: string[];
+	}) => Promise<void>;
+	/** Stop the running timer. */
+	stopTimer?: () => Promise<void>;
 }
 
 export interface Command {
@@ -142,8 +158,92 @@ export const commands: Command[] = [
 		execute(_args, ctx) {
 			ctx.toggleHelp();
 		}
+	},
+	{
+		name: 'sessions',
+		aliases: ['sessions', 'ss'],
+		description: 'go to sessions',
+		args: 'none',
+		execute() {
+			goto('/sessions');
+		}
+	},
+	{
+		name: 'log',
+		aliases: ['log', 'l'],
+		description: 'log a time entry',
+		args: 'required',
+		argsPlaceholder: '[date] HH:MM-HH:MM [+tag] ["desc"]',
+		async execute(args, ctx) {
+			if (!ctx.logSession) return 'session logging not available';
+
+			const parsed = parseTimeLog(args);
+			if (parsed === null) {
+				return 'invalid format — use: [date] HH:MM-HH:MM [+tag] ["desc"]';
+			}
+
+			try {
+				await ctx.logSession({
+					startTime: parsed.startTime,
+					endTime: parsed.endTime,
+					description: parsed.description,
+					tags: parsed.tags
+				});
+			} catch (err) {
+				return err instanceof Error ? err.message : 'failed to log session';
+			}
+		}
+	},
+	{
+		name: 'start',
+		aliases: ['start'],
+		description: 'start a timer',
+		args: 'optional',
+		argsPlaceholder: '[+tag] ["desc"]',
+		async execute(args, ctx) {
+			if (!ctx.startTimer) return 'timer not available';
+
+			const tags = extractTags(args);
+			const description = extractQuotedString(args);
+
+			try {
+				await ctx.startTimer({ description, tags });
+			} catch (err) {
+				return err instanceof Error ? err.message : 'failed to start timer';
+			}
+		}
+	},
+	{
+		name: 'stop',
+		aliases: ['stop'],
+		description: 'stop the running timer',
+		args: 'none',
+		async execute(_args, ctx) {
+			if (!ctx.stopTimer) return 'timer not available';
+
+			try {
+				await ctx.stopTimer();
+			} catch (err) {
+				return err instanceof Error ? err.message : 'failed to stop timer';
+			}
+		}
 	}
 ];
+
+// ── Helpers ────────────────────────────────────────────────────────
+
+/** Extract a quoted string from input (double or single quotes). */
+function extractQuotedString(input: string): string | undefined {
+	for (const quote of ['"', "'"]) {
+		const start = input.indexOf(quote);
+		if (start === -1) continue;
+		const end = input.indexOf(quote, start + 1);
+		if (end === -1) continue;
+		const value = input.slice(start + 1, end);
+		return value || undefined;
+	}
+	return undefined;
+}
 
 // ── Matching / execution ───────────────────────────────────────────
 

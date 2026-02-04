@@ -59,5 +59,24 @@ export default defineSchema({
 		.index('by_status', ['status'])
 		.index('by_userId', ['userId'])
 		.index('by_status_userId', ['status', 'userId'])
-		.index('by_dueDate', ['dueDate'])
+		.index('by_dueDate', ['dueDate']),
+
+	sessions: defineTable({
+		/** When work began (UTC ms). */
+		startTime: v.number(),
+		/** When work ended (UTC ms). Undefined = timer is running. */
+		endTime: v.optional(v.number()),
+		/** Optional description, e.g. "Killed the beast". */
+		description: v.optional(v.string()),
+		/** Project/context tags associated with this session. */
+		tagIds: v.array(v.id('tags')),
+		/** Tasks linked to this session (many-to-many). */
+		taskIds: v.array(v.id('tasks')),
+		/** Owner — references the auth-managed users table. */
+		userId: v.id('users'),
+		createdAt: v.number(),
+		updatedAt: v.number()
+	})
+		.index('by_userId', ['userId'])
+		.index('by_userId_startTime', ['userId', 'startTime'])
 });

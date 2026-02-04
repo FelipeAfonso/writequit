@@ -16,7 +16,10 @@ function createCommandPalette() {
 	let error = $state('');
 
 	// Base context — always available (set by layout)
-	let baseCtx: Pick<CommandContext, 'signOut' | 'toggleHelp'> | null = null;
+	let baseCtx: Pick<
+		CommandContext,
+		'signOut' | 'toggleHelp' | 'logSession' | 'startTimer' | 'stopTimer'
+	> | null = null;
 
 	// Page-specific extensions — set by individual pages
 	let pageActions: Partial<CommandContext> = {};
@@ -44,7 +47,12 @@ function createCommandPalette() {
 		},
 
 		/** Set the base context (called once from the app layout). */
-		setBaseContext(ctx: Pick<CommandContext, 'signOut' | 'toggleHelp'>) {
+		setBaseContext(
+			ctx: Pick<
+				CommandContext,
+				'signOut' | 'toggleHelp' | 'logSession' | 'startTimer' | 'stopTimer'
+			>
+		) {
 			baseCtx = ctx;
 		},
 
@@ -68,6 +76,9 @@ function createCommandPalette() {
 			return {
 				signOut: baseCtx?.signOut ?? (() => {}),
 				toggleHelp: baseCtx?.toggleHelp ?? (() => {}),
+				logSession: baseCtx?.logSession,
+				startTimer: baseCtx?.startTimer,
+				stopTimer: baseCtx?.stopTimer,
 				...pageActions
 			};
 		}

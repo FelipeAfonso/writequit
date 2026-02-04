@@ -2,6 +2,7 @@ import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { parseTask } from '../src/lib/parser/index.js';
 import { getOrCreateTag } from './tags.js';
+import { autoLinkTask } from './sessions.js';
 import { getAuthUserId } from '@convex-dev/auth/server';
 
 // ── Queries ────────────────────────────────────────────────────────
@@ -174,6 +175,11 @@ export const updateStatus = mutation({
 		}
 
 		await ctx.db.patch(args.id, patch);
+
+		// Auto-link to running session when moving to "active" or "done"
+		if (args.status === 'active' || args.status === 'done') {
+			await autoLinkTask(ctx, userId, args.id, existing.tagIds);
+		}
 	}
 });
 

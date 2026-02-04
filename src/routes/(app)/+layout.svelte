@@ -2,14 +2,18 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { useAuthState, useAuthActions } from '$lib/auth';
+	import { useConvexClient } from 'convex-svelte';
+	import { api } from '$convex/_generated/api';
 	import { isEditableTarget } from '$lib/utils/keys';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
+	import StatusBar from '$lib/components/StatusBar.svelte';
 
 	let { children } = $props();
 
 	const auth = useAuthState();
 	const { signOut } = useAuthActions();
+	const client = useConvexClient();
 
 	// Auth guard: redirect to /login if not authenticated
 	$effect(() => {
@@ -27,6 +31,7 @@
 
 	const nav: NavItem[] = [
 		{ href: '/', label: 'tasks', icon: '#', shortcut: 'g t' },
+		{ href: '/sessions', label: 'sessions', icon: '~', shortcut: 'g s' },
 		{ href: '/tags', label: 'tags', icon: '+', shortcut: 'g a' }
 	];
 
@@ -47,6 +52,28 @@
 			signOut: () => signOut(),
 			toggleHelp: () => {
 				showHelp = !showHelp;
+			},
+			logSession: async (args: {
+				startTime: number;
+				endTime: number;
+				description?: string;
+				tags: string[];
+			}) => {
+				await client.mutation(api.sessions.log, {
+					startTime: args.startTime,
+					endTime: args.endTime,
+					description: args.description,
+					tags: args.tags
+				});
+			},
+			startTimer: async (args: { description?: string; tags: string[] }) => {
+				await client.mutation(api.sessions.start, {
+					description: args.description,
+					tags: args.tags
+				});
+			},
+			stopTimer: async () => {
+				await client.mutation(api.sessions.stop, {});
 			}
 		});
 	});
@@ -84,6 +111,7 @@
 
 			const routes: Record<string, string> = {
 				t: '/',
+				s: '/sessions',
 				a: '/tags',
 				u: '/user'
 			};
@@ -237,6 +265,16 @@
 										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
 									>
 										g a
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										go to sessions
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										g s
 									</kbd>
 								</div>
 								<div class="flex items-center justify-between">
@@ -426,17 +464,53 @@
 								</div>
 							</div>
 						</div>
+						<div>
+							<h3 class="mb-2 font-mono text-xs font-bold text-fg-muted">
+								time tracking
+							</h3>
+							<div class="flex flex-col gap-1.5">
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										start timer
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										:start
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">stop timer</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										:stop
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">log time</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										:log
+									</kbd>
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>
 		{/if}
 
 		<!-- Main content -->
-		<main class="flex-1 overflow-y-auto">
+		<main class="flex-1 overflow-y-auto pb-10">
 			{@render children()}
 		</main>
 
 		<!-- Command palette -->
 		<CommandPalette />
+
+		<!-- Global status bar (shows when timer is running) -->
+		<StatusBar />
 	</div>
 {/if}
