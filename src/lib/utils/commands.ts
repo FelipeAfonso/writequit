@@ -39,6 +39,10 @@ export interface CommandContext {
 	}) => Promise<void>;
 	/** Stop the running timer. */
 	stopTimer?: () => Promise<void>;
+	/** Link a task (by ID) to the active session. */
+	linkTaskToSession?: (taskId: string) => Promise<void>;
+	/** Get the current task ID (from task detail or selected in list). */
+	getCurrentTaskId?: () => string | undefined;
 }
 
 export interface Command {
@@ -225,6 +229,24 @@ export const commands: Command[] = [
 				await ctx.stopTimer();
 			} catch (err) {
 				return err instanceof Error ? err.message : 'failed to stop timer';
+			}
+		}
+	},
+	{
+		name: 'link',
+		aliases: ['link'],
+		description: 'link current task to active session',
+		args: 'none',
+		async execute(_args, ctx) {
+			if (!ctx.linkTaskToSession) return 'linking not available';
+
+			const taskId = ctx.getCurrentTaskId?.();
+			if (!taskId) return 'no task selected';
+
+			try {
+				await ctx.linkTaskToSession(taskId);
+			} catch (err) {
+				return err instanceof Error ? err.message : 'failed to link task';
 			}
 		}
 	}

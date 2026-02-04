@@ -36,6 +36,8 @@
 		tagIds?: string[];
 		/** Called on t+number — toggle tag by index. 0 = clear all. */
 		ontagtoggle?: (index: number) => void;
+		/** Called whenever the selected task changes. */
+		onselect?: (taskId: string | undefined) => void;
 	}
 
 	let {
@@ -47,7 +49,8 @@
 		onfilterprev,
 		onfilternext,
 		tagIds = [],
-		ontagtoggle
+		ontagtoggle,
+		onselect
 	}: Props = $props();
 
 	/** Resolve tag IDs to tag objects using the provided map. */
@@ -76,6 +79,15 @@
 		} else if (selectedIndex >= tasks.length) {
 			selectedIndex = tasks.length - 1;
 		}
+	});
+
+	// Notify parent of selection changes
+	$effect(() => {
+		const taskId =
+			selectedIndex >= 0 && selectedIndex < tasks.length
+				? tasks[selectedIndex]._id
+				: undefined;
+		onselect?.(taskId);
 	});
 
 	function clamp(idx: number): number {

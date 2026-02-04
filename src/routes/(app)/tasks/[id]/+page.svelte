@@ -24,6 +24,17 @@
 	let isEditing = $state(false);
 	let editor: TaskEditor | undefined = $state();
 
+	// Register page-specific command actions
+	$effect(() => {
+		commandPalette.registerActions({
+			getCurrentTaskId: () => taskId
+		});
+
+		return () => {
+			commandPalette.unregisterActions(['getCurrentTaskId']);
+		};
+	});
+
 	// Register editor commands when editing
 	$effect(() => {
 		if (isEditing && editor) {

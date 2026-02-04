@@ -74,6 +74,17 @@
 			},
 			stopTimer: async () => {
 				await client.mutation(api.sessions.stop, {});
+			},
+			linkTaskToSession: async (taskId: string) => {
+				// Find the active session first
+				const active = await client.query(api.sessions.active, {});
+				if (!active) throw new Error('No timer is running');
+				await client.mutation(api.sessions.linkTask, {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					sessionId: active._id as any,
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					taskId: taskId as any
+				});
 			}
 		});
 	});

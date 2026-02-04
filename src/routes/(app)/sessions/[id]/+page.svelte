@@ -15,6 +15,9 @@
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const session = useQuery(api.sessions.get, () => ({ id: sessionId as any }));
 
+	// All tasks for the task picker
+	const allTasks = useQuery(api.tasks.list, {});
+
 	// ── Formatting ──
 
 	function formatTime(ms: number): string {
@@ -81,6 +84,54 @@
 			});
 		} catch (error) {
 			console.error('Failed to unlink task:', error);
+		}
+	}
+
+	// ── Task picker ──
+
+	let showTaskPicker = $state(false);
+	let taskSearch = $state('');
+	let taskSearchInput: HTMLInputElement | undefined = $state();
+
+	/** Tasks available for linking (not already linked). */
+	let linkableTasks = $derived.by(() => {
+		if (!allTasks.data || !session.data) return [];
+		const linkedIds = new Set(
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			(session.data as any).taskIds.map(String) as string[]
+		);
+		return allTasks.data.filter((t) => !linkedIds.has(String(t._id)));
+	});
+
+	/** Filtered by search query. */
+	let filteredLinkable = $derived.by(() => {
+		if (!taskSearch) return linkableTasks;
+		const q = taskSearch.toLowerCase();
+		return linkableTasks.filter((t) => t.title.toLowerCase().includes(q));
+	});
+
+	function openTaskPicker() {
+		showTaskPicker = true;
+		taskSearch = '';
+		// Focus the search input after it renders
+		setTimeout(() => taskSearchInput?.focus(), 0);
+	}
+
+	function closeTaskPicker() {
+		showTaskPicker = false;
+		taskSearch = '';
+	}
+
+	async function handleLinkTask(taskId: string) {
+		try {
+			await client.mutation(api.sessions.linkTask, {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				sessionId: sessionId as any,
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				taskId: taskId as any
+			});
+		} catch (error) {
+			console.error('Failed to link task:', error);
 		}
 	}
 
@@ -207,10 +258,67 @@
 
 		<!-- Linked tasks -->
 		<div class="flex flex-col gap-3">
-			<h2 class="font-mono text-sm font-bold text-fg-muted">
-				linked tasks
-				<span class="text-fg-gutter">({s.tasks ? s.tasks.length : 0})</span>
-			</h2>
+			<div class="flex items-center justify-between">
+				<h2 class="font-mono text-sm font-bold text-fg-muted">
+					linked tasks
+					<span class="text-fg-gutter">({s.tasks ? s.tasks.length : 0})</span>
+				</h2>
+				<button
+					type="button"
+					class="border border-border px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
+					onclick={openTaskPicker}
+				>
+					+ link task
+				</button>
+			</div>
+
+			<!-- Task picker -->
+			{#if showTaskPicker}
+				<div class="flex flex-col gap-2 border border-primary bg-surface-1 p-3">
+					<div class="flex items-center gap-2">
+						<span class="font-mono text-xs text-fg-muted">/</span>
+						<input
+							bind:this={taskSearchInput}
+							bind:value={taskSearch}
+							type="text"
+							class="flex-1 border-none bg-transparent font-mono text-sm text-fg outline-none"
+							placeholder="search tasks..."
+							onkeydown={(e) => {
+								if (e.key === 'Escape') {
+									e.preventDefault();
+									closeTaskPicker();
+								}
+							}}
+						/>
+						<button
+							type="button"
+							class="font-mono text-xs text-fg-muted transition-colors hover:text-red"
+							onclick={closeTaskPicker}
+						>
+							[x]
+						</button>
+					</div>
+
+					{#if filteredLinkable.length > 0}
+						<div class="flex max-h-48 flex-col gap-1 overflow-y-auto">
+							{#each filteredLinkable as task (task._id)}
+								<button
+									type="button"
+									class="flex items-center gap-2 px-2 py-1.5 text-left font-mono text-sm text-fg-dark transition-colors hover:bg-surface-2 hover:text-fg"
+									onclick={() => handleLinkTask(task._id)}
+								>
+									<TaskStatusBadge status={task.status} />
+									<span class="min-w-0 truncate">{task.title}</span>
+								</button>
+							{/each}
+						</div>
+					{:else}
+						<p class="py-2 text-center font-mono text-xs text-fg-muted">
+							{taskSearch ? 'no matching tasks' : 'all tasks already linked'}
+						</p>
+					{/if}
+				</div>
+			{/if}
 
 			{#if s.tasks && s.tasks.length > 0}
 				<div class="flex flex-col gap-1">
@@ -238,7 +346,7 @@
 						</div>
 					{/each}
 				</div>
-			{:else}
+			{:else if !showTaskPicker}
 				<p class="font-mono text-xs text-fg-muted">
 					No tasks linked to this session.
 				</p>

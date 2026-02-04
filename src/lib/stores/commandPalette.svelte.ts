@@ -18,7 +18,12 @@ function createCommandPalette() {
 	// Base context — always available (set by layout)
 	let baseCtx: Pick<
 		CommandContext,
-		'signOut' | 'toggleHelp' | 'logSession' | 'startTimer' | 'stopTimer'
+		| 'signOut'
+		| 'toggleHelp'
+		| 'logSession'
+		| 'startTimer'
+		| 'stopTimer'
+		| 'linkTaskToSession'
 	> | null = null;
 
 	// Page-specific extensions — set by individual pages
@@ -50,7 +55,12 @@ function createCommandPalette() {
 		setBaseContext(
 			ctx: Pick<
 				CommandContext,
-				'signOut' | 'toggleHelp' | 'logSession' | 'startTimer' | 'stopTimer'
+				| 'signOut'
+				| 'toggleHelp'
+				| 'logSession'
+				| 'startTimer'
+				| 'stopTimer'
+				| 'linkTaskToSession'
 			>
 		) {
 			baseCtx = ctx;
@@ -79,6 +89,7 @@ function createCommandPalette() {
 				logSession: baseCtx?.logSession,
 				startTimer: baseCtx?.startTimer,
 				stopTimer: baseCtx?.stopTimer,
+				linkTaskToSession: baseCtx?.linkTaskToSession,
 				...pageActions
 			};
 		}

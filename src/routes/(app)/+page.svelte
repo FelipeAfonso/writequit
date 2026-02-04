@@ -11,6 +11,7 @@
 
 	let editor: TaskEditor | undefined = $state();
 	let searchQuery = $state('');
+	let selectedTaskId = $state<string | undefined>(undefined);
 
 	// ── Server-side user settings ──────────────────────────────────
 	const userSettings = useQuery(api.users.getSettings, {});
@@ -32,7 +33,8 @@
 				searchQuery = query;
 			},
 			editorSubmit: () => editor?.submit() ?? false,
-			editorBlur: () => editor?.blur()
+			editorBlur: () => editor?.blur(),
+			getCurrentTaskId: () => selectedTaskId
 		});
 
 		return () => {
@@ -40,7 +42,8 @@
 				'focusEditor',
 				'setSearch',
 				'editorSubmit',
-				'editorBlur'
+				'editorBlur',
+				'getCurrentTaskId'
 			]);
 		};
 	});
@@ -277,6 +280,9 @@
 					const tag = allTags.data?.[index - 1];
 					if (tag) toggleTag(tag._id);
 				}
+			}}
+			onselect={(id) => {
+				selectedTaskId = id;
 			}}
 		/>
 	{/if}
