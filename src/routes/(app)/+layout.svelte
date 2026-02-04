@@ -24,8 +24,8 @@
 	}
 
 	const nav: NavItem[] = [
-		{ href: '/', label: 'tasks', icon: '*', shortcut: 'g t' },
-		{ href: '/tags', label: 'tags', icon: '#', shortcut: 'g a' }
+		{ href: '/', label: 'tasks', icon: '#', shortcut: 'g t' },
+		{ href: '/tags', label: 'tags', icon: '+', shortcut: 'g a' }
 	];
 
 	function isActive(href: string): boolean {
@@ -188,6 +188,16 @@
 								task list
 							</h3>
 							<div class="flex flex-col gap-1.5">
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										focus input
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										i
+									</kbd>
+								</div>
 								<div class="flex items-center justify-between">
 									<span class="font-mono text-sm text-fg-dark">move down</span>
 									<kbd

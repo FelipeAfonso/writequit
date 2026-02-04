@@ -35,6 +35,11 @@
 	let view: EditorView | undefined = $state();
 	let preview: ParsedTask | null = $state(null);
 
+	/** Focus the editor. */
+	export function focus(): void {
+		view?.focus();
+	}
+
 	/** Get the current editor content. */
 	function getContent(): string {
 		if (!view) return '';

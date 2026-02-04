@@ -2,22 +2,34 @@
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
+	import { isEditableTarget } from '$lib/utils/keys';
+	import { settings } from '$lib/stores/settings.svelte';
 	import TaskEditor from '$lib/components/tasks/TaskEditor.svelte';
 	import TaskList from '$lib/components/tasks/TaskList.svelte';
 	import TagFilter from '$lib/components/tags/TagFilter.svelte';
+
+	let editor: TaskEditor | undefined = $state();
+
+	function handleKeydown(e: KeyboardEvent) {
+		if (isEditableTarget(e)) return;
+		if (e.key === 'i') {
+			e.preventDefault();
+			editor?.focus();
+		}
+	}
 
 	type TaskStatus = 'inbox' | 'active' | 'done';
 
 	const client = useConvexClient();
 
-	let activeStatusFilter: TaskStatus | 'all' = $state('all');
-	let activeTagIds = new SvelteSet<string>();
+	/** Reactive Set view of the persisted tag IDs. */
+	let activeTagIds = $derived(new SvelteSet(settings.activeTagIds));
 
 	/** Build query args based on the active status filter. */
 	let queryArgs = $derived(
-		activeStatusFilter === 'all'
+		settings.statusFilter === 'all'
 			? {}
-			: { status: activeStatusFilter as TaskStatus }
+			: { status: settings.statusFilter as TaskStatus }
 	);
 
 	const tasks = useQuery(api.tasks.list, () => queryArgs);
@@ -46,15 +58,16 @@
 	});
 
 	function toggleTag(tagId: string) {
-		if (activeTagIds.has(tagId)) {
-			activeTagIds.delete(tagId);
+		const ids = settings.activeTagIds;
+		if (ids.includes(tagId)) {
+			settings.activeTagIds = ids.filter((id) => id !== tagId);
 		} else {
-			activeTagIds.add(tagId);
+			settings.activeTagIds = [...ids, tagId];
 		}
 	}
 
 	function clearTags() {
-		activeTagIds.clear();
+		settings.activeTagIds = [];
 	}
 
 	const statusOptions: {
@@ -70,11 +83,11 @@
 
 	function cycleFilter(direction: -1 | 1) {
 		const currentIdx = statusOptions.findIndex(
-			(o) => o.value === activeStatusFilter
+			(o) => o.value === settings.statusFilter
 		);
 		const nextIdx =
 			(currentIdx + direction + statusOptions.length) % statusOptions.length;
-		activeStatusFilter = statusOptions[nextIdx].value;
+		settings.statusFilter = statusOptions[nextIdx].value;
 	}
 
 	async function handleCreateTask(rawContent: string) {
@@ -106,6 +119,8 @@
 	}
 </script>
 
+<svelte:window onkeydown={handleKeydown} />
+
 <div class="mx-auto flex max-w-3xl flex-col gap-6 p-6">
 	<!-- Page header -->
 	<div class="flex items-baseline gap-3">
@@ -121,7 +136,11 @@
 	</div>
 
 	<!-- Task editor (the dump zone) -->
-	<TaskEditor onsubmit={handleCreateTask} />
+	<TaskEditor
+		bind:this={editor}
+		onsubmit={handleCreateTask}
+		autofocus={false}
+	/>
 
 	<!-- Filters -->
 	<div class="flex flex-col gap-3">
@@ -131,13 +150,13 @@
 				<button
 					type="button"
 					class="border px-2 py-1 font-mono text-xs transition-colors"
-					class:border-primary={activeStatusFilter === opt.value}
-					class:text-primary={activeStatusFilter === opt.value}
-					class:bg-surface-2={activeStatusFilter === opt.value}
-					class:border-border={activeStatusFilter !== opt.value}
-					class:text-fg-muted={activeStatusFilter !== opt.value}
+					class:border-primary={settings.statusFilter === opt.value}
+					class:text-primary={settings.statusFilter === opt.value}
+					class:bg-surface-2={settings.statusFilter === opt.value}
+					class:border-border={settings.statusFilter !== opt.value}
+					class:text-fg-muted={settings.statusFilter !== opt.value}
 					onclick={() => {
-						activeStatusFilter = opt.value;
+						settings.statusFilter = opt.value;
 					}}
 				>
 					<span class="opacity-60">[{opt.icon}]</span>
