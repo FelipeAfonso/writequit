@@ -9,8 +9,9 @@
 	import { markdown } from '@codemirror/lang-markdown';
 	import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 	import { searchKeymap } from '@codemirror/search';
-	import { vim } from '@replit/codemirror-vim';
+	import { vim, getCM } from '@replit/codemirror-vim';
 	import { tokyoNight } from '$lib/components/ui/codemirror-theme';
+	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 	import { parseTask } from '$lib/parser';
 	import type { ParsedTask } from '$lib/parser';
 
@@ -41,6 +42,38 @@
 
 	// Compartment for dynamically toggling vim mode
 	const vimCompartment = new Compartment();
+
+	/**
+	 * Patch the vim adapter's `openDialog` so that pressing `:` in
+	 * normal mode opens our command palette instead of vim's built-in
+	 * command line.  Search (`/` and `?`) is left intact.
+	 */
+	function patchVimDialog(editorView: EditorView) {
+		const cm = getCM(editorView);
+		if (!cm) return;
+
+		const origOpenDialog = cm.openDialog.bind(cm);
+
+		cm.openDialog = (
+			template: Element,
+			callback: ((...args: unknown[]) => unknown) | undefined,
+			options: Record<string, unknown>
+		) => {
+			// The vim ex-command dialog uses a template whose first
+			// child's textContent is ":".  Intercept only that case.
+			const label = template?.firstChild?.textContent ?? '';
+			if (label === ':') {
+				// Open the app command palette, blur the editor so
+				// global shortcuts work normally.
+				editorView.contentDOM.blur();
+				commandPalette.open();
+				// Return a no-op close function
+				return () => {};
+			}
+			// Everything else (search `/`, `?`, etc.) goes through vim
+			return origOpenDialog(template, callback, options);
+		};
+	}
 
 	/** Focus the editor. */
 	export function focus(): void {
@@ -139,6 +172,11 @@
 			parent: editorContainer
 		});
 
+		// Patch vim's command-line dialog when vim is initially enabled
+		if (viMode) {
+			patchVimDialog(view);
+		}
+
 		if (autofocus) {
 			view.focus();
 		}
@@ -162,6 +200,10 @@
 				escapeCompartment.reconfigure(viMode ? [] : makeEscapeKeymap())
 			]
 		});
+		// Re-patch the dialog override after vim is (re)enabled
+		if (viMode) {
+			patchVimDialog(view);
+		}
 	});
 
 	/**
