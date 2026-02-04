@@ -179,7 +179,7 @@
 	<!-- Page header -->
 	<div class="flex items-baseline gap-3">
 		<h1 class="font-mono text-lg font-bold text-fg">
-			<span class="text-fg-muted">*</span>
+			<span class="text-fg-muted">#</span>
 			tasks
 		</h1>
 		{#if tasks.data}

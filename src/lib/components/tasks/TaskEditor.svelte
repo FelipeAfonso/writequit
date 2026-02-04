@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import {
 		EditorView,
+		drawSelection,
 		placeholder as cmPlaceholder,
 		keymap
 	} from '@codemirror/view';
@@ -210,6 +211,7 @@
 				keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
 				history(),
 				markdown({ codeLanguages: languages }),
+				drawSelection(),
 				tokyoNight,
 				cmPlaceholder(placeholder),
 				updateListener,

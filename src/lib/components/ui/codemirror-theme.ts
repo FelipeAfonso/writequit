@@ -30,6 +30,14 @@ export const tokyoNightTheme = EditorView.theme(
 			{
 				backgroundColor: '#283457'
 			},
+		// Vim fat cursor (block cursor in normal/visual mode)
+		'& .cm-fat-cursor': {
+			backgroundColor: '#c0caf5 !important'
+		},
+		'&:not(.cm-focused) .cm-fat-cursor': {
+			background: 'none',
+			outline: '1px solid #c0caf5 !important'
+		},
 		'.cm-activeLine': {
 			backgroundColor: '#1f2335'
 		},
