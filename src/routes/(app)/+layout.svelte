@@ -189,16 +189,16 @@
 			>
 				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 				<div
-					class="w-full max-w-md border border-border-highlight bg-surface-1 p-6"
+					class="flex max-h-[70vh] w-full max-w-2xl flex-col border border-border-highlight bg-surface-1 p-6"
 					onclick={(e) => e.stopPropagation()}
 				>
-					<div class="mb-4 flex items-center justify-between">
+					<div class="mb-4 flex shrink-0 items-center justify-between">
 						<h2 class="font-mono text-sm font-bold text-fg">
 							keyboard shortcuts
 						</h2>
 						<span class="font-mono text-xs text-fg-muted">? to toggle</span>
 					</div>
-					<div class="flex flex-col gap-4">
+					<div class="grid grid-cols-1 gap-4 overflow-y-auto sm:grid-cols-2">
 						<div>
 							<h3 class="mb-2 font-mono text-xs font-bold text-fg-muted">
 								general
@@ -332,6 +332,63 @@
 										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
 									>
 										t 0
+									</kbd>
+								</div>
+							</div>
+						</div>
+						<div>
+							<h3 class="mb-2 font-mono text-xs font-bold text-fg-muted">
+								editor (vi mode)
+							</h3>
+							<div class="flex flex-col gap-1.5">
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										enter insert mode
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										i
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										back to normal
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										Esc
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										blur editor
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										Esc Esc
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										command palette
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										:
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										search in editor
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										/
 									</kbd>
 								</div>
 							</div>

@@ -83,6 +83,36 @@ export const tokyoNightTheme = EditorView.theme(
 		'.cm-placeholder': {
 			color: '#565f89',
 			fontStyle: 'italic'
+		},
+		// Vim panel (search dialog, ex bar, notifications)
+		'.cm-vim-panel': {
+			padding: '0px 8px',
+			fontFamily: "'Iosevka', ui-monospace, monospace",
+			fontSize: '13px',
+			lineHeight: '1.4',
+			minHeight: 'auto',
+			backgroundColor: '#1a1b26',
+			borderTop: '1px solid #292e42',
+			color: '#c0caf5'
+		},
+		'.cm-vim-panel input, .cm-vim-panel input:focus': {
+			fontFamily: "'Iosevka', ui-monospace, monospace",
+			fontSize: '13px',
+			lineHeight: '1.4',
+			padding: '2px 2px',
+			margin: '0',
+			color: '#c0caf5',
+			backgroundColor: 'transparent',
+			border: 'none',
+			outline: 'none',
+			boxShadow: 'none',
+			caretColor: '#7aa2f7',
+			flex: '1'
+		},
+		'.cm-vim-message': {
+			color: '#f7768e',
+			fontFamily: "'Iosevka', ui-monospace, monospace",
+			fontSize: '13px'
 		}
 	},
 	{ dark: true }
