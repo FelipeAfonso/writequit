@@ -4,11 +4,27 @@
 	import { api } from '$convex/_generated/api';
 	import { isEditableTarget } from '$lib/utils/keys';
 	import { settings } from '$lib/stores/settings.svelte';
+	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 	import TaskEditor from '$lib/components/tasks/TaskEditor.svelte';
 	import TaskList from '$lib/components/tasks/TaskList.svelte';
 	import TagFilter from '$lib/components/tags/TagFilter.svelte';
 
 	let editor: TaskEditor | undefined = $state();
+	let searchQuery = $state('');
+
+	// Register page-specific command actions
+	$effect(() => {
+		commandPalette.registerActions({
+			focusEditor: () => editor?.focus(),
+			setSearch: (query: string) => {
+				searchQuery = query;
+			}
+		});
+
+		return () => {
+			commandPalette.unregisterActions(['focusEditor', 'setSearch']);
+		};
+	});
 
 	function handleKeydown(e: KeyboardEvent) {
 		if (isEditableTarget(e)) return;
@@ -49,11 +65,22 @@
 	});
 
 	/** Filter tasks by tags (client-side, inclusive/AND — must have ALL selected tags). */
-	let filteredTasks = $derived.by(() => {
+	let tagFiltered = $derived.by(() => {
 		if (!tasks.data) return [];
 		if (activeTagIds.size === 0) return tasks.data;
 		return tasks.data.filter((t: { tagIds: string[] }) =>
 			[...activeTagIds].every((id) => t.tagIds.includes(id))
+		);
+	});
+
+	/** Further filter by search query (case-insensitive title match). */
+	let filteredTasks = $derived.by(() => {
+		if (!searchQuery) return tagFiltered;
+		const q = searchQuery.toLowerCase();
+		return tagFiltered.filter(
+			(t: { title: string; rawContent: string }) =>
+				t.title.toLowerCase().includes(q) ||
+				t.rawContent.toLowerCase().includes(q)
 		);
 	});
 
@@ -134,6 +161,23 @@
 			</span>
 		{/if}
 	</div>
+
+	<!-- Search indicator -->
+	{#if searchQuery}
+		<div
+			class="flex items-center gap-2 border border-border-highlight bg-surface-1 px-3 py-1.5"
+		>
+			<span class="font-mono text-xs text-fg-muted">/</span>
+			<span class="font-mono text-sm text-primary">{searchQuery}</span>
+			<button
+				type="button"
+				class="ml-auto font-mono text-xs text-fg-muted transition-colors hover:text-red"
+				onclick={() => (searchQuery = '')}
+			>
+				[x] clear
+			</button>
+		</div>
+	{/if}
 
 	<!-- Task editor (the dump zone) -->
 	<TaskEditor

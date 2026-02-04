@@ -3,6 +3,8 @@
 	import { page } from '$app/state';
 	import { useAuthState, useAuthActions } from '$lib/auth';
 	import { isEditableTarget } from '$lib/utils/keys';
+	import { commandPalette } from '$lib/stores/commandPalette.svelte';
+	import CommandPalette from '$lib/components/CommandPalette.svelte';
 
 	let { children } = $props();
 
@@ -39,8 +41,28 @@
 	let pendingG = $state(false);
 	let gTimer: ReturnType<typeof setTimeout> | undefined;
 
+	// Register base command context
+	$effect(() => {
+		commandPalette.setBaseContext({
+			signOut: () => signOut(),
+			toggleHelp: () => {
+				showHelp = !showHelp;
+			}
+		});
+	});
+
 	function handleKeydown(e: KeyboardEvent) {
+		// When command palette is open, let it handle all input
+		if (commandPalette.isOpen) return;
+
 		if (isEditableTarget(e)) return;
+
+		// Open command palette with ':'
+		if (e.key === ':') {
+			e.preventDefault();
+			commandPalette.open();
+			return;
+		}
 
 		// Toggle help overlay
 		if (e.key === '?') {
@@ -158,6 +180,23 @@
 						<span class="font-mono text-xs text-fg-muted">? to toggle</span>
 					</div>
 					<div class="flex flex-col gap-4">
+						<div>
+							<h3 class="mb-2 font-mono text-xs font-bold text-fg-muted">
+								general
+							</h3>
+							<div class="flex flex-col gap-1.5">
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										command palette
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										:
+									</kbd>
+								</div>
+							</div>
+						</div>
 						<div>
 							<h3 class="mb-2 font-mono text-xs font-bold text-fg-muted">
 								navigation
@@ -294,5 +333,8 @@
 		<main class="flex-1 overflow-y-auto">
 			{@render children()}
 		</main>
+
+		<!-- Command palette -->
+		<CommandPalette />
 	</div>
 {/if}

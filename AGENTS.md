@@ -246,6 +246,27 @@ Required in `.env.local`:
 PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
 ```
 
+## Updating Command Palette & Keyboard Shortcuts
+
+**IMPORTANT**: When adding new features, pages, or actions, always consider updating:
+
+1. **Command palette commands** (`src/lib/utils/commands.ts`)
+   - Add new commands for any new navigable page (`:pagename`)
+   - Add action commands for significant user actions (`:new`, `:delete`, etc.)
+   - Update `CommandContext` interface if the command needs page-specific actions
+   - Each command needs: `name`, `aliases`, `description`, `args`, and `execute`
+
+2. **Keyboard shortcuts help overlay** (`src/routes/(app)/+layout.svelte`)
+   - Add any new keyboard shortcut to the help overlay (`showHelp` section)
+   - Keep shortcuts organized in sections: general, navigation, task list, task detail
+
+3. **Page-specific command actions** (in each page's `+page.svelte`)
+   - Register page-specific actions via `commandPalette.registerActions()` in a `$effect`
+   - Clean up with `commandPalette.unregisterActions()` in the effect's return
+   - Example: the tasks page registers `focusEditor` and `setSearch`
+
+4. **Keep all three in sync** — if a shortcut exists, it should also be a command, and both should appear in the help overlay.
+
 ## Key Dependencies
 
 - `svelte@5.x` - Frontend framework (uses runes)
