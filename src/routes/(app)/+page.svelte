@@ -28,6 +28,14 @@
 
 	function handleKeydown(e: KeyboardEvent) {
 		if (isEditableTarget(e)) return;
+
+		// Clear search with Escape
+		if (e.key === 'Escape' && searchQuery) {
+			e.preventDefault();
+			searchQuery = '';
+			return;
+		}
+
 		if (e.key === 'i') {
 			e.preventDefault();
 			editor?.focus();
@@ -175,6 +183,11 @@
 				onclick={() => (searchQuery = '')}
 			>
 				[x] clear
+				<kbd
+					class="ml-1 border border-border bg-surface-2 px-1.5 py-0.5 text-fg-muted"
+				>
+					Esc
+				</kbd>
 			</button>
 		</div>
 	{/if}
