@@ -1,7 +1,10 @@
 import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
+import { authTables } from '@convex-dev/auth/server';
 
 export default defineSchema({
+	...authTables,
+
 	tags: defineTable({
 		/** Unique tag name per user, e.g. "urgent", "backend". */
 		name: v.string(),
@@ -12,8 +15,8 @@ export default defineSchema({
 		type: v.optional(v.string()),
 		/** Optional hex color for UI display, e.g. "#f7768e". */
 		color: v.optional(v.string()),
-		/** Owner identifier (for future multi-user support). */
-		userId: v.string(),
+		/** Owner — references the auth-managed users table. */
+		userId: v.id('users'),
 		createdAt: v.number()
 	})
 		.index('by_userId', ['userId'])
@@ -30,8 +33,8 @@ export default defineSchema({
 		status: v.union(v.literal('inbox'), v.literal('active'), v.literal('done')),
 		/** References to tag documents. */
 		tagIds: v.array(v.id('tags')),
-		/** Owner identifier. */
-		userId: v.string(),
+		/** Owner — references the auth-managed users table. */
+		userId: v.id('users'),
 		createdAt: v.number(),
 		updatedAt: v.number(),
 		/** Set when status transitions to "done". */

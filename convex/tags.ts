@@ -1,12 +1,8 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
-import type { MutationCtx } from './_generated/server';
+import type { MutationCtx, QueryCtx } from './_generated/server';
 import type { Id } from './_generated/dataModel';
-
-// ── Placeholder userId ─────────────────────────────────────────────
-// Auth is not yet implemented. We use a constant so every query
-// already filters by user, making the auth migration seamless.
-const ANONYMOUS_USER = 'anonymous';
+import { getAuthUserId } from '@convex-dev/auth/server';
 
 // ── Queries ────────────────────────────────────────────────────────
 
@@ -14,9 +10,12 @@ const ANONYMOUS_USER = 'anonymous';
 export const list = query({
 	args: {},
 	handler: async (ctx) => {
+		const userId = await getAuthUserId(ctx);
+		if (userId === null) return [];
+
 		return await ctx.db
 			.query('tags')
-			.withIndex('by_userId', (q) => q.eq('userId', ANONYMOUS_USER))
+			.withIndex('by_userId', (q) => q.eq('userId', userId))
 			.collect();
 	}
 });
@@ -25,7 +24,12 @@ export const list = query({
 export const get = query({
 	args: { id: v.id('tags') },
 	handler: async (ctx, args) => {
-		return await ctx.db.get(args.id);
+		const userId = await getAuthUserId(ctx);
+		if (userId === null) return null;
+
+		const tag = await ctx.db.get(args.id);
+		if (tag === null || tag.userId !== userId) return null;
+		return tag;
 	}
 });
 
@@ -39,18 +43,21 @@ export const create = mutation({
 		color: v.optional(v.string())
 	},
 	handler: async (ctx, args) => {
+		const userId = await getAuthUserId(ctx);
+		if (userId === null) throw new Error('Not authenticated');
+
 		const name = args.name.toLowerCase().trim();
 		if (name.length === 0) throw new Error('Tag name cannot be empty');
 
 		// Check for duplicate
-		const existing = await findByName(ctx, name);
+		const existing = await findByName(ctx, name, userId);
 		if (existing !== null) return existing._id;
 
 		return await ctx.db.insert('tags', {
 			name,
 			type: args.type,
 			color: args.color,
-			userId: ANONYMOUS_USER,
+			userId,
 			createdAt: Date.now()
 		});
 	}
@@ -64,8 +71,11 @@ export const update = mutation({
 		color: v.optional(v.string())
 	},
 	handler: async (ctx, args) => {
+		const userId = await getAuthUserId(ctx);
+		if (userId === null) throw new Error('Not authenticated');
+
 		const tag = await ctx.db.get(args.id);
-		if (tag === null) throw new Error('Tag not found');
+		if (tag === null || tag.userId !== userId) throw new Error('Tag not found');
 
 		await ctx.db.patch(args.id, {
 			type: args.type,
@@ -78,6 +88,12 @@ export const update = mutation({
 export const remove = mutation({
 	args: { id: v.id('tags') },
 	handler: async (ctx, args) => {
+		const userId = await getAuthUserId(ctx);
+		if (userId === null) throw new Error('Not authenticated');
+
+		const tag = await ctx.db.get(args.id);
+		if (tag === null || tag.userId !== userId) throw new Error('Tag not found');
+
 		await ctx.db.delete(args.id);
 	}
 });
@@ -85,7 +101,7 @@ export const remove = mutation({
 // ── Internal helpers ───────────────────────────────────────────────
 
 /**
- * Find an existing tag by name for the current user, or create it.
+ * Find an existing tag by name for a user, or create it.
  *
  * This is used by the task parser: when a task contains `+foo`, we
  * need the `Id<"tags">` for "foo" — either existing or freshly
@@ -97,28 +113,28 @@ export const remove = mutation({
  */
 export async function getOrCreateTag(
 	ctx: MutationCtx,
-	name: string
+	name: string,
+	userId: Id<'users'>
 ): Promise<Id<'tags'>> {
 	const normalized = name.toLowerCase().trim();
-	const existing = await findByName(ctx, normalized);
+	const existing = await findByName(ctx, normalized, userId);
 	if (existing !== null) return existing._id;
 
 	return await ctx.db.insert('tags', {
 		name: normalized,
-		userId: ANONYMOUS_USER,
+		userId,
 		createdAt: Date.now()
 	});
 }
 
-/** Look up a tag by (normalized) name for the current user. */
+/** Look up a tag by (normalized) name for a specific user. */
 async function findByName(
-	ctx: MutationCtx | { db: MutationCtx['db'] },
-	name: string
+	ctx: MutationCtx | QueryCtx,
+	name: string,
+	userId: Id<'users'>
 ) {
 	return await ctx.db
 		.query('tags')
-		.withIndex('by_name_userId', (q) =>
-			q.eq('name', name).eq('userId', ANONYMOUS_USER)
-		)
+		.withIndex('by_name_userId', (q) => q.eq('name', name).eq('userId', userId))
 		.unique();
 }

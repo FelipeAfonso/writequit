@@ -2,9 +2,7 @@ import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { parseTask } from '../src/lib/parser/index.js';
 import { getOrCreateTag } from './tags.js';
-
-// ── Placeholder userId ─────────────────────────────────────────────
-const ANONYMOUS_USER = 'anonymous';
+import { getAuthUserId } from '@convex-dev/auth/server';
 
 // ── Queries ────────────────────────────────────────────────────────
 
@@ -17,19 +15,22 @@ export const list = query({
 		tagId: v.optional(v.id('tags'))
 	},
 	handler: async (ctx, args) => {
+		const userId = await getAuthUserId(ctx);
+		if (userId === null) return [];
+
 		let tasks;
 
 		if (args.status !== undefined) {
 			tasks = await ctx.db
 				.query('tasks')
 				.withIndex('by_status_userId', (q) =>
-					q.eq('status', args.status!).eq('userId', ANONYMOUS_USER)
+					q.eq('status', args.status!).eq('userId', userId)
 				)
 				.collect();
 		} else {
 			tasks = await ctx.db
 				.query('tasks')
-				.withIndex('by_userId', (q) => q.eq('userId', ANONYMOUS_USER))
+				.withIndex('by_userId', (q) => q.eq('userId', userId))
 				.collect();
 		}
 
@@ -49,8 +50,11 @@ export const list = query({
 export const get = query({
 	args: { id: v.id('tasks') },
 	handler: async (ctx, args) => {
+		const userId = await getAuthUserId(ctx);
+		if (userId === null) return null;
+
 		const task = await ctx.db.get(args.id);
-		if (task === null) return null;
+		if (task === null || task.userId !== userId) return null;
 
 		// Resolve tag documents so the client has names/colors
 		const tags = await Promise.all(task.tagIds.map((id) => ctx.db.get(id)));
@@ -75,6 +79,9 @@ export const get = query({
 export const create = mutation({
 	args: { rawContent: v.string() },
 	handler: async (ctx, args) => {
+		const userId = await getAuthUserId(ctx);
+		if (userId === null) throw new Error('Not authenticated');
+
 		const content = args.rawContent.trim();
 		if (content.length === 0) throw new Error('Task content cannot be empty');
 
@@ -83,7 +90,7 @@ export const create = mutation({
 
 		// Resolve tag names → tag IDs (creating tags as needed)
 		const tagIds = await Promise.all(
-			parsed.tags.map((name) => getOrCreateTag(ctx, name))
+			parsed.tags.map((name) => getOrCreateTag(ctx, name, userId))
 		);
 
 		return await ctx.db.insert('tasks', {
@@ -92,7 +99,7 @@ export const create = mutation({
 			dueDate: parsed.dueDate ?? undefined,
 			status: 'inbox',
 			tagIds,
-			userId: ANONYMOUS_USER,
+			userId,
 			createdAt: now,
 			updatedAt: now
 		});
@@ -109,15 +116,20 @@ export const update = mutation({
 		rawContent: v.string()
 	},
 	handler: async (ctx, args) => {
+		const userId = await getAuthUserId(ctx);
+		if (userId === null) throw new Error('Not authenticated');
+
 		const existing = await ctx.db.get(args.id);
-		if (existing === null) throw new Error('Task not found');
+		if (existing === null || existing.userId !== userId) {
+			throw new Error('Task not found');
+		}
 
 		const content = args.rawContent.trim();
 		if (content.length === 0) throw new Error('Task content cannot be empty');
 
 		const parsed = parseTask(content);
 		const tagIds = await Promise.all(
-			parsed.tags.map((name) => getOrCreateTag(ctx, name))
+			parsed.tags.map((name) => getOrCreateTag(ctx, name, userId))
 		);
 
 		await ctx.db.patch(args.id, {
@@ -140,8 +152,13 @@ export const updateStatus = mutation({
 		status: v.union(v.literal('inbox'), v.literal('active'), v.literal('done'))
 	},
 	handler: async (ctx, args) => {
+		const userId = await getAuthUserId(ctx);
+		if (userId === null) throw new Error('Not authenticated');
+
 		const existing = await ctx.db.get(args.id);
-		if (existing === null) throw new Error('Task not found');
+		if (existing === null || existing.userId !== userId) {
+			throw new Error('Task not found');
+		}
 
 		const now = Date.now();
 		const patch: Record<string, unknown> = {
@@ -164,6 +181,14 @@ export const updateStatus = mutation({
 export const remove = mutation({
 	args: { id: v.id('tasks') },
 	handler: async (ctx, args) => {
+		const userId = await getAuthUserId(ctx);
+		if (userId === null) throw new Error('Not authenticated');
+
+		const existing = await ctx.db.get(args.id);
+		if (existing === null || existing.userId !== userId) {
+			throw new Error('Task not found');
+		}
+
 		await ctx.db.delete(args.id);
 	}
 });
