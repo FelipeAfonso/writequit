@@ -59,6 +59,7 @@
 	const nav: NavItem[] = [
 		{ href: '/', label: 'tasks', icon: '#', shortcut: 'g t' },
 		{ href: '/sessions', label: 'sessions', icon: '~', shortcut: 'g s' },
+		{ href: '/reports', label: 'reports', icon: '$', shortcut: 'g r' },
 		{ href: '/tags', label: 'tags', icon: '+', shortcut: 'g a' }
 	];
 
@@ -151,6 +152,7 @@
 			const routes: Record<string, string> = {
 				t: '/',
 				s: '/sessions',
+				r: '/reports',
 				a: '/tags',
 				u: '/user'
 			};
@@ -314,6 +316,16 @@
 										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
 									>
 										g s
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										go to reports
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										g r
 									</kbd>
 								</div>
 								<div class="flex items-center justify-between">

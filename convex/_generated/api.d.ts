@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as invoices from "../invoices.js";
 import type * as sessions from "../sessions.js";
 import type * as tags from "../tags.js";
 import type * as tasks from "../tasks.js";
@@ -24,6 +25,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
+  invoices: typeof invoices;
   sessions: typeof sessions;
   tags: typeof tags;
   tasks: typeof tasks;

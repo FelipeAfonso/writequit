@@ -1,5 +1,5 @@
 import { isWhitespace, isDigit, toLower, readWhile } from './scanner.js';
-import { getLocalMidnight } from '$lib/utils/datetime.js';
+import { getLocalMidnight } from '../utils/datetime.js';
 
 /**
  * Extract a due date from a markdown string.

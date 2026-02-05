@@ -306,7 +306,10 @@ export type TimezoneGetter = () => string;
 export function getTimezoneList(): string[] {
 	try {
 		// Available in modern browsers and Node 18+
-		return Intl.supportedValuesOf('timeZone');
+		// Cast needed: supportedValuesOf is ES2022+ but Convex tsconfig targets ES2021
+		return (
+			Intl as unknown as { supportedValuesOf(key: string): string[] }
+		).supportedValuesOf('timeZone');
 	} catch {
 		// Fallback: return a minimal set
 		return [

@@ -16,7 +16,7 @@
 
 import { isDigit } from './scanner.js';
 import { parseISODate, parseRelativeDate } from './dueDate.js';
-import { getLocalMidnight } from '$lib/utils/datetime.js';
+import { getLocalMidnight } from '../utils/datetime.js';
 import { extractTags } from './tags.js';
 
 export interface ParsedTimeLog {
@@ -81,13 +81,11 @@ export function parseTimeLog(
 	}
 
 	// Default to today if no date found
-	if (dateMidnight === null) {
-		dateMidnight = getLocalMidnight(currentTime, tz);
-	}
+	const midnight = dateMidnight ?? getLocalMidnight(currentTime, tz);
 
 	// Combine date (local midnight) + time-of-day offsets
-	const startTime = dateMidnight + timeRange.startMinutes * 60_000;
-	let endTime = dateMidnight + timeRange.endMinutes * 60_000;
+	const startTime = midnight + timeRange.startMinutes * 60_000;
+	let endTime = midnight + timeRange.endMinutes * 60_000;
 
 	// If end is before or equal to start, assume it wraps to the next day
 	if (endTime <= startTime) {

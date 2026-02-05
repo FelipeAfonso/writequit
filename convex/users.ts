@@ -15,7 +15,11 @@ const SETTINGS_DEFAULTS = {
 	viMode: false,
 	defaultStatusFilter: 'lastUsed' as const,
 	defaultTagFilter: 'lastUsed' as const,
-	timezone: undefined as string | undefined
+	timezone: undefined as string | undefined,
+	invoiceFromAddress: undefined as string | undefined,
+	defaultHourlyRate: undefined as number | undefined,
+	defaultCurrency: undefined as string | undefined,
+	defaultPaymentTerms: undefined as string | undefined
 };
 
 // ── Queries ────────────────────────────────────────────────────────
@@ -48,7 +52,11 @@ export const getSettings = query({
 			viMode: row.viMode,
 			defaultStatusFilter: row.defaultStatusFilter,
 			defaultTagFilter: row.defaultTagFilter,
-			timezone: row.timezone
+			timezone: row.timezone,
+			invoiceFromAddress: row.invoiceFromAddress,
+			defaultHourlyRate: row.defaultHourlyRate,
+			defaultCurrency: row.defaultCurrency,
+			defaultPaymentTerms: row.defaultPaymentTerms
 		};
 	}
 });
@@ -103,7 +111,11 @@ export const updateSettings = mutation({
 		defaultTagFilter: v.optional(
 			v.union(v.literal('lastUsed'), v.literal('all'))
 		),
-		timezone: v.optional(v.string())
+		timezone: v.optional(v.string()),
+		invoiceFromAddress: v.optional(v.string()),
+		defaultHourlyRate: v.optional(v.number()),
+		defaultCurrency: v.optional(v.string()),
+		defaultPaymentTerms: v.optional(v.string())
 	},
 	handler: async (ctx, args) => {
 		const userId = await getAuthUserId(ctx);
@@ -122,6 +134,14 @@ export const updateSettings = mutation({
 		if (args.defaultTagFilter !== undefined)
 			patch.defaultTagFilter = args.defaultTagFilter;
 		if (args.timezone !== undefined) patch.timezone = args.timezone;
+		if (args.invoiceFromAddress !== undefined)
+			patch.invoiceFromAddress = args.invoiceFromAddress;
+		if (args.defaultHourlyRate !== undefined)
+			patch.defaultHourlyRate = args.defaultHourlyRate;
+		if (args.defaultCurrency !== undefined)
+			patch.defaultCurrency = args.defaultCurrency;
+		if (args.defaultPaymentTerms !== undefined)
+			patch.defaultPaymentTerms = args.defaultPaymentTerms;
 
 		if (existing) {
 			await ctx.db.patch(existing._id, patch);
@@ -133,7 +153,11 @@ export const updateSettings = mutation({
 					args.defaultStatusFilter ?? SETTINGS_DEFAULTS.defaultStatusFilter,
 				defaultTagFilter:
 					args.defaultTagFilter ?? SETTINGS_DEFAULTS.defaultTagFilter,
-				timezone: args.timezone
+				timezone: args.timezone,
+				invoiceFromAddress: args.invoiceFromAddress,
+				defaultHourlyRate: args.defaultHourlyRate,
+				defaultCurrency: args.defaultCurrency,
+				defaultPaymentTerms: args.defaultPaymentTerms
 			});
 		}
 	}

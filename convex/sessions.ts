@@ -79,6 +79,82 @@ export const list = query({
 	}
 });
 
+/**
+ * List sessions for the current user, with resolved tags AND tasks.
+ *
+ * Used by the reports page to build work reports showing what was
+ * worked on each day, including linked task details.
+ */
+export const listWithTasks = query({
+	args: {
+		startAfter: v.optional(v.number()),
+		startBefore: v.optional(v.number()),
+		tagId: v.optional(v.id('tags'))
+	},
+	handler: async (ctx, args) => {
+		const userId = await getAuthUserId(ctx);
+		if (userId === null) return [];
+
+		let sessions;
+
+		if (args.startAfter !== undefined && args.startBefore !== undefined) {
+			sessions = await ctx.db
+				.query('sessions')
+				.withIndex('by_userId_startTime', (q) =>
+					q
+						.eq('userId', userId)
+						.gte('startTime', args.startAfter!)
+						.lte('startTime', args.startBefore!)
+				)
+				.collect();
+		} else if (args.startAfter !== undefined) {
+			sessions = await ctx.db
+				.query('sessions')
+				.withIndex('by_userId_startTime', (q) =>
+					q.eq('userId', userId).gte('startTime', args.startAfter!)
+				)
+				.collect();
+		} else if (args.startBefore !== undefined) {
+			sessions = await ctx.db
+				.query('sessions')
+				.withIndex('by_userId_startTime', (q) =>
+					q.eq('userId', userId).lte('startTime', args.startBefore!)
+				)
+				.collect();
+		} else {
+			sessions = await ctx.db
+				.query('sessions')
+				.withIndex('by_userId_startTime', (q) => q.eq('userId', userId))
+				.collect();
+		}
+
+		// Tag filter (client-side — tag arrays are small)
+		if (args.tagId !== undefined) {
+			sessions = sessions.filter((s) => s.tagIds.includes(args.tagId!));
+		}
+
+		// Newest first
+		sessions.sort((a, b) => b.startTime - a.startTime);
+
+		// Resolve tags AND tasks for each session
+		return Promise.all(
+			sessions.map(async (session) => {
+				const tags = await Promise.all(
+					session.tagIds.map((id) => ctx.db.get(id))
+				);
+				const tasks = await Promise.all(
+					session.taskIds.map((id) => ctx.db.get(id))
+				);
+				return {
+					...session,
+					tags: tags.filter((t) => t !== null),
+					tasks: tasks.filter((t) => t !== null)
+				};
+			})
+		);
+	}
+});
+
 /** Get a single session by ID, with resolved tags and tasks. */
 export const get = query({
 	args: { id: v.id('sessions') },

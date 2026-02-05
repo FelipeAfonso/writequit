@@ -175,6 +175,15 @@ export const commands: Command[] = [
 		}
 	},
 	{
+		name: 'reports',
+		aliases: ['reports', 'r'],
+		description: 'go to reports & invoices',
+		args: 'none',
+		execute() {
+			goto('/reports');
+		}
+	},
+	{
 		name: 'log',
 		aliases: ['log', 'l'],
 		description: 'log a time entry',
