@@ -176,6 +176,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>tasks | :wq</title>
+</svelte:head>
+
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="mx-auto flex max-w-3xl flex-col gap-6 p-6">

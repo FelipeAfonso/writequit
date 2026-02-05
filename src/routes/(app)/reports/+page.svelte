@@ -435,6 +435,10 @@
 		'border border-border bg-surface-1 px-3 py-2 font-mono text-sm text-fg placeholder:text-fg-muted focus:border-primary focus:ring-0 w-full';
 </script>
 
+<svelte:head>
+	<title>reports | :wq</title>
+</svelte:head>
+
 <div class="mx-auto flex max-w-3xl flex-col gap-6 p-6">
 	<!-- Page header -->
 	<div class="flex items-baseline gap-3">

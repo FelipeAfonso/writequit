@@ -267,6 +267,26 @@ PUBLIC_CONVEX_URL=https://your-deployment.convex.cloud
 
 4. **Keep all three in sync** — if a shortcut exists, it should also be a command, and both should appear in the help overlay.
 
+## Page Titles
+
+**IMPORTANT**: Every page must have a `<svelte:head>` with a `<title>` element. Follow this pattern:
+
+```svelte
+<svelte:head>
+	<title>pagename | :wq</title>
+</svelte:head>
+```
+
+- **Static pages**: Use the page name (e.g., `tasks | :wq`, `sessions | :wq`)
+- **Dynamic pages** (with `[id]` params): Use the entity's name/title with a fallback:
+  ```svelte
+  <svelte:head>
+  	<title>{task.data?.title ?? 'task'} | :wq</title>
+  </svelte:head>
+  ```
+
+Place `<svelte:head>` after the `</script>` tag and before any other markup.
+
 ## Key Dependencies
 
 - `svelte@5.x` - Frontend framework (uses runes)

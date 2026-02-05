@@ -33,6 +33,10 @@
 	}
 </script>
 
+<svelte:head>
+	<title>tags | :wq</title>
+</svelte:head>
+
 <div class="mx-auto flex max-w-3xl flex-col gap-6 p-6">
 	<!-- Page header -->
 	<div class="flex items-baseline gap-3">

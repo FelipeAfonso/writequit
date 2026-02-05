@@ -14,6 +14,10 @@
 	});
 </script>
 
+<svelte:head>
+	<title>login | :wq</title>
+</svelte:head>
+
 {#if auth.isLoading}
 	<div class="flex h-screen items-center justify-center">
 		<p class="animate-pulse font-mono text-sm text-fg-muted">loading...</p>
