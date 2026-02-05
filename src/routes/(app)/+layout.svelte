@@ -536,6 +536,41 @@
 								</div>
 							</div>
 						</div>
+						<div>
+							<h3 class="mb-2 font-mono text-xs font-bold text-fg-muted">
+								session detail
+							</h3>
+							<div class="flex flex-col gap-1.5">
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										edit session
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										cc
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										delete session
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										dd
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">go back</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										Backspace
+									</kbd>
+								</div>
+							</div>
+						</div>
 					</div>
 				</div>
 			</div>

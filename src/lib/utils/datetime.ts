@@ -197,6 +197,35 @@ export function getLocalMidnight(ms: number, tz: string): number {
 }
 
 /**
+ * Parse a `HH:MM` string into minutes since midnight.
+ *
+ * Returns `null` if the format is invalid or values are out of range.
+ */
+export function parseHHMM(time: string): number | null {
+	const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+	if (!match) return null;
+
+	const hours = parseInt(match[1], 10);
+	const minutes = parseInt(match[2], 10);
+
+	if (hours < 0 || hours > 23) return null;
+	if (minutes < 0 || minutes > 59) return null;
+
+	return hours * 60 + minutes;
+}
+
+/**
+ * Build a UTC ms timestamp from a local midnight timestamp and
+ * minutes since midnight.
+ *
+ * @param midnight UTC ms representing local midnight in the target timezone.
+ * @param minutes  Minutes since midnight (0–1439).
+ */
+export function buildTimestamp(midnight: number, minutes: number): number {
+	return midnight + minutes * 60_000;
+}
+
+/**
  * Get the start-of-week (Monday) and start-of-month boundaries
  * in the user's timezone, returned as UTC ms timestamps.
  */

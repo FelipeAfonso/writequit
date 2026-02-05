@@ -10,6 +10,9 @@
 		formatTime,
 		formatDate,
 		formatDuration,
+		getLocalMidnight,
+		parseHHMM,
+		buildTimestamp,
 		TIMEZONE_CTX,
 		type TimezoneGetter
 	} from '$lib/utils/datetime';
@@ -36,6 +39,218 @@
 		}
 		return 'running';
 	});
+
+	// ── Inline editing ──
+
+	type EditField = 'description' | 'startTime' | 'endTime' | 'tags';
+	const FIELD_ORDER: EditField[] = [
+		'description',
+		'startTime',
+		'endTime',
+		'tags'
+	];
+
+	let isEditing = $state(false);
+	let activeField = $state<EditField | null>(null);
+
+	// Draft values for each field
+	let draftDescription = $state('');
+	let draftStartTime = $state('');
+	let draftEndTime = $state('');
+	let draftTags = $state('');
+
+	// Input refs for focusing
+	let descriptionInput: HTMLInputElement | undefined = $state();
+	let startTimeInput: HTMLInputElement | undefined = $state();
+	let endTimeInput: HTMLInputElement | undefined = $state();
+	let tagsInput: HTMLInputElement | undefined = $state();
+
+	/** Get the input element for a given field. */
+	function getInputRef(field: EditField): HTMLInputElement | undefined {
+		switch (field) {
+			case 'description':
+				return descriptionInput;
+			case 'startTime':
+				return startTimeInput;
+			case 'endTime':
+				return endTimeInput;
+			case 'tags':
+				return tagsInput;
+		}
+	}
+
+	/** Get the available editable fields (endTime excluded for running sessions). */
+	let editableFields = $derived.by(() => {
+		if (isRunning) {
+			return FIELD_ORDER.filter((f) => f !== 'endTime');
+		}
+		return FIELD_ORDER;
+	});
+
+	/** Populate draft values from the current session data. */
+	function populateDrafts() {
+		if (!session.data) return;
+		const s = session.data;
+		draftDescription = s.description ?? '';
+		draftStartTime = formatTime(s.startTime, timezone);
+		draftEndTime = s.endTime ? formatTime(s.endTime, timezone) : '';
+		draftTags = s.tags
+			? s.tags.map((t: { name: string }) => `+${t.name}`).join(' ')
+			: '';
+	}
+
+	/** Enter edit mode, optionally focusing a specific field. */
+	function enterEditMode(field?: EditField) {
+		populateDrafts();
+		isEditing = true;
+		const target = field ?? editableFields[0];
+		activeField = target;
+		setTimeout(() => getInputRef(target)?.focus(), 0);
+	}
+
+	/** Exit edit mode without saving the current field. */
+	function exitEditMode() {
+		isEditing = false;
+		activeField = null;
+	}
+
+	/** Move to the next editable field. Wraps around. */
+	function focusNextField() {
+		if (!activeField) return;
+		const idx = editableFields.indexOf(activeField);
+		const next = editableFields[(idx + 1) % editableFields.length];
+		activeField = next;
+		setTimeout(() => getInputRef(next)?.focus(), 0);
+	}
+
+	/** Move to the previous editable field. Wraps around. */
+	function focusPrevField() {
+		if (!activeField) return;
+		const idx = editableFields.indexOf(activeField);
+		const prev =
+			editableFields[(idx - 1 + editableFields.length) % editableFields.length];
+		activeField = prev;
+		setTimeout(() => getInputRef(prev)?.focus(), 0);
+	}
+
+	/** Save a single field's draft value to the backend. */
+	async function saveField(field: EditField) {
+		if (!session.data) return;
+
+		try {
+			switch (field) {
+				case 'description': {
+					const desc = draftDescription.trim() || undefined;
+					if (desc !== (session.data.description ?? undefined)) {
+						await client.mutation(api.sessions.update, {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any
+							id: sessionId as any,
+							description: desc ?? ''
+						});
+					}
+					break;
+				}
+				case 'startTime': {
+					const mins = parseHHMM(draftStartTime);
+					if (mins === null) {
+						// Revert to original
+						draftStartTime = formatTime(session.data.startTime, timezone);
+						break;
+					}
+					const midnight = getLocalMidnight(session.data.startTime, timezone);
+					const newStart = buildTimestamp(midnight, mins);
+					if (newStart !== session.data.startTime) {
+						await client.mutation(api.sessions.update, {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any
+							id: sessionId as any,
+							startTime: newStart
+						});
+					}
+					break;
+				}
+				case 'endTime': {
+					if (!session.data.endTime) break;
+					const mins = parseHHMM(draftEndTime);
+					if (mins === null) {
+						// Revert to original
+						draftEndTime = formatTime(session.data.endTime, timezone);
+						break;
+					}
+					const midnight = getLocalMidnight(session.data.endTime, timezone);
+					const newEnd = buildTimestamp(midnight, mins);
+					if (newEnd !== session.data.endTime) {
+						await client.mutation(api.sessions.update, {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any
+							id: sessionId as any,
+							endTime: newEnd
+						});
+					}
+					break;
+				}
+				case 'tags': {
+					// Parse +tag syntax
+					const tagNames = draftTags
+						.split(/\s+/)
+						.map((t) => t.replace(/^\+/, '').trim())
+						.filter((t) => t.length > 0);
+					const currentTagNames = session.data.tags
+						? session.data.tags.map((t: { name: string }) => t.name)
+						: [];
+					// Only update if tags changed
+					const changed =
+						tagNames.length !== currentTagNames.length ||
+						tagNames.some((t: string, i: number) => t !== currentTagNames[i]);
+					if (changed) {
+						await client.mutation(api.sessions.update, {
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any
+							id: sessionId as any,
+							tags: tagNames
+						});
+					}
+					break;
+				}
+			}
+		} catch (error) {
+			console.error(`Failed to update ${field}:`, error);
+		}
+	}
+
+	/** Handle Enter on a field: save and move to next, or exit if last. */
+	async function handleFieldEnter(field: EditField) {
+		await saveField(field);
+		const idx = editableFields.indexOf(field);
+		if (idx < editableFields.length - 1) {
+			focusNextField();
+		} else {
+			exitEditMode();
+		}
+	}
+
+	/** Handle Escape on a field: revert draft and exit edit mode. */
+	function handleFieldEscape() {
+		populateDrafts();
+		exitEditMode();
+	}
+
+	/** Handle keydown on an editable field input. */
+	function handleFieldKeydown(field: EditField, e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			handleFieldEnter(field);
+		} else if (e.key === 'Escape') {
+			e.preventDefault();
+			handleFieldEscape();
+		} else if (e.key === 'Tab') {
+			e.preventDefault();
+			// Save current field first, then navigate
+			saveField(field);
+			if (e.shiftKey) {
+				focusPrevField();
+			} else {
+				focusNextField();
+			}
+		}
+	}
 
 	// ── Actions ──
 
@@ -129,6 +344,7 @@
 		if (isEditableTarget(e)) return;
 		if (commandPalette.isOpen) return;
 
+		// Second key of a two-key sequence
 		if (pendingKey) {
 			const combo = pendingKey + e.key;
 			pendingKey = '';
@@ -139,10 +355,16 @@
 				handleDelete();
 				return;
 			}
+			if (combo === 'cc') {
+				e.preventDefault();
+				enterEditMode();
+				return;
+			}
 		}
 
-		if (e.key === 'd') {
-			pendingKey = 'd';
+		// Start a two-key sequence
+		if (e.key === 'd' || e.key === 'c') {
+			pendingKey = e.key;
 			pendingTimer = setTimeout(() => {
 				pendingKey = '';
 			}, 500);
@@ -182,14 +404,61 @@
 		<!-- Header -->
 		<div class="flex flex-col gap-3">
 			<div class="flex items-start justify-between gap-4">
-				<h1 class="font-mono text-lg font-bold text-fg">
-					{#if s.description}
-						{s.description}
-					{:else}
-						<span class="text-fg-muted">untitled session</span>
-					{/if}
-				</h1>
+				<!-- Description: inline editable -->
+				{#if isEditing && activeField === 'description'}
+					<input
+						bind:this={descriptionInput}
+						bind:value={draftDescription}
+						type="text"
+						class="flex-1 border border-primary bg-bg-dark px-2 py-1 font-mono text-lg font-bold text-fg outline-none"
+						placeholder="session description..."
+						onkeydown={(e) => handleFieldKeydown('description', e)}
+						onblur={() => {
+							saveField('description');
+						}}
+					/>
+				{:else if isEditing}
+					<button
+						type="button"
+						class="cursor-pointer text-left font-mono text-lg font-bold text-fg"
+						onclick={() => {
+							activeField = 'description';
+							setTimeout(() => descriptionInput?.focus(), 0);
+						}}
+					>
+						{#if s.description}
+							{s.description}
+						{:else}
+							<span class="text-fg-muted">untitled session</span>
+						{/if}
+						<span class="ml-2 text-xs text-fg-gutter">[edit]</span>
+					</button>
+				{:else}
+					<h1 class="font-mono text-lg font-bold text-fg">
+						{#if s.description}
+							{s.description}
+						{:else}
+							<span class="text-fg-muted">untitled session</span>
+						{/if}
+					</h1>
+				{/if}
+
 				<div class="flex shrink-0 items-center gap-2">
+					<!-- Edit toggle -->
+					<button
+						type="button"
+						class="border border-border px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border-highlight hover:text-fg-dark"
+						onclick={() => {
+							if (isEditing) {
+								exitEditMode();
+							} else {
+								enterEditMode();
+							}
+						}}
+					>
+						{isEditing ? ':q' : ':e'}
+					</button>
+
 					{#if isRunning}
 						<button
 							type="button"
@@ -213,17 +482,80 @@
 			<div
 				class="flex flex-wrap items-center gap-3 border-b border-border pb-3"
 			>
-				<!-- Date -->
+				<!-- Date (read-only) -->
 				<span class="font-mono text-xs text-fg-muted">
 					{formatDate(s.startTime, timezone)}
 				</span>
 
-				<!-- Time range -->
-				<span class="font-mono text-sm text-fg-dark">
-					{formatTime(s.startTime, timezone)}-{s.endTime
-						? formatTime(s.endTime, timezone)
-						: '...'}
-				</span>
+				<!-- Start time: inline editable -->
+				{#if isEditing && activeField === 'startTime'}
+					<input
+						bind:this={startTimeInput}
+						bind:value={draftStartTime}
+						type="text"
+						class="w-16 border border-primary bg-bg-dark px-1 py-0.5 text-center font-mono text-sm text-fg-dark outline-none"
+						placeholder="HH:MM"
+						onkeydown={(e) => handleFieldKeydown('startTime', e)}
+						onblur={() => {
+							saveField('startTime');
+						}}
+					/>
+				{:else}
+					<button
+						type="button"
+						class="font-mono text-sm transition-colors"
+						class:text-fg-dark={!isEditing}
+						class:text-primary={isEditing}
+						class:cursor-pointer={isEditing}
+						class:cursor-default={!isEditing}
+						disabled={!isEditing}
+						onclick={() => {
+							if (isEditing) {
+								activeField = 'startTime';
+								setTimeout(() => startTimeInput?.focus(), 0);
+							}
+						}}
+					>
+						{formatTime(s.startTime, timezone)}
+					</button>
+				{/if}
+
+				<span class="font-mono text-sm text-fg-muted">-</span>
+
+				<!-- End time: inline editable (only for completed sessions) -->
+				{#if isRunning}
+					<span class="font-mono text-sm text-fg-muted">...</span>
+				{:else if isEditing && activeField === 'endTime'}
+					<input
+						bind:this={endTimeInput}
+						bind:value={draftEndTime}
+						type="text"
+						class="w-16 border border-primary bg-bg-dark px-1 py-0.5 text-center font-mono text-sm text-fg-dark outline-none"
+						placeholder="HH:MM"
+						onkeydown={(e) => handleFieldKeydown('endTime', e)}
+						onblur={() => {
+							saveField('endTime');
+						}}
+					/>
+				{:else}
+					<button
+						type="button"
+						class="font-mono text-sm transition-colors"
+						class:text-fg-dark={!isEditing}
+						class:text-primary={isEditing}
+						class:cursor-pointer={isEditing}
+						class:cursor-default={!isEditing}
+						disabled={!isEditing}
+						onclick={() => {
+							if (isEditing) {
+								activeField = 'endTime';
+								setTimeout(() => endTimeInput?.focus(), 0);
+							}
+						}}
+					>
+						{s.endTime ? formatTime(s.endTime, timezone) : '...'}
+					</button>
+				{/if}
 
 				<!-- Duration -->
 				<span
@@ -234,13 +566,61 @@
 					{duration}
 				</span>
 
-				<!-- Tags -->
-				{#if s.tags && s.tags.length > 0}
-					{#each s.tags as tag (tag._id)}
-						<TagBadge name={tag.name} color={tag.color} type={tag.type} />
-					{/each}
+				<!-- Tags: inline editable -->
+				{#if isEditing && activeField === 'tags'}
+					<input
+						bind:this={tagsInput}
+						bind:value={draftTags}
+						type="text"
+						class="min-w-32 flex-1 border border-primary bg-bg-dark px-1 py-0.5 font-mono text-xs text-teal outline-none"
+						placeholder="+tag1 +tag2"
+						onkeydown={(e) => handleFieldKeydown('tags', e)}
+						onblur={() => {
+							saveField('tags');
+						}}
+					/>
+				{:else if s.tags && s.tags.length > 0}
+					<button
+						type="button"
+						class="inline-flex items-center gap-1 transition-opacity"
+						class:cursor-pointer={isEditing}
+						class:cursor-default={!isEditing}
+						class:hover:opacity-80={isEditing}
+						disabled={!isEditing}
+						onclick={() => {
+							if (isEditing) {
+								activeField = 'tags';
+								setTimeout(() => tagsInput?.focus(), 0);
+							}
+						}}
+					>
+						{#each s.tags as tag (tag._id)}
+							<TagBadge name={tag.name} color={tag.color} type={tag.type} />
+						{/each}
+						{#if isEditing}
+							<span class="ml-1 text-xs text-fg-gutter">[edit]</span>
+						{/if}
+					</button>
+				{:else if isEditing}
+					<button
+						type="button"
+						class="cursor-pointer font-mono text-xs text-fg-gutter transition-colors hover:text-teal"
+						onclick={() => {
+							activeField = 'tags';
+							setTimeout(() => tagsInput?.focus(), 0);
+						}}
+					>
+						+add tags
+					</button>
 				{/if}
 			</div>
+
+			<!-- Editing hint -->
+			{#if isEditing}
+				<div class="font-mono text-xs text-fg-gutter">
+					Enter save &middot; Tab next &middot; Escape cancel
+				</div>
+			{/if}
 		</div>
 
 		<!-- Linked tasks -->
