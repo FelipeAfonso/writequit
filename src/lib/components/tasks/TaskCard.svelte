@@ -1,5 +1,11 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
 	import TagBadge from '$lib/components/tags/TagBadge.svelte';
+	import {
+		formatShortDate,
+		TIMEZONE_CTX,
+		type TimezoneGetter
+	} from '$lib/utils/datetime';
 
 	interface Tag {
 		_id: string;
@@ -35,13 +41,8 @@
 		onstatuschange
 	}: Props = $props();
 
-	/** Format a timestamp to a short date. */
-	function formatDate(ms: number): string {
-		const d = new Date(ms);
-		const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-		const day = String(d.getUTCDate()).padStart(2, '0');
-		return `${month}/${day}`;
-	}
+	const getTz = getContext<TimezoneGetter>(TIMEZONE_CTX);
+	let timezone = $derived(getTz());
 
 	/** Check if a due date is in the past (overdue). */
 	function isOverdue(ms: number): boolean {
@@ -114,7 +115,7 @@
 						class:text-warning={!isOverdue(dueDate)}
 						class:text-red={isOverdue(dueDate)}
 					>
-						due:{formatDate(dueDate)}
+						due:{formatShortDate(dueDate, timezone)}
 					</span>
 				{/if}
 			</div>
@@ -127,6 +128,6 @@
 			? 'opacity-100'
 			: 'opacity-0 group-hover:opacity-100'}"
 	>
-		{formatDate(createdAt)}
+		{formatShortDate(createdAt, timezone)}
 	</span>
 </div>

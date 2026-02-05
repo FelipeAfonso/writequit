@@ -14,7 +14,8 @@ import { api } from './_generated/api';
 const SETTINGS_DEFAULTS = {
 	viMode: false,
 	defaultStatusFilter: 'lastUsed' as const,
-	defaultTagFilter: 'lastUsed' as const
+	defaultTagFilter: 'lastUsed' as const,
+	timezone: undefined as string | undefined
 };
 
 // ── Queries ────────────────────────────────────────────────────────
@@ -46,7 +47,8 @@ export const getSettings = query({
 		return {
 			viMode: row.viMode,
 			defaultStatusFilter: row.defaultStatusFilter,
-			defaultTagFilter: row.defaultTagFilter
+			defaultTagFilter: row.defaultTagFilter,
+			timezone: row.timezone
 		};
 	}
 });
@@ -100,7 +102,8 @@ export const updateSettings = mutation({
 		),
 		defaultTagFilter: v.optional(
 			v.union(v.literal('lastUsed'), v.literal('all'))
-		)
+		),
+		timezone: v.optional(v.string())
 	},
 	handler: async (ctx, args) => {
 		const userId = await getAuthUserId(ctx);
@@ -118,6 +121,7 @@ export const updateSettings = mutation({
 			patch.defaultStatusFilter = args.defaultStatusFilter;
 		if (args.defaultTagFilter !== undefined)
 			patch.defaultTagFilter = args.defaultTagFilter;
+		if (args.timezone !== undefined) patch.timezone = args.timezone;
 
 		if (existing) {
 			await ctx.db.patch(existing._id, patch);
@@ -128,7 +132,8 @@ export const updateSettings = mutation({
 				defaultStatusFilter:
 					args.defaultStatusFilter ?? SETTINGS_DEFAULTS.defaultStatusFilter,
 				defaultTagFilter:
-					args.defaultTagFilter ?? SETTINGS_DEFAULTS.defaultTagFilter
+					args.defaultTagFilter ?? SETTINGS_DEFAULTS.defaultTagFilter,
+				timezone: args.timezone
 			});
 		}
 	}

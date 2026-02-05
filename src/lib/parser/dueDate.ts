@@ -1,4 +1,5 @@
 import { isWhitespace, isDigit, toLower, readWhile } from './scanner.js';
+import { getLocalMidnight } from '$lib/utils/datetime.js';
 
 /**
  * Extract a due date from a markdown string.
@@ -9,13 +10,18 @@ import { isWhitespace, isDigit, toLower, readWhile } from './scanner.js';
  *
  * Only the **first** `due:` token found is used.
  *
- * Returns a Unix-millisecond timestamp (midnight UTC of that day) or
- * `null` if no valid due date was found.
+ * Returns a Unix-millisecond timestamp (midnight in the user's timezone
+ * of that day) or `null` if no valid due date was found.
  *
- * The optional `now` parameter allows injecting the current time for
- * deterministic testing.
+ * @param markdown The input text to scan.
+ * @param tz       IANA timezone string (e.g. "America/New_York").
+ * @param now      Optional current time in ms for deterministic testing.
  */
-export function extractDueDate(markdown: string, now?: number): number | null {
+export function extractDueDate(
+	markdown: string,
+	tz: string,
+	now?: number
+): number | null {
 	const currentTime = now ?? Date.now();
 	const token = findDueToken(markdown);
 	if (token === null) return null;
@@ -23,11 +29,11 @@ export function extractDueDate(markdown: string, now?: number): number | null {
 	const value = toLower(token);
 
 	// Try ISO date first: YYYY-MM-DD
-	const isoResult = parseISODate(value);
+	const isoResult = parseISODate(value, tz);
 	if (isoResult !== null) return isoResult;
 
 	// Try relative keywords
-	return parseRelativeDate(value, currentTime);
+	return parseRelativeDate(value, currentTime, tz);
 }
 
 // ── Token finder ───────────────────────────────────────────────────
@@ -75,14 +81,17 @@ function matchesPrefix(text: string, i: number, prefix: string): boolean {
 // ── ISO date parser ────────────────────────────────────────────────
 
 /**
- * Parse a `YYYY-MM-DD` string into a UTC midnight timestamp.
+ * Parse a `YYYY-MM-DD` string into a midnight timestamp in the given timezone.
  * Returns `null` if the format is invalid or the date doesn't exist.
  *
  * Validates character-by-character — no regex.
  *
  * Exported for reuse by the time-range parser.
+ *
+ * @param value The date string to parse (YYYY-MM-DD).
+ * @param tz    IANA timezone string. Midnight is computed in this timezone.
  */
-export function parseISODate(value: string): number | null {
+export function parseISODate(value: string, tz: string): number | null {
 	// Must be exactly 10 characters: YYYY-MM-DD
 	if (value.length !== 10) return null;
 
@@ -101,9 +110,10 @@ export function parseISODate(value: string): number | null {
 
 	if (!isValidDate(year, month, day)) return null;
 
-	// Construct UTC midnight timestamp
-	const date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0, 0));
-	return date.getTime();
+	// Construct midnight timestamp in the user's timezone.
+	// Use a rough UTC estimate then resolve to exact local midnight.
+	const utcEstimate = Date.UTC(year, month - 1, day, 0, 0, 0, 0);
+	return getLocalMidnight(utcEstimate, tz);
 }
 
 /**
@@ -168,7 +178,7 @@ const DAY_NAMES: Record<string, number> = {
 };
 
 /**
- * Parse a relative date keyword into a UTC midnight timestamp.
+ * Parse a relative date keyword into a midnight timestamp in the given timezone.
  *
  * Supported keywords:
  *   - `today`
@@ -179,39 +189,64 @@ const DAY_NAMES: Record<string, number> = {
  *   - Short day names: `mon` … `sun` (next occurrence)
  *
  * Exported for reuse by the time-range parser.
+ *
+ * @param value The relative date keyword.
+ * @param now   Current time in ms.
+ * @param tz    IANA timezone string. Midnight is computed in this timezone.
  */
-export function parseRelativeDate(value: string, now: number): number | null {
-	const today = utcMidnight(now);
+export function parseRelativeDate(
+	value: string,
+	now: number,
+	tz: string
+): number | null {
+	const today = getLocalMidnight(now, tz);
 
 	if (value === 'today') return today;
-	if (value === 'yesterday') return today - 86_400_000;
-	if (value === 'tomorrow') return today + 86_400_000;
-	if (value === 'next-week') return nextDayOfWeek(today, 1); // Next Monday
+	if (value === 'yesterday') return getLocalMidnight(now - 86_400_000, tz);
+	if (value === 'tomorrow') return getLocalMidnight(now + 86_400_000, tz);
+	if (value === 'next-week') return nextDayOfWeek(today, 1, tz);
 
 	const targetDay = DAY_NAMES[value];
-	if (targetDay !== undefined) return nextDayOfWeek(today, targetDay);
+	if (targetDay !== undefined) return nextDayOfWeek(today, targetDay, tz);
 
 	return null;
 }
 
 /**
- * Given a UTC midnight timestamp, return midnight of the **next**
- * occurrence of `targetDay` (0=Sun … 6=Sat). If today is that day,
- * returns next week's occurrence.
+ * Given a local midnight timestamp, return midnight of the **next**
+ * occurrence of `targetDay` (0=Sun … 6=Sat) in the given timezone.
+ * If today is that day, returns next week's occurrence.
  */
-function nextDayOfWeek(todayMidnight: number, targetDay: number): number {
+function nextDayOfWeek(
+	todayMidnight: number,
+	targetDay: number,
+	tz: string
+): number {
 	const currentDay = new Date(todayMidnight).getUTCDay();
-	let daysAhead = targetDay - currentDay;
+	// todayMidnight is local midnight expressed as UTC ms — we need the
+	// local day-of-week, not the UTC one. Use getPartsInTz logic instead.
+	const fmt = new Intl.DateTimeFormat('en-US', {
+		timeZone: tz,
+		weekday: 'short'
+	});
+	const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+	const localDay = dayNames.indexOf(fmt.format(new Date(todayMidnight)));
+	const day = localDay >= 0 ? localDay : currentDay;
+
+	let daysAhead = targetDay - day;
 	if (daysAhead <= 0) daysAhead += 7;
-	return todayMidnight + daysAhead * 86_400_000;
+
+	return getLocalMidnight(todayMidnight + daysAhead * 86_400_000, tz);
 }
 
 /**
- * Truncate a timestamp to UTC midnight.
+ * Get midnight in the user's timezone for a given timestamp.
  *
- * Exported for reuse by the time-range parser.
+ * This is a re-export for convenience — the actual implementation
+ * lives in `$lib/utils/datetime.ts`.
+ *
+ * @deprecated Use `getLocalMidnight` from `$lib/utils/datetime` directly.
  */
-export function utcMidnight(timestamp: number): number {
-	const d = new Date(timestamp);
-	return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+export function localMidnight(timestamp: number, tz: string): number {
+	return getLocalMidnight(timestamp, tz);
 }

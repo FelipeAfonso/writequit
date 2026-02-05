@@ -15,7 +15,8 @@
  */
 
 import { isDigit } from './scanner.js';
-import { parseISODate, parseRelativeDate, utcMidnight } from './dueDate.js';
+import { parseISODate, parseRelativeDate } from './dueDate.js';
+import { getLocalMidnight } from '$lib/utils/datetime.js';
 import { extractTags } from './tags.js';
 
 export interface ParsedTimeLog {
@@ -35,10 +36,12 @@ export interface ParsedTimeLog {
  * Returns `null` if the input can't be parsed (no valid time range).
  *
  * @param input The argument string after `:log `, e.g. `"14:00-18:00 +projx \"Killed it\""`
+ * @param tz    IANA timezone string. Times are interpreted in this timezone.
  * @param now   Optional current time in ms for deterministic testing.
  */
 export function parseTimeLog(
 	input: string,
+	tz: string,
 	now?: number
 ): ParsedTimeLog | null {
 	const currentTime = now ?? Date.now();
@@ -72,16 +75,17 @@ export function parseTimeLog(
 		// Skip tags that might appear before the time range
 		if (token.startsWith('+')) continue;
 
-		dateMidnight = parseISODate(token) ?? parseRelativeDate(token, currentTime);
+		dateMidnight =
+			parseISODate(token, tz) ?? parseRelativeDate(token, currentTime, tz);
 		if (dateMidnight !== null) break;
 	}
 
 	// Default to today if no date found
 	if (dateMidnight === null) {
-		dateMidnight = utcMidnight(currentTime);
+		dateMidnight = getLocalMidnight(currentTime, tz);
 	}
 
-	// Combine date + time-of-day
+	// Combine date (local midnight) + time-of-day offsets
 	const startTime = dateMidnight + timeRange.startMinutes * 60_000;
 	let endTime = dateMidnight + timeRange.endMinutes * 60_000;
 

@@ -13,9 +13,15 @@
 	import { searchKeymap } from '@codemirror/search';
 	import { vim, getCM, Vim } from '@replit/codemirror-vim';
 	import { tokyoNight } from '$lib/components/ui/codemirror-theme';
+	import { getContext } from 'svelte';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 	import { parseTask } from '$lib/parser';
 	import type { ParsedTask } from '$lib/parser';
+	import {
+		formatDate,
+		TIMEZONE_CTX,
+		type TimezoneGetter
+	} from '$lib/utils/datetime';
 
 	interface Props {
 		/** Called when the user submits (Ctrl/Cmd+Enter). */
@@ -37,6 +43,9 @@
 		autofocus = true,
 		viMode = false
 	}: Props = $props();
+
+	const getTz = getContext<TimezoneGetter>(TIMEZONE_CTX);
+	let timezone = $derived(getTz());
 
 	let editorContainer: HTMLDivElement | undefined = $state();
 	let view: EditorView | undefined = $state();
@@ -191,7 +200,7 @@
 			if (update.docChanged) {
 				const text = update.state.doc.toString();
 				if (text.trim().length > 0) {
-					preview = parseTask(text);
+					preview = parseTask(text, timezone);
 				} else {
 					preview = null;
 				}
@@ -240,7 +249,7 @@
 
 		// Parse initial content if present
 		if (initialContent.trim().length > 0) {
-			preview = parseTask(initialContent);
+			preview = parseTask(initialContent, timezone);
 		}
 
 		return () => {
@@ -263,18 +272,6 @@
 			patchVimDialog(view);
 		}
 	});
-
-	/**
-	 * Format a UTC ms timestamp into a human-readable date string.
-	 * Simple manual formatting — no Intl dependency.
-	 */
-	function formatDate(ms: number): string {
-		const d = new Date(ms);
-		const year = d.getUTCFullYear();
-		const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-		const day = String(d.getUTCDate()).padStart(2, '0');
-		return `${year}-${month}-${day}`;
-	}
 </script>
 
 <div class="flex flex-col gap-2">
@@ -314,7 +311,7 @@
 			{#if preview.dueDate !== null}
 				<span title="Due date">
 					<span class="text-warning">due:</span>
-					{formatDate(preview.dueDate)}
+					{formatDate(preview.dueDate, timezone)}
 				</span>
 			{/if}
 
@@ -334,7 +331,9 @@
 
 	<!-- Submit hint + button -->
 	<div class="flex items-center justify-between px-1">
-		<span class="font-mono text-xs text-fg-muted">ctrl+enter to save</span>
+		<span class="font-mono text-xs text-fg-muted">
+			ctrl+enter or :w to save
+		</span>
 		<button
 			type="button"
 			class="border border-green bg-transparent px-3 py-1 font-mono text-xs text-green transition-colors hover:bg-green hover:text-bg-dark"

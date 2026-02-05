@@ -28,7 +28,7 @@ export {
 	extractDueDate,
 	parseISODate,
 	parseRelativeDate,
-	utcMidnight
+	localMidnight
 } from './dueDate.js';
 export { stripMetadata } from './strip.js';
 export { parseTimeLog } from './timeRange.js';
@@ -47,14 +47,19 @@ import { stripMetadata } from './strip.js';
  * the editor's live preview.
  *
  * @param rawContent  The markdown string typed by the user.
+ * @param tz          IANA timezone string (e.g. "America/New_York").
  * @param now         Optional: current time in ms (for deterministic testing).
  * @returns           A `ParsedTask` with all extracted fields.
  */
-export function parseTask(rawContent: string, now?: number): ParsedTask {
+export function parseTask(
+	rawContent: string,
+	tz: string,
+	now?: number
+): ParsedTask {
 	return {
 		rawContent,
 		title: extractTitle(rawContent),
-		dueDate: extractDueDate(rawContent, now),
+		dueDate: extractDueDate(rawContent, tz, now),
 		tags: extractTags(rawContent),
 		cleanContent: stripMetadata(rawContent)
 	};

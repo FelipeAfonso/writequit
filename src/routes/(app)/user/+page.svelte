@@ -1,6 +1,11 @@
 <script lang="ts">
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
+	import {
+		getTimezoneList,
+		isValidTimezone,
+		detectTimezone
+	} from '$lib/utils/datetime';
 
 	const client = useConvexClient();
 
@@ -133,6 +138,28 @@
 		{ value: 'lastUsed', label: 'last used' },
 		{ value: 'all', label: 'all' }
 	];
+
+	// ── Timezone state ──────────────────────────────────────────────
+	const timezones = getTimezoneList();
+	let tzInput = $state('');
+	let tzError = $state('');
+
+	// Sync the input with the server value once it loads
+	$effect(() => {
+		if (userSettings.data) {
+			tzInput = userSettings.data.timezone ?? detectTimezone();
+		}
+	});
+
+	async function saveTimezone() {
+		const trimmed = tzInput.trim();
+		if (!isValidTimezone(trimmed)) {
+			tzError = 'invalid timezone';
+			return;
+		}
+		tzError = '';
+		await updateSetting({ timezone: trimmed });
+	}
 
 	const inputClass =
 		'border border-border bg-surface-1 px-3 py-2 font-mono text-sm text-fg placeholder:text-fg-muted focus:border-primary focus:ring-0 w-full';
@@ -324,6 +351,44 @@
 		{#if userSettings.isLoading}
 			<p class="animate-pulse font-mono text-sm text-fg-muted">loading...</p>
 		{:else if userSettings.data}
+			<!-- Timezone -->
+			<div class="flex flex-col gap-2">
+				<div class="flex flex-col gap-0.5">
+					<span class="font-mono text-sm text-fg-dark">timezone</span>
+					<span class="font-mono text-xs text-fg-muted">
+						all dates and times are displayed in this timezone
+					</span>
+				</div>
+				<div class="flex items-center gap-2">
+					<input
+						type="text"
+						bind:value={tzInput}
+						list="tz-list"
+						class={inputClass}
+						placeholder="America/New_York"
+						onkeydown={(e) => {
+							if (e.key === 'Enter') saveTimezone();
+						}}
+						onchange={saveTimezone}
+					/>
+					<button
+						type="button"
+						class="shrink-0 border border-border px-3 py-2 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
+						onclick={saveTimezone}
+					>
+						:w
+					</button>
+				</div>
+				{#if tzError}
+					<p class="font-mono text-xs text-red">{tzError}</p>
+				{/if}
+				<datalist id="tz-list">
+					{#each timezones as tz (tz)}
+						<option value={tz}></option>
+					{/each}
+				</datalist>
+			</div>
+
 			<!-- Vi mode toggle -->
 			<div class="flex items-center justify-between">
 				<div class="flex flex-col gap-0.5">

@@ -1,5 +1,12 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
 	import TagBadge from '$lib/components/tags/TagBadge.svelte';
+	import {
+		formatTime,
+		formatDuration,
+		TIMEZONE_CTX,
+		type TimezoneGetter
+	} from '$lib/utils/datetime';
 
 	interface Tag {
 		_id: string;
@@ -24,20 +31,8 @@
 
 	let { session, selected = false, onclick }: Props = $props();
 
-	function formatTime(ms: number): string {
-		const d = new Date(ms);
-		const h = String(d.getUTCHours()).padStart(2, '0');
-		const m = String(d.getUTCMinutes()).padStart(2, '0');
-		return `${h}:${m}`;
-	}
-
-	function formatDuration(ms: number): string {
-		const totalMinutes = Math.floor(ms / 60_000);
-		const hours = Math.floor(totalMinutes / 60);
-		const minutes = totalMinutes % 60;
-		if (hours === 0) return `${minutes}m`;
-		return `${hours}h ${minutes}m`;
-	}
+	const getTz = getContext<TimezoneGetter>(TIMEZONE_CTX);
+	let timezone = $derived(getTz());
 
 	let duration = $derived(
 		session.endTime
@@ -47,8 +42,8 @@
 
 	let timeRange = $derived(
 		session.endTime
-			? `${formatTime(session.startTime)}-${formatTime(session.endTime)}`
-			: `${formatTime(session.startTime)}-...`
+			? `${formatTime(session.startTime, timezone)}-${formatTime(session.endTime, timezone)}`
+			: `${formatTime(session.startTime, timezone)}-...`
 	);
 
 	let isRunning = $derived(!session.endTime);

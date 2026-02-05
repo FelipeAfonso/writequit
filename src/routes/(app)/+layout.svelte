@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { setContext } from 'svelte';
 	import { useAuthState, useAuthActions } from '$lib/auth';
-	import { useConvexClient } from 'convex-svelte';
+	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import { isEditableTarget } from '$lib/utils/keys';
+	import { detectTimezone, TIMEZONE_CTX } from '$lib/utils/datetime';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import StatusBar from '$lib/components/StatusBar.svelte';
@@ -14,6 +16,31 @@
 	const auth = useAuthState();
 	const { signOut } = useAuthActions();
 	const client = useConvexClient();
+
+	// ── Timezone ────────────────────────────────────────────────────
+	const userSettings = useQuery(api.users.getSettings, {});
+	const browserTz = detectTimezone();
+
+	// Use server-stored timezone if available, otherwise fall back to browser.
+	let timezone = $derived(userSettings.data?.timezone ?? browserTz);
+
+	// Provide timezone to all child components via Svelte context.
+	// We pass a getter function so consumers always read the latest value.
+	setContext(TIMEZONE_CTX, () => timezone);
+
+	// Auto-detect and persist timezone on first visit (one-time)
+	let tzPersisted = false;
+	$effect(() => {
+		if (
+			!tzPersisted &&
+			userSettings.data &&
+			!userSettings.data.timezone &&
+			auth.isAuthenticated
+		) {
+			tzPersisted = true;
+			client.mutation(api.users.updateSettings, { timezone: browserTz });
+		}
+	});
 
 	// Auth guard: redirect to /login if not authenticated
 	$effect(() => {
@@ -53,6 +80,7 @@
 			toggleHelp: () => {
 				showHelp = !showHelp;
 			},
+			getTimezone: () => timezone,
 			logSession: async (args: {
 				startTime: number;
 				endTime: number;

@@ -35,7 +35,9 @@ export default defineSchema({
 			v.literal('done')
 		),
 		/** Default tag filter when loading the tasks page. */
-		defaultTagFilter: v.union(v.literal('lastUsed'), v.literal('all'))
+		defaultTagFilter: v.union(v.literal('lastUsed'), v.literal('all')),
+		/** IANA timezone string, e.g. "America/New_York". Auto-detected on first login. */
+		timezone: v.optional(v.string())
 	}).index('by_userId', ['userId']),
 
 	tasks: defineTable({

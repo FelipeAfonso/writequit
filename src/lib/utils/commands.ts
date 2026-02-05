@@ -17,6 +17,8 @@ export interface CommandContext {
 	signOut: () => void;
 	/** Toggle the keyboard shortcuts help overlay. */
 	toggleHelp: () => void;
+	/** Get the user's IANA timezone string. */
+	getTimezone: () => string;
 	/** Focus the task editor (only available on the tasks page). */
 	focusEditor?: () => void;
 	/** Set the search query filter (only available on the tasks page). */
@@ -181,7 +183,7 @@ export const commands: Command[] = [
 		async execute(args, ctx) {
 			if (!ctx.logSession) return 'session logging not available';
 
-			const parsed = parseTimeLog(args);
+			const parsed = parseTimeLog(args, ctx.getTimezone());
 			if (parsed === null) {
 				return 'invalid format — use: [date] HH:MM-HH:MM [+tag] ["desc"]';
 			}

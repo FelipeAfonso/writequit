@@ -4,6 +4,20 @@ import { parseTask } from '../src/lib/parser/index.js';
 import { getOrCreateTag } from './tags.js';
 import { autoLinkTask } from './sessions.js';
 import { getAuthUserId } from '@convex-dev/auth/server';
+import type { MutationCtx } from './_generated/server';
+import type { Id } from './_generated/dataModel';
+
+/** Look up the user's timezone from their settings, defaulting to UTC. */
+async function getUserTimezone(
+	ctx: MutationCtx,
+	userId: Id<'users'>
+): Promise<string> {
+	const settings = await ctx.db
+		.query('userSettings')
+		.withIndex('by_userId', (q) => q.eq('userId', userId))
+		.unique();
+	return settings?.timezone ?? 'UTC';
+}
 
 // ── Queries ────────────────────────────────────────────────────────
 
@@ -86,7 +100,8 @@ export const create = mutation({
 		const content = args.rawContent.trim();
 		if (content.length === 0) throw new Error('Task content cannot be empty');
 
-		const parsed = parseTask(content);
+		const tz = await getUserTimezone(ctx, userId);
+		const parsed = parseTask(content, tz);
 		const now = Date.now();
 
 		// Resolve tag names → tag IDs (creating tags as needed)
@@ -128,7 +143,8 @@ export const update = mutation({
 		const content = args.rawContent.trim();
 		if (content.length === 0) throw new Error('Task content cannot be empty');
 
-		const parsed = parseTask(content);
+		const tz = await getUserTimezone(ctx, userId);
+		const parsed = parseTask(content, tz);
 		const tagIds = await Promise.all(
 			parsed.tags.map((name) => getOrCreateTag(ctx, name, userId))
 		);

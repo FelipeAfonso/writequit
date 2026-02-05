@@ -1,15 +1,24 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { getContext } from 'svelte';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import { isEditableTarget } from '$lib/utils/keys';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
+	import {
+		formatDate,
+		formatDateTime,
+		TIMEZONE_CTX,
+		type TimezoneGetter
+	} from '$lib/utils/datetime';
 	import TaskEditor from '$lib/components/tasks/TaskEditor.svelte';
 	import TaskStatusBadge from '$lib/components/tasks/TaskStatusBadge.svelte';
 	import TagBadge from '$lib/components/tags/TagBadge.svelte';
 	import Markdown from '$lib/components/ui/Markdown.svelte';
 
+	const getTz = getContext<TimezoneGetter>(TIMEZONE_CTX);
+	let timezone = $derived(getTz());
 	const client = useConvexClient();
 
 	let taskId = $derived(page.params.id);
@@ -47,23 +56,6 @@
 			};
 		}
 	});
-
-	/** Format a UTC ms timestamp. */
-	function formatDate(ms: number): string {
-		const d = new Date(ms);
-		const year = d.getUTCFullYear();
-		const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-		const day = String(d.getUTCDate()).padStart(2, '0');
-		return `${year}-${month}-${day}`;
-	}
-
-	function formatDateTime(ms: number): string {
-		const d = new Date(ms);
-		const date = formatDate(ms);
-		const hours = String(d.getUTCHours()).padStart(2, '0');
-		const minutes = String(d.getUTCMinutes()).padStart(2, '0');
-		return `${date} ${hours}:${minutes}`;
-	}
 
 	async function handleUpdate(rawContent: string) {
 		try {
@@ -209,7 +201,7 @@
 
 				{#if task.data.dueDate}
 					<span class="font-mono text-xs text-warning">
-						due:{formatDate(task.data.dueDate)}
+						due:{formatDate(task.data.dueDate, timezone)}
 					</span>
 				{/if}
 
@@ -220,7 +212,7 @@
 				{/if}
 
 				<span class="ml-auto font-mono text-xs text-fg-muted">
-					created {formatDateTime(task.data.createdAt)}
+					created {formatDateTime(task.data.createdAt, timezone)}
 				</span>
 			</div>
 		</div>

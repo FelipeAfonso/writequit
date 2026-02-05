@@ -20,6 +20,7 @@ function createCommandPalette() {
 		CommandContext,
 		| 'signOut'
 		| 'toggleHelp'
+		| 'getTimezone'
 		| 'logSession'
 		| 'startTimer'
 		| 'stopTimer'
@@ -57,6 +58,7 @@ function createCommandPalette() {
 				CommandContext,
 				| 'signOut'
 				| 'toggleHelp'
+				| 'getTimezone'
 				| 'logSession'
 				| 'startTimer'
 				| 'stopTimer'
@@ -86,6 +88,7 @@ function createCommandPalette() {
 			return {
 				signOut: baseCtx?.signOut ?? (() => {}),
 				toggleHelp: baseCtx?.toggleHelp ?? (() => {}),
+				getTimezone: baseCtx?.getTimezone ?? (() => 'UTC'),
 				logSession: baseCtx?.logSession,
 				startTimer: baseCtx?.startTimer,
 				stopTimer: baseCtx?.stopTimer,

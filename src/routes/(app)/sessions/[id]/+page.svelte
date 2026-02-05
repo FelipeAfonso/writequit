@@ -1,13 +1,23 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
+	import { getContext } from 'svelte';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import { isEditableTarget } from '$lib/utils/keys';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
+	import {
+		formatTime,
+		formatDate,
+		formatDuration,
+		TIMEZONE_CTX,
+		type TimezoneGetter
+	} from '$lib/utils/datetime';
 	import TagBadge from '$lib/components/tags/TagBadge.svelte';
 	import TaskStatusBadge from '$lib/components/tasks/TaskStatusBadge.svelte';
 
+	const getTz = getContext<TimezoneGetter>(TIMEZONE_CTX);
+	let timezone = $derived(getTz());
 	const client = useConvexClient();
 
 	let sessionId = $derived(page.params.id);
@@ -17,31 +27,6 @@
 
 	// All tasks for the task picker
 	const allTasks = useQuery(api.tasks.list, {});
-
-	// ── Formatting ──
-
-	function formatTime(ms: number): string {
-		const d = new Date(ms);
-		const h = String(d.getUTCHours()).padStart(2, '0');
-		const m = String(d.getUTCMinutes()).padStart(2, '0');
-		return `${h}:${m}`;
-	}
-
-	function formatDate(ms: number): string {
-		const d = new Date(ms);
-		const year = d.getUTCFullYear();
-		const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-		const day = String(d.getUTCDate()).padStart(2, '0');
-		return `${year}-${month}-${day}`;
-	}
-
-	function formatDuration(ms: number): string {
-		const totalMinutes = Math.floor(ms / 60_000);
-		const hours = Math.floor(totalMinutes / 60);
-		const minutes = totalMinutes % 60;
-		if (hours === 0) return `${minutes}m`;
-		return `${hours}h ${minutes}m`;
-	}
 
 	let isRunning = $derived(session.data ? !session.data.endTime : false);
 	let duration = $derived.by(() => {
@@ -230,12 +215,14 @@
 			>
 				<!-- Date -->
 				<span class="font-mono text-xs text-fg-muted">
-					{formatDate(s.startTime)}
+					{formatDate(s.startTime, timezone)}
 				</span>
 
 				<!-- Time range -->
 				<span class="font-mono text-sm text-fg-dark">
-					{formatTime(s.startTime)}-{s.endTime ? formatTime(s.endTime) : '...'}
+					{formatTime(s.startTime, timezone)}-{s.endTime
+						? formatTime(s.endTime, timezone)
+						: '...'}
 				</span>
 
 				<!-- Duration -->

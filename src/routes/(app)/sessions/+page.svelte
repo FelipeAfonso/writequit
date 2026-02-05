@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
 	import { useQuery } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import { isEditableTarget } from '$lib/utils/keys';
@@ -6,35 +7,30 @@
 	import SessionCard from '$lib/components/sessions/SessionCard.svelte';
 	import TagFilter from '$lib/components/tags/TagFilter.svelte';
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+	import {
+		formatDateHeader,
+		formatDuration,
+		getDateRangeBounds,
+		TIMEZONE_CTX,
+		type TimezoneGetter
+	} from '$lib/utils/datetime';
+
+	const getTz = getContext<TimezoneGetter>(TIMEZONE_CTX);
+	let timezone = $derived(getTz());
 
 	// ── Date range filter ──
 	type DateRange = 'week' | 'month' | 'all';
 	let dateRange = $state<DateRange>('week');
 
-	function getDateRangeBounds(range: DateRange): {
+	function computeDateRangeBounds(range: DateRange): {
 		startAfter?: number;
 		startBefore?: number;
 	} {
 		if (range === 'all') return {};
-		const now = Date.now();
-		const d = new Date(now);
-		if (range === 'week') {
-			// Start of the current week (Monday)
-			const day = d.getUTCDay();
-			const diff = day === 0 ? 6 : day - 1; // Monday=0
-			const monday = new Date(
-				Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - diff)
-			);
-			return { startAfter: monday.getTime() };
-		}
-		// month
-		const firstOfMonth = new Date(
-			Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)
-		);
-		return { startAfter: firstOfMonth.getTime() };
+		return getDateRangeBounds(range, timezone);
 	}
 
-	let queryArgs = $derived(getDateRangeBounds(dateRange));
+	let queryArgs = $derived(computeDateRangeBounds(dateRange));
 	const sessions = useQuery(api.sessions.list, () => queryArgs);
 	const allTags = useQuery(api.tags.list, {});
 
@@ -81,48 +77,11 @@
 		sessions: SessionData[];
 	}
 
-	function formatDateHeader(ms: number): { date: string; label: string } {
-		const d = new Date(ms);
-		const year = d.getUTCFullYear();
-		const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-		const day = String(d.getUTCDate()).padStart(2, '0');
-		const date = `${year}-${month}-${day}`;
-
-		const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-		const months = [
-			'Jan',
-			'Feb',
-			'Mar',
-			'Apr',
-			'May',
-			'Jun',
-			'Jul',
-			'Aug',
-			'Sep',
-			'Oct',
-			'Nov',
-			'Dec'
-		];
-		const dayName = days[d.getUTCDay()];
-		const monthName = months[d.getUTCMonth()];
-		const label = `${dayName}, ${monthName} ${d.getUTCDate()}`;
-
-		return { date, label };
-	}
-
-	function formatDuration(ms: number): string {
-		const totalMinutes = Math.floor(ms / 60_000);
-		const hours = Math.floor(totalMinutes / 60);
-		const minutes = totalMinutes % 60;
-		if (hours === 0) return `${minutes}m`;
-		return `${hours}h ${minutes}m`;
-	}
-
 	let grouped = $derived.by(() => {
 		const groups = new SvelteMap<string, DayGroup>();
 
 		for (const session of filteredSessions) {
-			const { date, label } = formatDateHeader(session.startTime);
+			const { date, label } = formatDateHeader(session.startTime, timezone);
 
 			if (!groups.has(date)) {
 				groups.set(date, { date, label, totalMs: 0, sessions: [] });
