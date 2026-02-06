@@ -9,7 +9,7 @@
 	const bootSequence = [
 		'$ writequit --init',
 		'loading modules.......... OK',
-		'scanning /dev/productivity.. 0 BS',
+		'scanning /dev/productivity.. OK',
 		'mounting task-engine v3.1.4. OK',
 		'binding :wq to everything.. OK',
 		'',
@@ -118,170 +118,243 @@
 	/>
 </svelte:head>
 
-<div class="page">
+<div
+	class="relative min-h-screen overflow-x-hidden font-[JetBrains_Mono,monospace] text-[#b4befe]"
+	style="background: #0a0a0e;"
+>
 	<!-- Scanline overlay -->
 	<div class="scanlines"></div>
 
 	<!-- Boot sequence -->
-	<div class="terminal" class:fade-out={showContent}>
-		<pre class="boot-text">{#each typedLines as line, idx (idx)}{line}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center p-8 transition-opacity duration-600 ease-in-out"
+		class:opacity-0={showContent}
+		class:pointer-events-none={showContent}
+		style="background: #0a0a0e;"
+	>
+		<pre
+			class="font-[JetBrains_Mono,monospace] text-[0.7rem] leading-relaxed whitespace-pre text-[#6e7a96]"
+			style="max-width: 40ch;">{#each typedLines as line, idx (idx)}{line}
 			{/each}{#if !bootComplete}<span
-					class="cursor"
+					class="cursor text-primary"
 					class:blink={showCursor}>█</span>{/if}</pre>
 	</div>
 
 	<!-- Main content -->
 	{#if showContent}
-		<div class="content" class:visible={showContent}>
+		<div
+			class="pb-20 transition-opacity duration-800 ease-in-out"
+			class:opacity-0={!showContent}
+			class:opacity-100={showContent}
+		>
 			<!-- Header bar -->
-			<header class="header">
-				<div class="header-left">
-					<span class="prompt">$</span>
-					<span class="brand">:wq</span>
+			<header
+				class="animate-fade-in flex items-center justify-between border-b border-primary/10 px-8 py-4"
+				style="animation-delay: 0.1s;"
+			>
+				<div class="flex items-center gap-2">
+					<span class="text-base font-bold -tracking-wide text-primary">
+						:wq
+					</span>
 				</div>
-				<div class="header-right">
-					<span class="header-tag">v3.1.4</span>
-					<span class="header-sep">|</span>
-					<span class="header-tag">MIT</span>
-					<span class="header-sep">|</span>
-					<a href="/login" class="header-cta">:login</a>
+				<div class="flex items-center gap-2 text-[0.55rem]">
+					<a
+						href="/login"
+						class="border border-primary/30 px-2.5 py-1 text-primary no-underline transition-all duration-150 hover:border-primary hover:bg-primary/10"
+					>
+						:login
+					</a>
 				</div>
 			</header>
 
 			<!-- Hero -->
-			<section class="hero">
-				<div class="hero-label">
-					<span class="label-dot"></span>
-					task management for developers who ship
+			<section
+				class="animate-fade-in mx-auto max-w-[52rem] px-8 pt-20 pb-16"
+				style="animation-delay: 0.3s;"
+			>
+				<div
+					class="mb-6 inline-flex items-center gap-2 text-[0.55rem] tracking-[0.2em] text-[#6e7a96] uppercase"
+				>
+					<span class="label-dot size-1.5 rounded-full bg-green"></span>
+					for developers who'd rather ship than organize
 				</div>
-				<div class="hero-name">
-					<span class="hero-name-wq">:WriteQuit</span>
+				<div class="mb-4 flex items-baseline gap-2.5">
+					<span class="hero-name-wq font-bold text-primary">:writequit</span>
 				</div>
-				<h1 class="hero-title">
-					<span class="hero-line">Stop context</span>
-					<span class="hero-line">switching.</span>
-					<span class="hero-line accent">Start shipping.</span>
+				<h1 class="hero-title mb-6 leading-[1.1] font-bold">
+					<span class="block text-[#cdd6f4]">
+						manage work, <br />
+						not a workspace.
+					</span>
+					<span class="block text-primary">tasks. time. invoices. :wq.</span>
 				</h1>
-				<p class="hero-sub">
-					Tasks, time tracking, and invoices in a single keyboard-driven
-					interface. No dashboards. No drag-and-drop. No BS. Just <code>
-						:wq
-					</code>
-					and move on.
+				<p
+					class="mb-8 max-w-[38rem] text-[0.75rem] leading-[1.8] text-[#6e7a96]"
+				>
+					vim keybindings. markdown tasks. terminal aesthetics. a tool, not a
+					lifestyle.
 				</p>
-				<div class="hero-actions">
+				<div class="flex items-center gap-6 max-sm:flex-col max-sm:items-start">
 					<a href="/login" class="btn-primary">
-						<span class="btn-prompt">&gt;</span>
+						<span class="opacity-60">&gt;</span>
 						get started
 					</a>
-					<span class="hero-hint">
+					<span class="text-[0.5rem] text-fg-muted">
 						free during beta &middot; no credit card
 					</span>
 				</div>
 			</section>
 
 			<!-- Feature grid -->
-			<section class="features">
-				<div class="feature-grid">
+			<section
+				class="animate-fade-in mx-auto max-w-[64rem] px-8 py-12 max-sm:px-5"
+				style="animation-delay: 0.5s;"
+			>
+				<div
+					class="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-px border border-primary/8 bg-primary/8"
+				>
 					<div class="feature-card">
-						<div class="feature-icon">[&gt;]</div>
-						<h3 class="feature-title">Vim-native workflow</h3>
+						<div class="mb-3 text-[0.8rem] font-semibold text-primary">
+							[&gt;]
+						</div>
+						<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
+							Vim-native workflow
+						</h3>
 						<p class="feature-desc">
 							<code>j/k</code>
 							to navigate.
 							<code>:</code>
 							for commands.
 							<code>:wq</code>
-							when you're done. Your muscle memory works here.
+							when you're done. nothing new to learn.
 						</p>
 					</div>
 					<div class="feature-card">
-						<div class="feature-icon">[~]</div>
-						<h3 class="feature-title">Time tracking</h3>
+						<div class="mb-3 text-[0.8rem] font-semibold text-primary">[~]</div>
+						<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
+							Time tracking
+						</h3>
 						<p class="feature-desc">
-							Start a session with <code>:track</code>
-							. Stop with
+							<code>:track</code>
+							to start.
 							<code>:stop</code>
-							. See exactly where your hours went. Bill accurately.
+							to stop. hours logged, clients billed.
 						</p>
 					</div>
 					<div class="feature-card">
-						<div class="feature-icon">[$]</div>
-						<h3 class="feature-title">Invoice generation</h3>
+						<div class="mb-3 text-[0.8rem] font-semibold text-primary">[$]</div>
+						<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
+							Invoice generation
+						</h3>
 						<p class="feature-desc">
-							Select sessions, set your rate, hit <code>:invoice</code>
-							. PDF lands in your downloads. Client gets paid notice. Done.
+							select sessions, set rate, <code>:invoice</code>
+							. PDF in your downloads. done.
 						</p>
 					</div>
 					<div class="feature-card">
-						<div class="feature-icon">[+]</div>
-						<h3 class="feature-title">Tag everything</h3>
+						<div class="mb-3 text-[0.8rem] font-semibold text-primary">[+]</div>
+						<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
+							Tag everything
+						</h3>
 						<p class="feature-desc">
-							Inline tags right in your task text: <code>+frontend</code>
+							inline tags in task text: <code>+frontend</code>
 							<code>+urgent</code>
 							<code>+client-name</code>
-							. Filter instantly. No category dropdowns.
+							. filter instantly. no dropdowns.
 						</p>
 					</div>
 					<div class="feature-card">
-						<div class="feature-icon">[*]</div>
-						<h3 class="feature-title">Markdown tasks</h3>
+						<div class="mb-3 text-[0.8rem] font-semibold text-primary">[*]</div>
+						<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
+							Markdown tasks
+						</h3>
 						<p class="feature-desc">
-							Write tasks in full markdown. Code blocks with syntax
-							highlighting. No rich text editors, just text that renders.
+							full markdown with syntax highlighting. no rich text editors. just
+							text that renders.
 						</p>
 					</div>
 					<div class="feature-card">
-						<div class="feature-icon">[%]</div>
-						<h3 class="feature-title">Reports that matter</h3>
+						<div class="mb-3 text-[0.8rem] font-semibold text-primary">[%]</div>
+						<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
+							Reports that matter
+						</h3>
 						<p class="feature-desc">
-							Weekly/monthly breakdowns by project, tag, or client. Export to
-							PDF. Know where your time actually goes.
+							breakdowns by project, tag, or client. export to PDF. that's it.
 						</p>
 					</div>
 				</div>
 			</section>
 
 			<!-- Terminal demo -->
-			<section class="demo">
-				<div class="demo-window">
-					<div class="demo-titlebar">
-						<span class="demo-dot red"></span>
-						<span class="demo-dot yellow"></span>
-						<span class="demo-dot green"></span>
-						<span class="demo-titlebar-text">:wq - tasks</span>
+			<section
+				class="animate-fade-in mx-auto max-w-[48rem] px-8 py-12 max-sm:px-5"
+				style="animation-delay: 0.7s;"
+			>
+				<div class="overflow-hidden border border-primary/15 bg-[#0d0d12]">
+					<div
+						class="flex items-center gap-1.5 border-b border-primary/8 bg-primary/4 px-3 py-2"
+					>
+						<span class="size-2 rounded-full bg-red"></span>
+						<span class="size-2 rounded-full bg-warning"></span>
+						<span class="size-2 rounded-full bg-green"></span>
+						<span class="ml-2 text-[0.5rem] text-fg-muted">:wq - tasks</span>
 					</div>
-					<div class="demo-body">
-						<div class="demo-line">
-							<span class="line-status done">[x]</span>
-							<span class="line-text">Set up CI/CD pipeline #devops</span>
-							<span class="line-time">2h 14m</span>
+					<div class="p-4">
+						<div
+							class="flex items-center gap-3 border-l-2 border-transparent px-2 py-1.5 text-[0.6rem] transition-colors duration-150"
+						>
+							<span class="shrink-0 font-semibold text-green">[x]</span>
+							<span class="flex-1 text-fg-dark">
+								Set up CI/CD pipeline #devops
+							</span>
+							<span class="text-[0.5rem] text-fg-muted">2h 14m</span>
 						</div>
-						<div class="demo-line">
-							<span class="line-status done">[x]</span>
-							<span class="line-text">Fix auth token refresh bug #backend</span>
-							<span class="line-time">0h 47m</span>
+						<div
+							class="flex items-center gap-3 border-l-2 border-transparent px-2 py-1.5 text-[0.6rem] transition-colors duration-150"
+						>
+							<span class="shrink-0 font-semibold text-green">[x]</span>
+							<span class="flex-1 text-fg-dark">
+								Fix auth token refresh bug #backend
+							</span>
+							<span class="text-[0.5rem] text-fg-muted">0h 47m</span>
 						</div>
-						<div class="demo-line active">
-							<span class="line-status active-status">[*]</span>
-							<span class="line-text">Build landing page #frontend @acme</span>
-							<span class="line-time blink-slow">1h 23m</span>
+						<div
+							class="demo-line-active flex items-center gap-3 border-l-2 border-primary bg-primary/6 px-2 py-1.5 text-[0.6rem] transition-colors duration-150"
+						>
+							<span class="shrink-0 font-semibold text-primary">[*]</span>
+							<span class="flex-1 text-fg-dark">
+								Build landing page #frontend @acme
+							</span>
+							<span class="blink-slow text-[0.5rem] text-primary">1h 23m</span>
 						</div>
-						<div class="demo-line">
-							<span class="line-status inbox">[ ]</span>
-							<span class="line-text">Write API documentation #docs</span>
-							<span class="line-time">--:--</span>
+						<div
+							class="flex items-center gap-3 border-l-2 border-transparent px-2 py-1.5 text-[0.6rem] transition-colors duration-150"
+						>
+							<span class="shrink-0 font-semibold text-fg-muted">[ ]</span>
+							<span class="flex-1 text-fg-dark">
+								Write API documentation #docs
+							</span>
+							<span class="text-[0.5rem] text-fg-muted">--:--</span>
 						</div>
-						<div class="demo-line">
-							<span class="line-status inbox">[ ]</span>
-							<span class="line-text">Invoice Acme Corp - December @acme</span>
-							<span class="line-time">--:--</span>
+						<div
+							class="flex items-center gap-3 border-l-2 border-transparent px-2 py-1.5 text-[0.6rem] transition-colors duration-150"
+						>
+							<span class="shrink-0 font-semibold text-fg-muted">[ ]</span>
+							<span class="flex-1 text-fg-dark">
+								Invoice Acme Corp - December @acme
+							</span>
+							<span class="text-[0.5rem] text-fg-muted">--:--</span>
 						</div>
-						<div class="demo-command">
-							<span class="cmd-prompt">:</span>
-							<span class="cmd-text">
+						<div class="mt-3 border-t border-primary/8 pt-3 text-[0.6rem]">
+							<span class="font-bold text-primary">:</span>
+							<span class="text-[#cdd6f4]">
 								wq
-								<span class="cursor-inline" class:blink={showCursor}>█</span>
+								<span
+									class="cursor-inline text-primary"
+									class:blink={showCursor}
+								>
+									█
+								</span>
 							</span>
 						</div>
 					</div>
@@ -289,32 +362,38 @@
 			</section>
 
 			<!-- CTA -->
-			<section class="cta">
-				<div class="cta-inner">
-					<p class="cta-text">
-						<span class="cta-prompt">&gt;</span>
-						Ready to stop wasting time on tools that waste your time?
+			<section
+				class="animate-fade-in px-8 py-16 max-sm:px-5"
+				style="animation-delay: 0.9s;"
+			>
+				<div class="mx-auto max-w-[48rem] text-center">
+					<p class="mb-6 text-[0.8rem] text-[#6e7a96]">
+						<span class="text-primary">&gt;</span>
+						spend less time managing. more time building.
 					</p>
-					<a href="/login" class="btn-primary large">
-						<span class="btn-prompt">&gt;</span>
+					<a href="/login" class="btn-primary btn-primary-large">
+						<span class="opacity-60">&gt;</span>
 						start shipping
 					</a>
 				</div>
 			</section>
 
 			<!-- Footer -->
-			<footer class="footer">
-				<span class="footer-brand">:wq</span>
-				<span class="footer-sep">&middot;</span>
-				<span class="footer-text">write. quit. ship.</span>
-				<span class="footer-sep">&middot;</span>
-				<span class="footer-text">built for developers who don't like BS</span>
+			<footer
+				class="flex items-center justify-center gap-3 border-t border-primary/6 px-8 py-6 text-[0.5rem] text-surface-3"
+			>
+				<span class="font-semibold text-fg-muted">:wq</span>
+				<span class="text-primary/15">&middot;</span>
+				<span>write. quit. ship.</span>
+				<span class="text-primary/15">&middot;</span>
+				<span>a tool, not a lifestyle</span>
 			</footer>
 		</div>
 	{/if}
 </div>
 
 <style>
+	/* --- Keyframe animations (can't be expressed in Tailwind) --- */
 	@keyframes fadeIn {
 		from {
 			opacity: 0;
@@ -345,15 +424,16 @@
 		}
 	}
 
-	.page {
-		min-height: 100vh;
-		background: #0a0a0e;
-		font-family: 'JetBrains Mono', monospace;
-		color: #b4befe;
-		position: relative;
-		overflow-x: hidden;
+	/* --- Animation utilities --- */
+	.animate-fade-in {
+		animation: fadeIn 0.6s ease both;
 	}
 
+	.blink-slow {
+		animation: blinkSlow 2s ease infinite;
+	}
+
+	/* --- Scanline overlay (complex gradient + pseudo-element) --- */
 	.scanlines {
 		position: fixed;
 		top: 0;
@@ -385,35 +465,8 @@
 		animation: scanline 8s linear infinite;
 	}
 
-	/* Boot terminal */
-	.terminal {
-		position: fixed;
-		inset: 0;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		padding: 2rem;
-		z-index: 50;
-		background: #0a0a0e;
-		transition: opacity 0.6s ease;
-	}
-
-	.terminal.fade-out {
-		opacity: 0;
-		pointer-events: none;
-	}
-
-	.boot-text {
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 0.7rem;
-		line-height: 1.6;
-		color: #6e7a96;
-		white-space: pre;
-		max-width: 40ch;
-	}
-
+	/* --- Boot cursor toggle (conditional class:blink) --- */
 	.cursor {
-		color: #7aa2f7;
 		opacity: 0;
 		transition: opacity 0.05s;
 	}
@@ -422,170 +475,38 @@
 		opacity: 1;
 	}
 
-	/* Main content */
-	.content {
+	.cursor-inline {
 		opacity: 0;
-		transition: opacity 0.8s ease;
-		padding-bottom: 5rem;
+		transition: opacity 0.05s;
 	}
 
-	.content.visible {
+	.cursor-inline.blink {
 		opacity: 1;
 	}
 
-	/* Header */
-	.header {
-		display: flex;
-		justify-content: space-between;
-		align-items: center;
-		padding: 1rem 2rem;
-		border-bottom: 1px solid rgba(122, 162, 247, 0.1);
-		animation: fadeIn 0.6s ease both;
-		animation-delay: 0.1s;
-	}
-
-	.header-left {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-	}
-
-	.prompt {
-		color: #6e7a96;
-		font-size: 0.7rem;
-	}
-
-	.brand {
-		font-size: 1rem;
-		font-weight: 700;
-		color: #7aa2f7;
-		letter-spacing: -0.02em;
-	}
-
-	.header-right {
-		display: flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.55rem;
-	}
-
-	.header-tag {
-		color: #6e7a96;
-	}
-
-	.header-sep {
-		color: rgba(122, 162, 247, 0.2);
-	}
-
-	.header-cta {
-		color: #7aa2f7;
-		text-decoration: none;
-		padding: 0.2rem 0.6rem;
-		border: 1px solid rgba(122, 162, 247, 0.3);
-		transition: all 0.15s;
-	}
-
-	.header-cta:hover {
-		background: rgba(122, 162, 247, 0.1);
-		border-color: #7aa2f7;
-	}
-
-	/* Hero */
-	.hero {
-		padding: 5rem 2rem 4rem;
-		max-width: 52rem;
-		margin: 0 auto;
-		animation: fadeIn 0.6s ease both;
-		animation-delay: 0.3s;
-	}
-
-	.hero-label {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
-		font-size: 0.55rem;
-		text-transform: uppercase;
-		letter-spacing: 0.2em;
-		color: #6e7a96;
-		margin-bottom: 1.5rem;
-	}
-
+	/* --- Label dot blink --- */
 	.label-dot {
-		width: 6px;
-		height: 6px;
-		background: #9ece6a;
-		border-radius: 50%;
 		animation: blinkSlow 2s ease infinite;
 	}
 
-	.hero-name {
-		display: flex;
-		align-items: baseline;
-		gap: 0.6rem;
-		margin-bottom: 1rem;
-	}
-
+	/* --- Hero name + title (clamp font sizes) --- */
 	.hero-name-wq {
 		font-size: clamp(1.6rem, 4vw, 2.2rem);
-		font-weight: 700;
-		color: #7aa2f7;
 		letter-spacing: -0.03em;
-	}
-
-	.hero-name-full {
-		font-size: clamp(0.55rem, 1.2vw, 0.7rem);
-		font-weight: 400;
-		color: #565f89;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		position: relative;
-		top: -0.05em;
 	}
 
 	.hero-title {
 		font-size: clamp(2rem, 6vw, 3.5rem);
-		font-weight: 700;
-		line-height: 1.1;
-		margin: 0 0 1.5rem;
 		letter-spacing: -0.03em;
 	}
 
-	.hero-line {
-		display: block;
-		color: #cdd6f4;
-	}
-
-	.hero-line.accent {
-		color: #7aa2f7;
-	}
-
-	.hero-sub {
-		font-size: 0.75rem;
-		line-height: 1.8;
-		color: #6e7a96;
-		max-width: 38rem;
-		margin-bottom: 2rem;
-	}
-
-	.hero-sub code {
-		color: #f7768e;
-		background: rgba(247, 118, 142, 0.08);
-		padding: 0.1rem 0.3rem;
-		font-size: 0.7rem;
-	}
-
-	.hero-actions {
-		display: flex;
-		align-items: center;
-		gap: 1.5rem;
-	}
-
+	/* --- Primary button (hover transforms + box-shadow) --- */
 	.btn-primary {
 		display: inline-flex;
 		align-items: center;
 		gap: 0.5rem;
 		padding: 0.6rem 1.5rem;
-		background: #7aa2f7;
+		background: var(--color-primary);
 		color: #0a0a0e;
 		text-decoration: none;
 		font-family: 'JetBrains Mono', monospace;
@@ -603,37 +524,12 @@
 		box-shadow: 0 4px 20px rgba(122, 162, 247, 0.3);
 	}
 
-	.btn-primary.large {
+	.btn-primary-large {
 		padding: 0.8rem 2rem;
 		font-size: 0.75rem;
 	}
 
-	.btn-prompt {
-		opacity: 0.6;
-	}
-
-	.hero-hint {
-		font-size: 0.5rem;
-		color: #565f89;
-	}
-
-	/* Features */
-	.features {
-		padding: 3rem 2rem;
-		max-width: 64rem;
-		margin: 0 auto;
-		animation: fadeIn 0.6s ease both;
-		animation-delay: 0.5s;
-	}
-
-	.feature-grid {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-		gap: 1px;
-		background: rgba(122, 162, 247, 0.08);
-		border: 1px solid rgba(122, 162, 247, 0.08);
-	}
-
+	/* --- Feature card (hover bg transition) --- */
 	.feature-card {
 		padding: 1.5rem;
 		background: #0a0a0e;
@@ -644,20 +540,7 @@
 		background: #0d0d12;
 	}
 
-	.feature-icon {
-		font-size: 0.8rem;
-		color: #7aa2f7;
-		margin-bottom: 0.75rem;
-		font-weight: 600;
-	}
-
-	.feature-title {
-		font-size: 0.7rem;
-		font-weight: 600;
-		color: #cdd6f4;
-		margin: 0 0 0.5rem;
-	}
-
+	/* --- Feature description + code styling --- */
 	.feature-desc {
 		font-size: 0.55rem;
 		line-height: 1.8;
@@ -666,190 +549,9 @@
 	}
 
 	.feature-desc code {
-		color: #f7768e;
+		color: var(--color-red);
 		background: rgba(247, 118, 142, 0.08);
 		padding: 0.05rem 0.2rem;
 		font-size: 0.5rem;
-	}
-
-	/* Demo */
-	.demo {
-		padding: 3rem 2rem;
-		max-width: 48rem;
-		margin: 0 auto;
-		animation: fadeIn 0.6s ease both;
-		animation-delay: 0.7s;
-	}
-
-	.demo-window {
-		border: 1px solid rgba(122, 162, 247, 0.15);
-		background: #0d0d12;
-		overflow: hidden;
-	}
-
-	.demo-titlebar {
-		display: flex;
-		align-items: center;
-		gap: 0.4rem;
-		padding: 0.5rem 0.75rem;
-		background: rgba(122, 162, 247, 0.04);
-		border-bottom: 1px solid rgba(122, 162, 247, 0.08);
-	}
-
-	.demo-dot {
-		width: 8px;
-		height: 8px;
-		border-radius: 50%;
-	}
-
-	.demo-dot.red {
-		background: #f7768e;
-	}
-	.demo-dot.yellow {
-		background: #e0af68;
-	}
-	.demo-dot.green {
-		background: #9ece6a;
-	}
-
-	.demo-titlebar-text {
-		margin-left: 0.5rem;
-		font-size: 0.5rem;
-		color: #565f89;
-	}
-
-	.demo-body {
-		padding: 1rem;
-	}
-
-	.demo-line {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		padding: 0.4rem 0.5rem;
-		font-size: 0.6rem;
-		border-left: 2px solid transparent;
-		transition: background 0.15s;
-	}
-
-	.demo-line.active {
-		background: rgba(122, 162, 247, 0.06);
-		border-left-color: #7aa2f7;
-	}
-
-	.line-status {
-		font-weight: 600;
-		flex-shrink: 0;
-	}
-
-	.line-status.done {
-		color: #9ece6a;
-	}
-	.line-status.active-status {
-		color: #7aa2f7;
-	}
-	.line-status.inbox {
-		color: #565f89;
-	}
-
-	.line-text {
-		flex: 1;
-		color: #a9b1d6;
-	}
-
-	.line-time {
-		color: #565f89;
-		font-size: 0.5rem;
-	}
-
-	.line-time.blink-slow {
-		color: #7aa2f7;
-		animation: blinkSlow 2s ease infinite;
-	}
-
-	.demo-command {
-		margin-top: 0.75rem;
-		padding-top: 0.75rem;
-		border-top: 1px solid rgba(122, 162, 247, 0.08);
-		font-size: 0.6rem;
-	}
-
-	.cmd-prompt {
-		color: #7aa2f7;
-		font-weight: 700;
-	}
-
-	.cmd-text {
-		color: #cdd6f4;
-	}
-
-	.cursor-inline {
-		color: #7aa2f7;
-		opacity: 0;
-		transition: opacity 0.05s;
-	}
-
-	.cursor-inline.blink {
-		opacity: 1;
-	}
-
-	/* CTA */
-	.cta {
-		padding: 4rem 2rem;
-		animation: fadeIn 0.6s ease both;
-		animation-delay: 0.9s;
-	}
-
-	.cta-inner {
-		max-width: 48rem;
-		margin: 0 auto;
-		text-align: center;
-	}
-
-	.cta-text {
-		font-size: 0.8rem;
-		color: #6e7a96;
-		margin-bottom: 1.5rem;
-	}
-
-	.cta-prompt {
-		color: #7aa2f7;
-	}
-
-	/* Footer */
-	.footer {
-		padding: 1.5rem 2rem;
-		border-top: 1px solid rgba(122, 162, 247, 0.06);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.75rem;
-		font-size: 0.5rem;
-		color: #3b4261;
-	}
-
-	.footer-brand {
-		color: #565f89;
-		font-weight: 600;
-	}
-
-	.footer-sep {
-		color: rgba(122, 162, 247, 0.15);
-	}
-
-	@media (max-width: 640px) {
-		.hero {
-			padding: 3rem 1.25rem 2.5rem;
-		}
-		.hero-actions {
-			flex-direction: column;
-			align-items: flex-start;
-		}
-		.features,
-		.demo,
-		.cta {
-			padding-left: 1.25rem;
-			padding-right: 1.25rem;
-		}
 	}
 </style>
