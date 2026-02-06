@@ -268,7 +268,11 @@ export function setupConvexAuth(client: ConvexClient, convexUrl: string) {
 			url.searchParams.delete('code');
 			window.history.replaceState({}, '', url.pathname + url.search + url.hash);
 
-			verifyCodeAndSetToken({ code })
+			// Retrieve and clear the PKCE verifier that was stored before redirect
+			const verifier = storageGet(VERIFIER_STORAGE_KEY) ?? undefined;
+			storageRemove(VERIFIER_STORAGE_KEY);
+
+			verifyCodeAndSetToken({ code, verifier })
 				.then(() => refreshClientAuth())
 				.catch(() => {
 					const stored = storageGet(JWT_STORAGE_KEY);
