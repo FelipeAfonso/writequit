@@ -122,6 +122,10 @@
 	class="relative min-h-screen overflow-x-hidden font-[JetBrains_Mono,monospace] text-[#b4befe]"
 	style="background: #0a0a0e;"
 >
+	<!-- Grid background -->
+	<div class="grid-bg"></div>
+	<div class="grid-spotlight"></div>
+
 	<!-- Scanline overlay -->
 	<div class="scanlines"></div>
 
@@ -169,9 +173,10 @@
 
 			<!-- Hero -->
 			<section
-				class="animate-fade-in mx-auto max-w-[52rem] px-8 pt-20 pb-16"
+				class="animate-fade-in relative mx-auto max-w-[52rem] px-8 pt-20 pb-16"
 				style="animation-delay: 0.3s;"
 			>
+				<div class="hero-glow"></div>
 				<div
 					class="mb-6 inline-flex items-center gap-2 text-[0.55rem] tracking-[0.2em] text-[#6e7a96] uppercase"
 				>
@@ -433,6 +438,101 @@
 		animation: blinkSlow 2s ease infinite;
 	}
 
+	/* --- Dot grid background --- */
+	.grid-bg {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		pointer-events: none;
+		z-index: 0;
+		background-image: radial-gradient(
+			circle,
+			rgba(122, 162, 247, 0.3) 1px,
+			transparent 1px
+		);
+		background-size: 32px 32px;
+		mask-image: radial-gradient(
+			ellipse 80% 60% at 50% 40%,
+			black 0%,
+			transparent 70%
+		);
+		-webkit-mask-image: radial-gradient(
+			ellipse 80% 60% at 50% 40%,
+			black 0%,
+			transparent 70%
+		);
+	}
+
+	/* --- Spotlight that brightens grid dots as it drifts --- */
+	.grid-spotlight {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		pointer-events: none;
+		z-index: 1;
+		overflow: hidden;
+	}
+
+	.grid-spotlight::after {
+		content: '';
+		position: absolute;
+		width: 60vw;
+		height: 60vh;
+		top: 10%;
+		left: 20%;
+		background: radial-gradient(
+			ellipse at center,
+			rgba(122, 162, 247, 0.07) 0%,
+			transparent 70%
+		);
+		animation: spotlightDrift 14s ease-in-out infinite;
+	}
+
+	@keyframes spotlightDrift {
+		0% {
+			transform: translate(0%, 0%);
+			opacity: 0.4;
+		}
+		25% {
+			transform: translate(15%, 5%);
+			opacity: 1;
+		}
+		50% {
+			transform: translate(5%, 15%);
+			opacity: 0.5;
+		}
+		75% {
+			transform: translate(-10%, 8%);
+			opacity: 1;
+		}
+		100% {
+			transform: translate(0%, 0%);
+			opacity: 0.4;
+		}
+	}
+
+	/* --- Hero radial glow --- */
+	.hero-glow {
+		position: absolute;
+		top: -40%;
+		left: 50%;
+		transform: translateX(-50%);
+		width: 120%;
+		height: 180%;
+		pointer-events: none;
+		z-index: -1;
+		background: radial-gradient(
+			ellipse 50% 40% at 50% 45%,
+			rgba(122, 162, 247, 0.06) 0%,
+			rgba(122, 162, 247, 0.02) 40%,
+			transparent 70%
+		);
+	}
+
 	/* --- Scanline overlay (complex gradient + pseudo-element) --- */
 	.scanlines {
 		position: fixed;
@@ -454,13 +554,15 @@
 	.scanlines::after {
 		content: '';
 		position: absolute;
-		top: -100%;
+		top: 0;
 		left: 0;
 		width: 100%;
-		height: 100%;
+		height: 33vh;
 		background: linear-gradient(
-			transparent 50%,
-			rgba(100, 140, 255, 0.015) 50%
+			transparent,
+			rgba(100, 140, 255, 0.03) 12%,
+			rgba(100, 140, 255, 0.03) 88%,
+			transparent
 		);
 		animation: scanline 8s linear infinite;
 	}
