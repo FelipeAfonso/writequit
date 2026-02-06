@@ -271,7 +271,7 @@
 			{tagsMap}
 			emptyMessage="No tasks yet. Type above to dump a task."
 			ontaskclick={(id) => {
-				window.location.href = `/tasks/${id}`;
+				window.location.href = `/app/tasks/${id}`;
 			}}
 			onstatuschange={handleStatusChange}
 			onfilterprev={() => cycleFilter(-1)}

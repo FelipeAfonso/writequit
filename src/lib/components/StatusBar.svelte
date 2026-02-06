@@ -62,7 +62,7 @@
 
 			<!-- Timer -->
 			<a
-				href="/sessions/{session._id}"
+				href="/app/sessions/{session._id}"
 				class="font-mono text-sm font-bold text-green transition-colors hover:text-teal"
 			>
 				{elapsed}

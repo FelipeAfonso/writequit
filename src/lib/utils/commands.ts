@@ -74,7 +74,7 @@ export const commands: Command[] = [
 		description: 'go to tasks',
 		args: 'none',
 		execute() {
-			goto('/');
+			goto('/app');
 		}
 	},
 	{
@@ -83,7 +83,7 @@ export const commands: Command[] = [
 		description: 'go to tags',
 		args: 'none',
 		execute() {
-			goto('/tags');
+			goto('/app/tags');
 		}
 	},
 	{
@@ -92,7 +92,7 @@ export const commands: Command[] = [
 		description: 'go to user settings',
 		args: 'none',
 		execute() {
-			goto('/user');
+			goto('/app/user');
 		}
 	},
 	{
@@ -144,8 +144,8 @@ export const commands: Command[] = [
 		argsPlaceholder: '<keyword>',
 		async execute(args, ctx) {
 			// Navigate to tasks page first if not there
-			if (window.location.pathname !== '/') {
-				await goto('/');
+			if (window.location.pathname !== '/app') {
+				await goto('/app');
 				// Small delay to let the page mount and register setSearch
 				await new Promise((r) => setTimeout(r, 50));
 			}
@@ -171,7 +171,7 @@ export const commands: Command[] = [
 		description: 'go to sessions',
 		args: 'none',
 		execute() {
-			goto('/sessions');
+			goto('/app/sessions');
 		}
 	},
 	{
@@ -180,7 +180,7 @@ export const commands: Command[] = [
 		description: 'go to reports & invoices',
 		args: 'none',
 		execute() {
-			goto('/reports');
+			goto('/app/reports');
 		}
 	},
 	{

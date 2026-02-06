@@ -120,7 +120,7 @@
 			e.preventDefault();
 			const session = flatSessions[selectedIdx];
 			if (session) {
-				window.location.href = `/sessions/${session._id}`;
+				window.location.href = `/app/sessions/${session._id}`;
 			}
 		}
 	}
@@ -225,7 +225,7 @@
 							{session}
 							selected={selectedIdx === getFlatIdx(session)}
 							onclick={() => {
-								window.location.href = `/sessions/${session._id}`;
+								window.location.href = `/app/sessions/${session._id}`;
 							}}
 						/>
 					{/each}

@@ -260,7 +260,7 @@
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				id: sessionId as any
 			});
-			goto('/sessions');
+			goto('/app/sessions');
 		} catch (error) {
 			console.error('Failed to delete session:', error);
 		}
@@ -387,7 +387,7 @@
 <div class="mx-auto flex max-w-3xl flex-col gap-6 p-6">
 	<!-- Back link -->
 	<a
-		href="/sessions"
+		href="/app/sessions"
 		class="inline-flex items-center gap-1 font-mono text-xs text-fg-muted transition-colors hover:text-fg-dark"
 	>
 		&lt;- back
@@ -699,7 +699,7 @@
 						>
 							<TaskStatusBadge status={task.status} />
 							<a
-								href="/tasks/{task._id}"
+								href="/app/tasks/{task._id}"
 								class="min-w-0 truncate text-fg-dark transition-colors hover:text-fg"
 								class:line-through={task.status === 'done'}
 								class:opacity-60={task.status === 'done'}

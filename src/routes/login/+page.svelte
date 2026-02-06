@@ -9,7 +9,7 @@
 	// If already authenticated, redirect to inbox
 	$effect(() => {
 		if (!auth.isLoading && auth.isAuthenticated) {
-			goto('/');
+			goto('/app');
 		}
 	});
 </script>

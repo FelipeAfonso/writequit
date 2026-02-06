@@ -57,15 +57,15 @@
 	}
 
 	const nav: NavItem[] = [
-		{ href: '/', label: 'tasks', icon: '#', shortcut: 'g t' },
-		{ href: '/sessions', label: 'sessions', icon: '~', shortcut: 'g s' },
-		{ href: '/reports', label: 'reports', icon: '$', shortcut: 'g r' },
-		{ href: '/tags', label: 'tags', icon: '+', shortcut: 'g a' }
+		{ href: '/app', label: 'tasks', icon: '#', shortcut: 'g t' },
+		{ href: '/app/sessions', label: 'sessions', icon: '~', shortcut: 'g s' },
+		{ href: '/app/reports', label: 'reports', icon: '$', shortcut: 'g r' },
+		{ href: '/app/tags', label: 'tags', icon: '+', shortcut: 'g a' }
 	];
 
 	function isActive(href: string): boolean {
 		const path = page.url.pathname;
-		if (href === '/') return path === '/';
+		if (href === '/app') return path === '/app';
 		return path.startsWith(href);
 	}
 
@@ -150,11 +150,11 @@
 			clearTimeout(gTimer);
 
 			const routes: Record<string, string> = {
-				t: '/',
-				s: '/sessions',
-				r: '/reports',
-				a: '/tags',
-				u: '/user'
+				t: '/app',
+				s: '/app/sessions',
+				r: '/app/reports',
+				a: '/app/tags',
+				u: '/app/user'
 			};
 
 			if (routes[e.key]) {
@@ -187,7 +187,7 @@
 		<header
 			class="flex shrink-0 items-center justify-between border-b border-border px-4 py-2"
 		>
-			<a href="/" class="font-mono text-sm font-bold text-green">:wq</a>
+			<a href="/app" class="font-mono text-sm font-bold text-green">:wq</a>
 			<div class="flex items-center gap-3">
 				<nav class="flex items-center gap-1">
 					{#each nav as item (item.href)}
@@ -212,15 +212,15 @@
 					{/each}
 				</nav>
 				<a
-					href="/user"
+					href="/app/user"
 					class="border px-2 py-1 font-mono text-xs transition-colors"
-					class:border-primary={isActive('/user')}
-					class:text-primary={isActive('/user')}
-					class:bg-surface-2={isActive('/user')}
-					class:border-transparent={!isActive('/user')}
-					class:text-fg-muted={!isActive('/user')}
-					class:hover:text-fg-dark={!isActive('/user')}
-					class:hover:border-border={!isActive('/user')}
+					class:border-primary={isActive('/app/user')}
+					class:text-primary={isActive('/app/user')}
+					class:bg-surface-2={isActive('/app/user')}
+					class:border-transparent={!isActive('/app/user')}
+					class:text-fg-muted={!isActive('/app/user')}
+					class:hover:text-fg-dark={!isActive('/app/user')}
+					class:hover:border-border={!isActive('/app/user')}
 					title="user settings (g u)"
 				>
 					<span class="opacity-60">@</span>
