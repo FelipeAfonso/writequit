@@ -430,6 +430,7 @@
 								<span class="text-fg-muted">3/5</span>
 							</div>
 						</div>
+						<div class="crt-overlay"></div>
 					</div>
 				</div>
 			</section>
@@ -639,9 +640,50 @@
 	}
 
 	.terminal-inner {
+		position: relative;
 		border-radius: 8px;
 		background: #0d0d12;
 		overflow: hidden;
+	}
+
+	/* CRT scanlines */
+	.crt-overlay {
+		position: absolute;
+		inset: 0;
+		pointer-events: none;
+		z-index: 10;
+		background: repeating-linear-gradient(
+			0deg,
+			transparent,
+			transparent 2px,
+			rgba(0, 0, 0, 0.15) 2px,
+			rgba(0, 0, 0, 0.15) 4px
+		);
+	}
+
+	/* Phosphor glow — bleeds color outward slightly */
+	.crt-overlay::before {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: radial-gradient(
+			ellipse 80% 60% at 50% 50%,
+			rgba(122, 162, 247, 0.04) 0%,
+			transparent 70%
+		);
+		filter: blur(6px);
+	}
+
+	/* Vignette — darkens edges like curved CRT glass */
+	.crt-overlay::after {
+		content: '';
+		position: absolute;
+		inset: 0;
+		background: radial-gradient(
+			ellipse 70% 65% at 50% 50%,
+			transparent 50%,
+			rgba(0, 0, 0, 0.45) 100%
+		);
 	}
 
 	/* --- Boot cursor toggle (conditional class:blink) --- */
