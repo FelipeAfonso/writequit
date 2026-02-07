@@ -25,6 +25,8 @@
 		type InvoiceLineItem
 	} from '$lib/utils/invoicePdf';
 
+	let { data } = $props();
+
 	const getTz = getContext<TimezoneGetter>(TIMEZONE_CTX);
 	let timezone = $derived(getTz());
 	const client = useConvexClient();
@@ -59,9 +61,15 @@
 	});
 
 	const sessions = useQuery(api.sessions.listWithTasks, () => queryArgs ?? {});
-	const user = useQuery(api.users.currentUser, {});
-	const userSettings = useQuery(api.users.getSettings, {});
-	const invoices = useQuery(api.invoices.list, {});
+	const user = useQuery(api.users.currentUser, {}, () => ({
+		initialData: data.preloaded?.user
+	}));
+	const userSettings = useQuery(api.users.getSettings, {}, () => ({
+		initialData: data.preloaded?.settings
+	}));
+	const invoices = useQuery(api.invoices.list, {}, () => ({
+		initialData: data.preloaded?.invoices
+	}));
 
 	// ── Quick presets ──────────────────────────────────────────────
 	function setPreset(

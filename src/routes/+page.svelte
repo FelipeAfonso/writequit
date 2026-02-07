@@ -191,7 +191,7 @@
 						manage work, <br />
 						not a workspace.
 					</span>
-					<span class="block text-primary">tasks. time. invoices. :wq.</span>
+					<span class="block text-primary">tasks. time. invoices.</span>
 				</h1>
 				<p
 					class="mb-8 max-w-[38rem] text-[0.75rem] leading-[1.8] text-[#6e7a96]"

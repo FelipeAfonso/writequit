@@ -15,6 +15,8 @@
 		type TimezoneGetter
 	} from '$lib/utils/datetime';
 
+	let { data } = $props();
+
 	const getTz = getContext<TimezoneGetter>(TIMEZONE_CTX);
 	let timezone = $derived(getTz());
 
@@ -31,8 +33,14 @@
 	}
 
 	let queryArgs = $derived(computeDateRangeBounds(dateRange));
-	const sessions = useQuery(api.sessions.list, () => queryArgs);
-	const allTags = useQuery(api.tags.list, {});
+	const sessions = useQuery(
+		api.sessions.list,
+		() => queryArgs,
+		() => ({ initialData: data.preloaded?.sessions })
+	);
+	const allTags = useQuery(api.tags.list, {}, () => ({
+		initialData: data.preloaded?.tags
+	}));
 
 	// ── Tag filter ──
 	let activeTagIds = $state<string[]>([]);

@@ -14,6 +14,10 @@ const VERIFIER_STORAGE_KEY = '__convexAuthOAuthVerifier';
 const JWT_STORAGE_KEY = '__convexAuthJWT';
 const REFRESH_TOKEN_STORAGE_KEY = '__convexAuthRefreshToken';
 
+// Cookie name used to mirror the JWT so SvelteKit server load functions
+// can read it and prefetch Convex data during SSR.
+export const JWT_COOKIE_NAME = '__convex_jwt';
+
 // ── Context key ────────────────────────────────────────────────────
 const AUTH_CONTEXT_KEY = '$$_convexAuth';
 
@@ -53,6 +57,36 @@ function makeStorageHelpers(namespace: string) {
 		storageSet: (k: string, v: string) => localStorage.setItem(key(k), v),
 		storageRemove: (k: string) => localStorage.removeItem(key(k))
 	};
+}
+
+// ── Cookie mirror (for SSR) ─────────────────────────────────────────
+
+/**
+ * Sync the JWT to a cookie so the SvelteKit server can read it during
+ * SSR and prefetch Convex data. We parse the JWT's `exp` claim to set
+ * an appropriate max-age so the cookie auto-expires with the token.
+ */
+function syncTokenCookie(jwt: string | null) {
+	if (typeof document === 'undefined') return;
+
+	if (jwt === null) {
+		document.cookie = `${JWT_COOKIE_NAME}=; path=/; SameSite=Lax; Secure; max-age=0`;
+		return;
+	}
+
+	// Parse JWT expiry to set cookie max-age
+	let maxAge = 3600; // fallback: 1 hour
+	try {
+		const payload = JSON.parse(atob(jwt.split('.')[1]));
+		if (payload.exp) {
+			const secondsLeft = payload.exp - Math.floor(Date.now() / 1000);
+			if (secondsLeft > 0) maxAge = secondsLeft;
+		}
+	} catch {
+		// If we can't parse the JWT, use the fallback
+	}
+
+	document.cookie = `${JWT_COOKIE_NAME}=${encodeURIComponent(jwt)}; path=/; SameSite=Lax; Secure; max-age=${maxAge}`;
 }
 
 // ── Network error detection ────────────────────────────────────────
@@ -97,12 +131,14 @@ export function setupConvexAuth(client: ConvexClient, convexUrl: string) {
 	) {
 		if (args.tokens === null) {
 			token = null;
+			syncTokenCookie(null);
 			if (args.shouldStore) {
 				storageRemove(JWT_STORAGE_KEY);
 				storageRemove(REFRESH_TOKEN_STORAGE_KEY);
 			}
 		} else {
 			token = args.tokens.token;
+			syncTokenCookie(args.tokens.token);
 			if (args.shouldStore && 'refreshToken' in args.tokens) {
 				storageSet(JWT_STORAGE_KEY, args.tokens.token);
 				storageSet(REFRESH_TOKEN_STORAGE_KEY, args.tokens.refreshToken);

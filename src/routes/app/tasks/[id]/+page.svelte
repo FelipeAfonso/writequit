@@ -17,6 +17,8 @@
 	import TagBadge from '$lib/components/tags/TagBadge.svelte';
 	import Markdown from '$lib/components/ui/Markdown.svelte';
 
+	let { data } = $props();
+
 	const getTz = getContext<TimezoneGetter>(TIMEZONE_CTX);
 	let timezone = $derived(getTz());
 	const client = useConvexClient();
@@ -27,8 +29,12 @@
 	const userSettings = useQuery(api.users.getSettings, {});
 	let viMode = $derived(userSettings.data?.viMode ?? false);
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const task = useQuery(api.tasks.get, () => ({ id: taskId as any }));
+	const task = useQuery(
+		api.tasks.get,
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Convex ID from route param
+		() => ({ id: taskId as any }),
+		() => ({ initialData: data.preloaded?.task })
+	);
 
 	let isEditing = $state(false);
 	let editor: TaskEditor | undefined = $state();

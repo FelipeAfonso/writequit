@@ -9,6 +9,8 @@
 	import TaskList from '$lib/components/tasks/TaskList.svelte';
 	import TagFilter from '$lib/components/tags/TagFilter.svelte';
 
+	let { data } = $props();
+
 	let editor: TaskEditor | undefined = $state();
 	let searchQuery = $state('');
 	let selectedTaskId = $state<string | undefined>(undefined);
@@ -78,8 +80,14 @@
 			: { status: settings.statusFilter as TaskStatus }
 	);
 
-	const tasks = useQuery(api.tasks.list, () => queryArgs);
-	const allTags = useQuery(api.tags.list, {});
+	const tasks = useQuery(
+		api.tasks.list,
+		() => queryArgs,
+		() => ({ initialData: data.preloaded?.tasks })
+	);
+	const allTags = useQuery(api.tags.list, {}, () => ({
+		initialData: data.preloaded?.tags
+	}));
 
 	let tagsMap = $derived.by(() => {
 		const map = new SvelteMap<

@@ -7,12 +7,20 @@
 		detectTimezone
 	} from '$lib/utils/datetime';
 
+	let { data } = $props();
+
 	const client = useConvexClient();
 
 	// ── Data queries ───────────────────────────────────────────────
-	const user = useQuery(api.users.currentUser, {});
-	const userSettings = useQuery(api.users.getSettings, {});
-	const hasPassword = useQuery(api.users.hasPasswordAccount, {});
+	const user = useQuery(api.users.currentUser, {}, () => ({
+		initialData: data.preloaded?.user
+	}));
+	const userSettings = useQuery(api.users.getSettings, {}, () => ({
+		initialData: data.preloaded?.settings
+	}));
+	const hasPassword = useQuery(api.users.hasPasswordAccount, {}, () => ({
+		initialData: data.preloaded?.hasPassword
+	}));
 
 	// ── Profile state ──────────────────────────────────────────────
 	let editingName = $state(false);

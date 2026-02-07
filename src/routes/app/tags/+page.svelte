@@ -3,8 +3,12 @@
 	import { api } from '$convex/_generated/api';
 	import TagBadge from '$lib/components/tags/TagBadge.svelte';
 
+	let { data } = $props();
+
 	const client = useConvexClient();
-	const allTags = useQuery(api.tags.list, {});
+	const allTags = useQuery(api.tags.list, {}, () => ({
+		initialData: data.preloaded?.tags
+	}));
 
 	const TAG_TYPES = [
 		{ value: undefined, label: 'none' },

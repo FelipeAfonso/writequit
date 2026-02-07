@@ -1,9 +1,23 @@
 <script lang="ts">
+	import { getContext } from 'svelte';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
+	import type { FunctionReturnType } from 'convex/server';
+	import { PRELOADED_ACTIVE_SESSION_CTX } from '$lib/utils/preload';
+
+	type ActiveSession = FunctionReturnType<typeof api.sessions.active>;
 
 	const client = useConvexClient();
-	const activeSession = useQuery(api.sessions.active, {});
+	const preloadedActiveSession = getContext<ActiveSession | undefined>(
+		PRELOADED_ACTIVE_SESSION_CTX
+	);
+	const activeSession = useQuery(
+		api.sessions.active,
+		{},
+		{
+			initialData: preloadedActiveSession
+		}
+	);
 
 	let elapsed = $state('00:00:00');
 	let intervalId: ReturnType<typeof setInterval> | undefined;

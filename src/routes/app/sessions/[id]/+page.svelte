@@ -19,17 +19,25 @@
 	import TagBadge from '$lib/components/tags/TagBadge.svelte';
 	import TaskStatusBadge from '$lib/components/tasks/TaskStatusBadge.svelte';
 
+	let { data } = $props();
+
 	const getTz = getContext<TimezoneGetter>(TIMEZONE_CTX);
 	let timezone = $derived(getTz());
 	const client = useConvexClient();
 
 	let sessionId = $derived(page.params.id);
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const session = useQuery(api.sessions.get, () => ({ id: sessionId as any }));
+	const session = useQuery(
+		api.sessions.get,
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Convex ID from route param
+		() => ({ id: sessionId as any }),
+		() => ({ initialData: data.preloaded?.session })
+	);
 
 	// All tasks for the task picker
-	const allTasks = useQuery(api.tasks.list, {});
+	const allTasks = useQuery(api.tasks.list, {}, () => ({
+		initialData: data.preloaded?.tasks
+	}));
 
 	let isRunning = $derived(session.data ? !session.data.endTime : false);
 	let duration = $derived.by(() => {

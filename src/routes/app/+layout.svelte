@@ -8,17 +8,20 @@
 	import { isEditableTarget } from '$lib/utils/keys';
 	import { detectTimezone, TIMEZONE_CTX } from '$lib/utils/datetime';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
+	import { PRELOADED_ACTIVE_SESSION_CTX } from '$lib/utils/preload';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import StatusBar from '$lib/components/StatusBar.svelte';
 
-	let { children } = $props();
+	let { data, children } = $props();
 
 	const auth = useAuthState();
 	const { signOut } = useAuthActions();
 	const client = useConvexClient();
 
 	// ── Timezone ────────────────────────────────────────────────────
-	const userSettings = useQuery(api.users.getSettings, {});
+	const userSettings = useQuery(api.users.getSettings, {}, () => ({
+		initialData: data.preloaded?.settings
+	}));
 	const browserTz = detectTimezone();
 
 	// Use server-stored timezone if available, otherwise fall back to browser.
@@ -27,6 +30,11 @@
 	// Provide timezone to all child components via Svelte context.
 	// We pass a getter function so consumers always read the latest value.
 	setContext(TIMEZONE_CTX, () => timezone);
+
+	// Provide preloaded active session to StatusBar via context.
+	// Intentionally captures initial value — preloaded data is one-time SSR seed.
+	const preloadedActiveSession = data.preloaded?.activeSession;
+	setContext(PRELOADED_ACTIVE_SESSION_CTX, preloadedActiveSession);
 
 	// Auto-detect and persist timezone on first visit (one-time)
 	let tzPersisted = false;
