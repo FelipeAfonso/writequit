@@ -1,4 +1,8 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
+
+	let { data } = $props();
+
 	let typedLines = $state<string[]>([]);
 	let currentLine = $state(0);
 	let currentChar = $state(0);
@@ -82,10 +86,14 @@
 				}
 			}, 3.4);
 		} else if (phase === 'hold') {
-			// Hold final state for 1.5s
+			// Hold final state for 1.5s, then redirect or show landing
 			const t = setTimeout(() => {
-				showContent = true;
-				phase = 'done';
+				if (data.isLoggedIn) {
+					goto('/app');
+				} else {
+					showContent = true;
+					phase = 'done';
+				}
 			}, 1500);
 			return () => clearTimeout(t);
 		}
