@@ -225,14 +225,6 @@
 			<span class="text-fg-muted">#</span>
 			tasks
 		</h1>
-		{#if tasks.status !== 'LoadingFirstPage'}
-			<span class="font-mono text-xs text-fg-muted">
-				{filteredTasks.length}{tasks.status !== 'Exhausted' ? '+' : ''} task{filteredTasks.length !==
-				1
-					? 's'
-					: ''}
-			</span>
-		{/if}
 	</div>
 
 	<!-- Search indicator -->
