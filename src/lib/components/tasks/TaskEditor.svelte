@@ -222,6 +222,19 @@
 			}
 		});
 
+		// Seed empty editor with '# ' on focus so the user starts with a title
+		const seedOnFocus = EditorView.domEventHandlers({
+			focusin(_, v) {
+				if (v.state.doc.length === 0) {
+					const insert = '# ';
+					v.dispatch({
+						changes: { from: 0, insert },
+						selection: { anchor: insert.length }
+					});
+				}
+			}
+		});
+
 		const state = EditorState.create({
 			doc: initialContent,
 			extensions: [
@@ -246,6 +259,7 @@
 				tokyoNight,
 				cmPlaceholder(placeholder),
 				updateListener,
+				seedOnFocus,
 				EditorView.lineWrapping
 			]
 		});
