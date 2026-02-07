@@ -1,5 +1,5 @@
 import { isWhitespace, isDigit, toLower, readWhile } from './scanner.js';
-import { getLocalMidnight } from '../utils/datetime.js';
+import { getLocalMidnight, getMidnightForDate } from '../utils/datetime.js';
 
 /**
  * Extract a due date from a markdown string.
@@ -111,9 +111,7 @@ export function parseISODate(value: string, tz: string): number | null {
 	if (!isValidDate(year, month, day)) return null;
 
 	// Construct midnight timestamp in the user's timezone.
-	// Use a rough UTC estimate then resolve to exact local midnight.
-	const utcEstimate = Date.UTC(year, month - 1, day, 0, 0, 0, 0);
-	return getLocalMidnight(utcEstimate, tz);
+	return getMidnightForDate(year, month, day, tz);
 }
 
 /**

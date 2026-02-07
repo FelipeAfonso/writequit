@@ -156,26 +156,64 @@ export function formatDuration(ms: number): string {
  */
 export function getLocalMidnight(ms: number, tz: string): number {
 	const { year, month, day } = getPartsInTz(ms, tz);
+	return getMidnightForDate(year, month, day, tz);
+}
 
+/**
+ * Get the UTC ms timestamp for midnight of a specific calendar date
+ * in the given timezone.
+ *
+ * Unlike `getLocalMidnight` (which extracts the date from a timestamp),
+ * this takes an explicit year/month/day — useful when you already know
+ * the target date (e.g. from parsing `YYYY-MM-DD`).
+ *
+ * @param year  Full year (e.g. 2026).
+ * @param month Month 1–12.
+ * @param day   Day 1–31.
+ * @param tz    IANA timezone string.
+ */
+export function getMidnightForDate(
+	year: number,
+	month: number,
+	day: number,
+	tz: string
+): number {
 	// Start with a rough estimate: UTC midnight of that date.
-	// Then compute the offset to find the exact local midnight.
 	const utcEstimate = Date.UTC(year, month - 1, day);
 
 	// Check what local time that UTC estimate maps to
 	const estParts = getPartsInTz(utcEstimate, tz);
 
-	// The offset in ms = local_representation - utc_time
-	// If utcEstimate shows as hour H in local time, then midnight local
-	// is at utcEstimate - H*60min - M*min (in ms)
-	const offsetMs =
-		(estParts.hour * 60 + estParts.minute) * 60_000 +
-		(estParts.day !== day
-			? estParts.day > day
-				? -86_400_000
-				: 86_400_000
-			: 0);
+	// We want the UTC instant where the local clock shows 00:00 on `day`.
+	// `utcEstimate` is midnight UTC on `day`, but in the local timezone it
+	// shows as (estParts.day, estParts.hour:estParts.minute).
+	//
+	// Case 1: estParts.day === day  → local time is ahead of UTC (positive offset, e.g. UTC+9).
+	//         Local clock shows H:M of the target day, so midnight local was H:M hours *before*
+	//         utcEstimate → candidate = utcEstimate - H*60min - M*min.
+	//
+	// Case 2: estParts.day < day    → local time is behind UTC (negative offset, e.g. UTC-3).
+	//         Local clock shows H:M of the *previous* day, so midnight of the target day is
+	//         (24 - H) hours *after* utcEstimate → candidate = utcEstimate + (24-H)*60min - M*min.
+	//
+	// Case 3: estParts.day > day    → UTC estimate crossed a month/year boundary in local time
+	//         (e.g. day=1, estParts.day=31). Same logic as Case 2 but reversed.
 
-	const candidate = utcEstimate - offsetMs;
+	let candidate: number;
+	if (estParts.day === day) {
+		// Positive or zero UTC offset — go backward by local time-of-day
+		candidate = utcEstimate - (estParts.hour * 60 + estParts.minute) * 60_000;
+	} else if (estParts.day < day || estParts.day > day + 1) {
+		// Negative UTC offset — local clock hasn't reached target day yet.
+		// (estParts.day > day+1 handles month wrap: e.g. day=1, estParts.day=28+)
+		candidate =
+			utcEstimate + ((24 - estParts.hour) * 60 - estParts.minute) * 60_000;
+	} else {
+		// estParts.day > day (by exactly 1) — large positive offset pushed into next day.
+		// Go backward by a full day plus the hours shown.
+		candidate =
+			utcEstimate - ((estParts.hour + 24) * 60 + estParts.minute) * 60_000;
+	}
 
 	// Verify the candidate — it should map to 00:00 of the target day
 	const verify = getPartsInTz(candidate, tz);

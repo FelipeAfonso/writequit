@@ -3,6 +3,7 @@
 	import { useQuery } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import { isEditableTarget } from '$lib/utils/keys';
+	import { sortTags } from '$lib/utils/tags';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 	import SessionCard from '$lib/components/sessions/SessionCard.svelte';
 	import TagFilter from '$lib/components/tags/TagFilter.svelte';
@@ -41,6 +42,8 @@
 	const allTags = useQuery(api.tags.list, {}, () => ({
 		initialData: data.preloaded?.tags
 	}));
+
+	let sortedTags = $derived(allTags.data ? sortTags(allTags.data) : []);
 
 	// ── Tag filter ──
 	let activeTagIds = $state<string[]>([]);
@@ -189,9 +192,9 @@
 		</div>
 
 		<!-- Tag filter -->
-		{#if allTags.data && allTags.data.length > 0}
+		{#if sortedTags.length > 0}
 			<TagFilter
-				tags={allTags.data}
+				tags={sortedTags}
 				selectedTagIds={activeTagSet}
 				ontoggle={toggleTag}
 				onclear={clearTags}

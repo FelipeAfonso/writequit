@@ -3,6 +3,7 @@
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import { isEditableTarget } from '$lib/utils/keys';
+	import { sortTags } from '$lib/utils/tags';
 	import { settings } from '$lib/stores/settings.svelte';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 	import TaskEditor from '$lib/components/tasks/TaskEditor.svelte';
@@ -101,6 +102,8 @@
 		}
 		return map;
 	});
+
+	let sortedTags = $derived(allTags.data ? sortTags(allTags.data) : []);
 
 	/** Filter tasks by tags (client-side, inclusive/AND — must have ALL selected tags). */
 	let tagFiltered = $derived.by(() => {
@@ -246,7 +249,7 @@
 		onsubmit={handleCreateTask}
 		autofocus={false}
 		{viMode}
-		tags={allTags.data ?? []}
+		tags={sortedTags}
 	/>
 
 	<!-- Filters -->
@@ -273,9 +276,9 @@
 		</div>
 
 		<!-- Tag filter -->
-		{#if allTags.data && allTags.data.length > 0}
+		{#if sortedTags.length > 0}
 			<TagFilter
-				tags={allTags.data}
+				tags={sortedTags}
 				selectedTagIds={activeTagIds}
 				ontoggle={toggleTag}
 				onclear={clearTags}
@@ -299,12 +302,12 @@
 			onstatuschange={handleStatusChange}
 			onfilterprev={() => cycleFilter(-1)}
 			onfilternext={() => cycleFilter(1)}
-			tagIds={allTags.data?.map((t) => t._id) ?? []}
+			tagIds={sortedTags.map((t) => t._id)}
 			ontagtoggle={(index) => {
 				if (index === 0) {
 					clearTags();
 				} else {
-					const tag = allTags.data?.[index - 1];
+					const tag = sortedTags[index - 1];
 					if (tag) toggleTag(tag._id);
 				}
 			}}

@@ -2,6 +2,7 @@
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import TagBadge from '$lib/components/tags/TagBadge.svelte';
+	import { sortTags } from '$lib/utils/tags';
 
 	let { data } = $props();
 
@@ -70,7 +71,7 @@
 		</div>
 	{:else if allTags.data}
 		<div class="flex flex-col gap-px">
-			{#each allTags.data as tag (tag._id)}
+			{#each sortTags(allTags.data) as tag (tag._id)}
 				<div
 					class="flex items-center gap-4 border border-border bg-surface-0 px-3 py-2.5 font-mono"
 				>
