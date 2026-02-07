@@ -14,6 +14,7 @@ import type { CommandContext } from '$lib/utils/commands';
 function createCommandPalette() {
 	let isOpen = $state(false);
 	let error = $state('');
+	let initialInput = $state('');
 
 	// Base context — always available (set by layout)
 	let baseCtx: Pick<
@@ -42,7 +43,19 @@ function createCommandPalette() {
 			error = value;
 		},
 
+		get initialInput() {
+			return initialInput;
+		},
+
 		open() {
+			initialInput = '';
+			isOpen = true;
+			error = '';
+		},
+
+		/** Open the palette with pre-filled input (e.g. 's ' for search). */
+		openWithInput(input: string) {
+			initialInput = input;
 			isOpen = true;
 			error = '';
 		},
@@ -50,6 +63,7 @@ function createCommandPalette() {
 		close() {
 			isOpen = false;
 			error = '';
+			initialInput = '';
 		},
 
 		/** Set the base context (called once from the app layout). */

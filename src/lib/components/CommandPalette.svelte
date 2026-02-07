@@ -15,8 +15,8 @@
 	// Focus input when palette opens
 	$effect(() => {
 		if (commandPalette.isOpen) {
-			// Reset state on open
-			input = '';
+			// Reset state on open (use initialInput if provided)
+			input = commandPalette.initialInput;
 			selectedIndex = 0;
 			// Tick to let the DOM render, then focus
 			requestAnimationFrame(() => {

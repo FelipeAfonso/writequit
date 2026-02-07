@@ -81,16 +81,29 @@
 
 	const PAGE_SIZE = 10;
 
+	let isSearching = $derived(searchQuery.length > 0);
+
 	/** Build query args based on the active status filter. */
-	let queryArgs = $derived(
+	let statusArg = $derived(
 		settings.statusFilter === 'all'
-			? {}
-			: { status: settings.statusFilter as TaskStatus }
+			? undefined
+			: (settings.statusFilter as TaskStatus)
 	);
 
-	const tasks = usePaginatedQuery(api.tasks.listPaginated, () => queryArgs, {
-		initialNumItems: PAGE_SIZE
-	});
+	// Paginated query — used when NOT searching
+	const tasks = usePaginatedQuery(
+		api.tasks.listPaginated,
+		() => (isSearching ? 'skip' : statusArg ? { status: statusArg } : {}),
+		{ initialNumItems: PAGE_SIZE }
+	);
+
+	// Server-side search query — used when searching (non-paginated, scans all tasks)
+	const searchResults = useQuery(api.tasks.search, () =>
+		isSearching
+			? { query: searchQuery, ...(statusArg ? { status: statusArg } : {}) }
+			: 'skip'
+	);
+
 	const allTags = useQuery(api.tags.list, {}, () => ({
 		initialData: data.preloaded?.tags
 	}));
@@ -110,27 +123,18 @@
 
 	let sortedTags = $derived(allTags.data ? sortTags(allTags.data) : []);
 
+	/** Pick the right result set depending on search mode. */
+	let baseResults = $derived(
+		isSearching ? (searchResults.data ?? []) : tasks.results
+	);
+
 	/** Filter tasks by tags (client-side, inclusive/AND — must have ALL selected tags). */
-	let tagFiltered = $derived.by(() => {
-		if (activeTagIds.size === 0) return tasks.results;
-		return tasks.results.filter((t: { tagIds: string[] }) =>
+	let filteredTasks = $derived.by(() => {
+		if (activeTagIds.size === 0) return baseResults;
+		return baseResults.filter((t: { tagIds: string[] }) =>
 			[...activeTagIds].every((id) => t.tagIds.includes(id))
 		);
 	});
-
-	/** Further filter by search query (case-insensitive title match). */
-	let searchFiltered = $derived.by(() => {
-		if (!searchQuery) return tagFiltered;
-		const q = searchQuery.toLowerCase();
-		return tagFiltered.filter(
-			(t: { title: string; rawContent: string }) =>
-				t.title.toLowerCase().includes(q) ||
-				t.rawContent.toLowerCase().includes(q)
-		);
-	});
-
-	/** Backend already sorts by status priority, so no client-side sort needed. */
-	let filteredTasks = $derived(searchFiltered);
 
 	function toggleTag(tagId: string) {
 		const ids = settings.activeTagIds;
@@ -192,7 +196,7 @@
 	}
 
 	async function handleStatusChange(id: string) {
-		const task = tasks.results.find((t: { _id: string }) => t._id === id);
+		const task = baseResults.find((t: { _id: string }) => t._id === id);
 		if (!task) return;
 
 		const nextStatus: Record<string, TaskStatus> = {
@@ -293,15 +297,17 @@
 	</div>
 
 	<!-- Task list -->
-	{#if tasks.status === 'LoadingFirstPage'}
+	{#if isSearching ? searchResults.isLoading : tasks.status === 'LoadingFirstPage'}
 		<div class="py-8 text-center font-mono text-sm text-fg-muted">
-			loading...
+			{isSearching ? 'searching...' : 'loading...'}
 		</div>
 	{:else}
 		<TaskList
 			tasks={filteredTasks}
 			{tagsMap}
-			emptyMessage="No tasks yet. Type above to dump a task."
+			emptyMessage={isSearching
+				? `no tasks matching "${searchQuery}"`
+				: 'No tasks yet. Type above to dump a task.'}
 			ontaskclick={(id) => {
 				window.location.href = `/app/tasks/${id}`;
 			}}
@@ -324,7 +330,7 @@
 			onedit={(id) => {
 				window.location.href = `/app/tasks/${id}?edit=1`;
 			}}
-			paginationStatus={tasks.status}
+			paginationStatus={isSearching ? 'Exhausted' : tasks.status}
 			onloadmore={() => tasks.loadMore(PAGE_SIZE)}
 		/>
 	{/if}

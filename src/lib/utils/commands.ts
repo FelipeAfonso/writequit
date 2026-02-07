@@ -9,6 +9,7 @@
 import { goto } from '$app/navigation';
 import { parseTimeLog } from '$lib/parser/timeRange';
 import { extractTags } from '$lib/parser/tags';
+import { commandPalette } from '$lib/stores/commandPalette.svelte';
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -142,20 +143,25 @@ export const commands: Command[] = [
 	{
 		name: 'search',
 		aliases: ['search', 's'],
-		description: 'search tasks',
+		description: 'search tasks & tags',
 		args: 'optional',
 		argsPlaceholder: '<keyword>',
 		async execute(args, ctx) {
-			// Navigate to tasks page first if not there
-			if (window.location.pathname !== '/app') {
-				await goto('/app');
-				// Small delay to let the page mount and register setSearch
-				await new Promise((r) => setTimeout(r, 50));
-			}
+			// If the current page already supports search, use it directly
 			if (ctx.setSearch) {
 				ctx.setSearch(args.trim());
+				return;
+			}
+			// Otherwise, navigate to tasks page as the default search target
+			await goto('/app');
+			// Small delay to let the page mount and register setSearch
+			await new Promise((r) => setTimeout(r, 50));
+			// Re-read context since page navigation may have registered new actions
+			const freshCtx = commandPalette.context;
+			if (freshCtx.setSearch) {
+				freshCtx.setSearch(args.trim());
 			} else {
-				return 'search is only available on the tasks page';
+				return 'search is not available on this page';
 			}
 		}
 	},

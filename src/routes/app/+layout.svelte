@@ -139,6 +139,13 @@
 			return;
 		}
 
+		// Open command palette in search mode with '/'
+		if (e.key === '/') {
+			e.preventDefault();
+			commandPalette.openWithInput('s ');
+			return;
+		}
+
 		// Toggle help overlay
 		if (e.key === '?') {
 			e.preventDefault();
@@ -289,6 +296,14 @@
 										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
 									>
 										:
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">search</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										/
 									</kbd>
 								</div>
 							</div>

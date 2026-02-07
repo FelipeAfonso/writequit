@@ -119,6 +119,84 @@ export const listPaginated = query({
 	}
 });
 
+/**
+ * Full-text search across all tasks (non-paginated).
+ *
+ * Matches the query string against title, rawContent, and resolved tag names.
+ * Optionally filters by status. Results are sorted by status priority
+ * (active > inbox > done), then newest first within each group.
+ */
+export const search = query({
+	args: {
+		query: v.string(),
+		status: v.optional(
+			v.union(v.literal('inbox'), v.literal('active'), v.literal('done'))
+		)
+	},
+	handler: async (ctx, args) => {
+		const userId = await getAuthUserId(ctx);
+		if (userId === null) return [];
+
+		const q = args.query.toLowerCase();
+		if (!q) return [];
+
+		// Fetch all tasks for this user (optionally filtered by status)
+		let tasks;
+		if (args.status !== undefined) {
+			tasks = await ctx.db
+				.query('tasks')
+				.withIndex('by_status_userId', (idx) =>
+					idx.eq('status', args.status!).eq('userId', userId)
+				)
+				.collect();
+		} else {
+			tasks = await ctx.db
+				.query('tasks')
+				.withIndex('by_userId_statusPriority', (idx) =>
+					idx.eq('userId', userId)
+				)
+				.order('asc')
+				.collect();
+		}
+
+		// Build a tag name lookup for all tags referenced by these tasks
+		const tagIdSet = new Set<string>();
+		for (const task of tasks) {
+			for (const tagId of task.tagIds) {
+				tagIdSet.add(tagId);
+			}
+		}
+		const tagNames = new Map<string, string>();
+		await Promise.all(
+			[...tagIdSet].map(async (tagId) => {
+				const tag = await ctx.db.get(tagId as Id<'tags'>);
+				if (tag) tagNames.set(tagId, tag.name.toLowerCase());
+			})
+		);
+
+		// Filter tasks by search query
+		const matched = tasks.filter((task) => {
+			if (task.title.toLowerCase().includes(q)) return true;
+			if (task.rawContent.toLowerCase().includes(q)) return true;
+			for (const tagId of task.tagIds) {
+				const name = tagNames.get(tagId);
+				if (name && name.includes(q)) return true;
+			}
+			return false;
+		});
+
+		// Sort: status priority (active=0 > inbox=1 > done=2), then newest first
+		matched.sort((a, b) => {
+			const pa = a.statusPriority ?? statusPriorityFor(a.status);
+			const pb = b.statusPriority ?? statusPriorityFor(b.status);
+			if (pa !== pb) return pa - pb;
+			return b.createdAt - a.createdAt;
+		});
+
+		return matched;
+	}
+});
+
 /** Get a single task by ID, including its resolved tags. */
 export const get = query({
 	args: { id: v.id('tasks') },

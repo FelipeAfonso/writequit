@@ -9,6 +9,21 @@
 
 	let { data } = $props();
 
+	let searchQuery = $state('');
+
+	// Register page-specific command actions
+	$effect(() => {
+		commandPalette.registerActions({
+			setSearch: (query: string) => {
+				searchQuery = query;
+			}
+		});
+
+		return () => {
+			commandPalette.unregisterActions(['setSearch']);
+		};
+	});
+
 	const client = useConvexClient();
 	const allTags = useQuery(api.tags.list, {}, () => ({
 		initialData: data.preloaded?.tags
@@ -24,11 +39,24 @@
 
 	let sorted = $derived(allTags.data ? sortTags(allTags.data) : []);
 
+	/** Filter tags by search query (case-insensitive match on name and type). */
+	let filteredTags = $derived.by(() => {
+		if (!searchQuery) return sorted;
+		const q = searchQuery.toLowerCase();
+		return sorted.filter(
+			(t) =>
+				t.name.toLowerCase().includes(q) ||
+				(t.type && t.type.toLowerCase().includes(q))
+		);
+	});
+
 	// Selection state — raw index that keyboard handlers update
 	let rawSelectedIndex = $state(0);
 	// Clamped to valid range so it never goes out of bounds
 	let selectedIndex = $derived(
-		sorted.length === 0 ? 0 : Math.min(rawSelectedIndex, sorted.length - 1)
+		filteredTags.length === 0
+			? 0
+			: Math.min(rawSelectedIndex, filteredTags.length - 1)
 	);
 
 	// Delete confirmation state
@@ -85,7 +113,7 @@
 
 	/** Cycle the selected tag's type forward (l / ArrowRight) */
 	function cycleTypeForward() {
-		const tag = sorted[selectedIndex];
+		const tag = filteredTags[selectedIndex];
 		if (!tag) return;
 		const cur = typeIndex(tag.type);
 		const next = (cur + 1) % TAG_TYPES.length;
@@ -94,7 +122,7 @@
 
 	/** Cycle the selected tag's type backward (h / ArrowLeft) */
 	function cycleTypeBackward() {
-		const tag = sorted[selectedIndex];
+		const tag = filteredTags[selectedIndex];
 		if (!tag) return;
 		const cur = typeIndex(tag.type);
 		const next = (cur - 1 + TAG_TYPES.length) % TAG_TYPES.length;
@@ -105,7 +133,15 @@
 		if (isEditableTarget(e)) return;
 		if (commandPalette.isOpen) return;
 		if (showDeleteConfirm) return;
-		if (sorted.length === 0) return;
+
+		// Clear search with Escape
+		if (e.key === 'Escape' && searchQuery) {
+			e.preventDefault();
+			searchQuery = '';
+			return;
+		}
+
+		if (filteredTags.length === 0) return;
 
 		// Second key of a two-key sequence
 		if (pendingKey) {
@@ -115,7 +151,7 @@
 
 			if (combo === 'dd') {
 				e.preventDefault();
-				const tag = sorted[selectedIndex];
+				const tag = filteredTags[selectedIndex];
 				if (tag) requestDelete(tag._id);
 				return;
 			}
@@ -140,7 +176,7 @@
 		// j / ArrowDown — move selection down
 		if (e.key === 'j' || e.key === 'ArrowDown') {
 			e.preventDefault();
-			if (selectedIndex < sorted.length - 1) {
+			if (selectedIndex < filteredTags.length - 1) {
 				rawSelectedIndex++;
 				scrollSelectedIntoView();
 			}
@@ -174,7 +210,7 @@
 		// G — jump to last
 		if (e.key === 'G') {
 			e.preventDefault();
-			rawSelectedIndex = sorted.length - 1;
+			rawSelectedIndex = filteredTags.length - 1;
 			scrollSelectedIntoView();
 			return;
 		}
@@ -206,6 +242,28 @@
 		assign types and manage them.
 	</p>
 
+	<!-- Search indicator -->
+	{#if searchQuery}
+		<div
+			class="flex items-center gap-2 border border-border-highlight bg-surface-1 px-3 py-1.5"
+		>
+			<span class="font-mono text-xs text-fg-muted">/</span>
+			<span class="font-mono text-sm text-primary">{searchQuery}</span>
+			<button
+				type="button"
+				class="ml-auto font-mono text-xs text-fg-muted transition-colors hover:text-red"
+				onclick={() => (searchQuery = '')}
+			>
+				[x] clear
+				<kbd
+					class="ml-1 border border-border bg-surface-2 px-1.5 py-0.5 text-fg-muted"
+				>
+					Esc
+				</kbd>
+			</button>
+		</div>
+	{/if}
+
 	{#if allTags.isLoading}
 		<div class="py-8 text-center font-mono text-sm text-fg-muted">
 			loading...
@@ -215,8 +273,13 @@
 			No tags yet. Create a task with +tagname to get started.
 		</div>
 	{:else if allTags.data}
+		{#if searchQuery && filteredTags.length === 0}
+			<div class="py-8 text-center font-mono text-sm text-fg-muted">
+				no tags matching "{searchQuery}"
+			</div>
+		{/if}
 		<div class="flex flex-col gap-px">
-			{#each sorted as tag, i (tag._id)}
+			{#each filteredTags as tag, i (tag._id)}
 				<div
 					bind:this={rowEls[i]}
 					class="flex items-center gap-4 border px-3 py-2.5 font-mono transition-colors"
