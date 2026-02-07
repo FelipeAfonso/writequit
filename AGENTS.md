@@ -6,7 +6,9 @@
 
 1. **DO NOT run `dev` or `build` commands** - Assume the dev server (`bun run dev`) and Convex dev (`bunx convex dev`) are already running. Never start them yourself.
 
-2. **After any major code changes**, always run validation in this order:
+2. **DO NOT run `bunx convex` commands** - Never run Convex CLI commands (`bunx convex run`, `bunx convex deploy`, etc.) yourself. These can mutate production data or trigger deployments. Always ask the user to run them instead.
+
+3. **After any major code changes**, always run validation in this order:
    ```bash
    bun run format              # First: auto-format code
    ```

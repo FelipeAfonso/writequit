@@ -18,6 +18,10 @@
 	const { signOut } = useAuthActions();
 	const client = useConvexClient();
 
+	// ── Admin check ─────────────────────────────────────────────────
+	const adminQuery = useQuery(api.admin.isAdmin, {});
+	let isAdminUser = $derived(adminQuery.data === true);
+
 	// ── Timezone ────────────────────────────────────────────────────
 	const userSettings = useQuery(api.users.getSettings, {}, () => ({
 		initialData: data.preloaded?.settings
@@ -169,7 +173,8 @@
 				s: '/app/sessions',
 				r: '/app/reports',
 				a: '/app/tags',
-				u: '/app/user'
+				u: '/app/user',
+				d: '/app/admin'
 			};
 
 			if (routes[e.key]) {
@@ -244,6 +249,26 @@
 						g u
 					</span>
 				</a>
+				{#if isAdminUser}
+					<a
+						href="/app/admin"
+						class="border px-2 py-1 font-mono text-xs transition-colors"
+						class:border-yellow={isActive('/app/admin')}
+						class:text-yellow={isActive('/app/admin')}
+						class:bg-surface-2={isActive('/app/admin')}
+						class:border-transparent={!isActive('/app/admin')}
+						class:text-fg-muted={!isActive('/app/admin')}
+						class:hover:text-yellow={!isActive('/app/admin')}
+						class:hover:border-border={!isActive('/app/admin')}
+						title="admin (g d)"
+					>
+						<span class="opacity-60">*</span>
+						admin
+						<span class="ml-1 hidden text-fg-muted opacity-50 sm:inline">
+							g d
+						</span>
+					</a>
+				{/if}
 				<button
 					onclick={() => signOut()}
 					class="border border-transparent px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-red hover:text-red"
@@ -359,6 +384,18 @@
 										g u
 									</kbd>
 								</div>
+								{#if isAdminUser}
+									<div class="flex items-center justify-between">
+										<span class="font-mono text-sm text-fg-dark">
+											go to admin
+										</span>
+										<kbd
+											class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+										>
+											g d
+										</kbd>
+									</div>
+								{/if}
 							</div>
 						</div>
 						<div>

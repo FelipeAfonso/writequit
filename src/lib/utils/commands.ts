@@ -186,6 +186,15 @@ export const commands: Command[] = [
 		}
 	},
 	{
+		name: 'admin',
+		aliases: ['admin'],
+		description: 'go to admin panel',
+		args: 'none',
+		execute() {
+			goto('/app/admin');
+		}
+	},
+	{
 		name: 'log',
 		aliases: ['log', 'l'],
 		description: 'log a time entry',
