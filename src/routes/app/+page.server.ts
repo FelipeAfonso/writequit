@@ -7,13 +7,12 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	if (!client) return { preloaded: {} };
 
 	try {
-		const [tasks, tags] = await Promise.all([
-			client.query(api.tasks.list, {}),
-			client.query(api.tags.list)
-		]);
+		// Tasks are loaded client-side via usePaginatedQuery (cursor-based).
+		// Only tags are preloaded server-side.
+		const tags = await client.query(api.tags.list);
 
 		return {
-			preloaded: { tasks, tags }
+			preloaded: { tags }
 		};
 	} catch {
 		return { preloaded: {} };

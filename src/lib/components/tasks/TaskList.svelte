@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { isEditableTarget } from '$lib/utils/keys';
+	import type { PaginationStatus } from '$lib/stores/usePaginatedQuery.svelte';
 	import TaskCard from './TaskCard.svelte';
 
 	interface Tag {
@@ -42,6 +43,10 @@
 		ondelete?: (id: string) => void;
 		/** Called on cc — edit the selected task. */
 		onedit?: (id: string) => void;
+		/** Pagination status from usePaginatedQuery. */
+		paginationStatus?: PaginationStatus;
+		/** Called to load the next page of results. */
+		onloadmore?: () => void;
 	}
 
 	let {
@@ -56,7 +61,9 @@
 		ontagtoggle,
 		onselect,
 		ondelete,
-		onedit
+		onedit,
+		paginationStatus = 'Exhausted',
+		onloadmore
 	}: Props = $props();
 
 	/** Resolve tag IDs to tag objects using the provided map. */
@@ -67,6 +74,36 @@
 			if (tag) resolved.push(tag);
 		}
 		return resolved;
+	}
+
+	// ── Infinite scroll ──
+	let sentinelEl: HTMLDivElement | undefined = $state();
+	const LOAD_MORE_THRESHOLD = 3; // trigger loadMore when within N items of the end
+
+	// IntersectionObserver: trigger loadMore when sentinel scrolls into view
+	$effect(() => {
+		if (!sentinelEl) return;
+		const observer = new IntersectionObserver(
+			(entries) => {
+				if (entries[0]?.isIntersecting && paginationStatus === 'CanLoadMore') {
+					onloadmore?.();
+				}
+			},
+			{ rootMargin: '200px' }
+		);
+		observer.observe(sentinelEl);
+		return () => observer.disconnect();
+	});
+
+	/** Request more items when navigating near the bottom of the loaded list. */
+	function maybeLoadMore(idx: number) {
+		if (
+			paginationStatus === 'CanLoadMore' &&
+			onloadmore &&
+			idx >= tasks.length - LOAD_MORE_THRESHOLD
+		) {
+			onloadmore();
+		}
 	}
 
 	// ── Keyboard navigation ──
@@ -118,6 +155,7 @@
 	function moveTo(idx: number) {
 		selectedIndex = clamp(idx);
 		scrollToSelected(selectedIndex);
+		maybeLoadMore(selectedIndex);
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -287,10 +325,24 @@
 		{/each}
 	</div>
 
+	<!-- Infinite scroll sentinel & loading indicator -->
+	{#if paginationStatus === 'CanLoadMore' || paginationStatus === 'LoadingMore'}
+		<div
+			bind:this={sentinelEl}
+			class="flex items-center justify-center py-4 font-mono text-xs text-fg-muted"
+		>
+			{#if paginationStatus === 'LoadingMore'}
+				loading...
+			{/if}
+		</div>
+	{/if}
+
 	<!-- Selection hint -->
 	{#if selectedIndex >= 0}
 		<div class="mt-2 font-mono text-xs text-fg-muted">
-			{selectedIndex + 1}/{tasks.length}
+			{selectedIndex + 1}/{tasks.length}{paginationStatus !== 'Exhausted'
+				? '+'
+				: ''}
 		</div>
 	{/if}
 {/if}

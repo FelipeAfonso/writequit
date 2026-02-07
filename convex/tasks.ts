@@ -1,5 +1,6 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import { paginationOptsValidator } from 'convex/server';
 import { parseTask } from '../src/lib/parser/index.js';
 import { getOrCreateTag } from './tags.js';
 import { autoLinkTask } from './sessions.js';
@@ -58,6 +59,44 @@ export const list = query({
 		tasks.sort((a, b) => b.createdAt - a.createdAt);
 
 		return tasks;
+	}
+});
+
+/**
+ * List tasks with cursor-based pagination.
+ *
+ * Supports the same status filter as `list`. Tag and search filtering
+ * are applied client-side across loaded pages.
+ *
+ * Results are ordered newest-first (descending _creationTime).
+ */
+export const listPaginated = query({
+	args: {
+		paginationOpts: paginationOptsValidator,
+		status: v.optional(
+			v.union(v.literal('inbox'), v.literal('active'), v.literal('done'))
+		)
+	},
+	handler: async (ctx, args) => {
+		const userId = await getAuthUserId(ctx);
+		if (userId === null) {
+			return { page: [], isDone: true, continueCursor: '' };
+		}
+
+		let q;
+		if (args.status !== undefined) {
+			q = ctx.db
+				.query('tasks')
+				.withIndex('by_status_userId', (idx) =>
+					idx.eq('status', args.status!).eq('userId', userId)
+				);
+		} else {
+			q = ctx.db
+				.query('tasks')
+				.withIndex('by_userId', (idx) => idx.eq('userId', userId));
+		}
+
+		return await q.order('desc').paginate(args.paginationOpts);
 	}
 });
 

@@ -6,6 +6,7 @@
 	import { sortTags } from '$lib/utils/tags';
 	import { settings } from '$lib/stores/settings.svelte';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
+	import { usePaginatedQuery } from '$lib/stores/usePaginatedQuery.svelte';
 	import TaskEditor from '$lib/components/tasks/TaskEditor.svelte';
 	import TaskList from '$lib/components/tasks/TaskList.svelte';
 	import TagFilter from '$lib/components/tags/TagFilter.svelte';
@@ -78,6 +79,8 @@
 	/** Reactive Set view of the persisted tag IDs. */
 	let activeTagIds = $derived(new SvelteSet(settings.activeTagIds));
 
+	const PAGE_SIZE = 10;
+
 	/** Build query args based on the active status filter. */
 	let queryArgs = $derived(
 		settings.statusFilter === 'all'
@@ -85,11 +88,9 @@
 			: { status: settings.statusFilter as TaskStatus }
 	);
 
-	const tasks = useQuery(
-		api.tasks.list,
-		() => queryArgs,
-		() => ({ initialData: data.preloaded?.tasks })
-	);
+	const tasks = usePaginatedQuery(api.tasks.listPaginated, () => queryArgs, {
+		initialNumItems: PAGE_SIZE
+	});
 	const allTags = useQuery(api.tags.list, {}, () => ({
 		initialData: data.preloaded?.tags
 	}));
@@ -111,9 +112,8 @@
 
 	/** Filter tasks by tags (client-side, inclusive/AND — must have ALL selected tags). */
 	let tagFiltered = $derived.by(() => {
-		if (!tasks.data) return [];
-		if (activeTagIds.size === 0) return tasks.data;
-		return tasks.data.filter((t: { tagIds: string[] }) =>
+		if (activeTagIds.size === 0) return tasks.results;
+		return tasks.results.filter((t: { tagIds: string[] }) =>
 			[...activeTagIds].every((id) => t.tagIds.includes(id))
 		);
 	});
@@ -203,7 +203,7 @@
 	}
 
 	async function handleStatusChange(id: string) {
-		const task = tasks.data?.find((t: { _id: string }) => t._id === id);
+		const task = tasks.results.find((t: { _id: string }) => t._id === id);
 		if (!task) return;
 
 		const nextStatus: Record<string, TaskStatus> = {
@@ -236,9 +236,12 @@
 			<span class="text-fg-muted">#</span>
 			tasks
 		</h1>
-		{#if tasks.data}
+		{#if tasks.status !== 'LoadingFirstPage'}
 			<span class="font-mono text-xs text-fg-muted">
-				{filteredTasks.length} task{filteredTasks.length !== 1 ? 's' : ''}
+				{filteredTasks.length}{tasks.status !== 'Exhausted' ? '+' : ''} task{filteredTasks.length !==
+				1
+					? 's'
+					: ''}
 			</span>
 		{/if}
 	</div>
@@ -309,7 +312,7 @@
 	</div>
 
 	<!-- Task list -->
-	{#if tasks.isLoading}
+	{#if tasks.status === 'LoadingFirstPage'}
 		<div class="py-8 text-center font-mono text-sm text-fg-muted">
 			loading...
 		</div>
@@ -340,6 +343,8 @@
 			onedit={(id) => {
 				window.location.href = `/app/tasks/${id}?edit=1`;
 			}}
+			paginationStatus={tasks.status}
+			onloadmore={() => tasks.loadMore(PAGE_SIZE)}
 		/>
 	{/if}
 </div>
