@@ -9,12 +9,15 @@
 	import TaskEditor from '$lib/components/tasks/TaskEditor.svelte';
 	import TaskList from '$lib/components/tasks/TaskList.svelte';
 	import TagFilter from '$lib/components/tags/TagFilter.svelte';
+	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
 
 	let { data } = $props();
 
 	let editor: TaskEditor | undefined = $state();
 	let searchQuery = $state('');
 	let selectedTaskId = $state<string | undefined>(undefined);
+	let deleteTargetId = $state<string | undefined>(undefined);
+	let showDeleteConfirm = $state(false);
 
 	// ── Server-side user settings ──────────────────────────────────
 	const userSettings = useQuery(api.users.getSettings, {});
@@ -53,6 +56,7 @@
 
 	function handleKeydown(e: KeyboardEvent) {
 		if (isEditableTarget(e)) return;
+		if (showDeleteConfirm) return;
 
 		// Clear search with Escape
 		if (e.key === 'Escape' && searchQuery) {
@@ -178,6 +182,24 @@
 		} catch (error) {
 			console.error('Failed to create task:', error);
 		}
+	}
+
+	function handleDeleteTask(id: string) {
+		deleteTargetId = id;
+		showDeleteConfirm = true;
+	}
+
+	async function confirmDelete() {
+		showDeleteConfirm = false;
+		if (!deleteTargetId) return;
+		try {
+			await client.mutation(api.tasks.remove, {
+				id: deleteTargetId as any // eslint-disable-line @typescript-eslint/no-explicit-any -- Convex ID from string
+			});
+		} catch (error) {
+			console.error('Failed to delete task:', error);
+		}
+		deleteTargetId = undefined;
 	}
 
 	async function handleStatusChange(id: string) {
@@ -314,6 +336,20 @@
 			onselect={(id) => {
 				selectedTaskId = id;
 			}}
+			ondelete={handleDeleteTask}
+			onedit={(id) => {
+				window.location.href = `/app/tasks/${id}?edit=1`;
+			}}
 		/>
 	{/if}
 </div>
+
+<ConfirmDialog
+	open={showDeleteConfirm}
+	message="delete this task?"
+	onconfirm={confirmDelete}
+	oncancel={() => {
+		showDeleteConfirm = false;
+		deleteTargetId = undefined;
+	}}
+/>

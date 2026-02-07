@@ -16,6 +16,7 @@
 	import TaskStatusBadge from '$lib/components/tasks/TaskStatusBadge.svelte';
 	import TagBadge from '$lib/components/tags/TagBadge.svelte';
 	import Markdown from '$lib/components/ui/Markdown.svelte';
+	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
 
 	let { data } = $props();
 
@@ -38,8 +39,10 @@
 
 	const allTags = useQuery(api.tags.list, {});
 
-	let isEditing = $state(false);
+	// Check for ?edit=1 URL param to start in edit mode (e.g. from cc on task list)
+	let isEditing = $state(page.url.searchParams.get('edit') === '1');
 	let editor: TaskEditor | undefined = $state();
+	let showDeleteConfirm = $state(false);
 
 	// Register page-specific command actions
 	$effect(() => {
@@ -57,10 +60,15 @@
 		if (isEditing && editor) {
 			commandPalette.registerActions({
 				editorSubmit: () => editor?.submit() ?? false,
-				editorBlur: () => editor?.blur()
+				editorBlur: () => editor?.blur(),
+				navigateBack: () => goto('/app')
 			});
 			return () => {
-				commandPalette.unregisterActions(['editorSubmit', 'editorBlur']);
+				commandPalette.unregisterActions([
+					'editorSubmit',
+					'editorBlur',
+					'navigateBack'
+				]);
 			};
 		}
 	});
@@ -95,7 +103,12 @@
 		}
 	}
 
-	async function handleDelete() {
+	function handleDelete() {
+		showDeleteConfirm = true;
+	}
+
+	async function confirmDelete() {
+		showDeleteConfirm = false;
 		try {
 			await client.mutation(api.tasks.remove, { id: taskId as any }); // eslint-disable-line @typescript-eslint/no-explicit-any -- Convex ID from route param
 			goto('/app');
@@ -111,6 +124,7 @@
 	function handleKeydown(e: KeyboardEvent) {
 		if (isEditableTarget(e)) return;
 		if (commandPalette.isOpen) return;
+		if (showDeleteConfirm) return;
 
 		// Second key of a two-key sequence
 		if (pendingKey) {
@@ -125,7 +139,11 @@
 			}
 			if (combo === 'cc') {
 				e.preventDefault();
-				isEditing = true;
+				if (isEditing) {
+					editor?.focus();
+				} else {
+					isEditing = true;
+				}
 				return;
 			}
 			// Unknown combo — fall through
@@ -143,6 +161,11 @@
 		if (e.key === 'Backspace') {
 			e.preventDefault();
 			history.back();
+		}
+
+		if (e.key === 'i' && isEditing && editor) {
+			e.preventDefault();
+			editor.focus();
 		}
 	}
 </script>
@@ -245,3 +268,10 @@
 		{/if}
 	{/if}
 </div>
+
+<ConfirmDialog
+	open={showDeleteConfirm}
+	message="delete this task?"
+	onconfirm={confirmDelete}
+	oncancel={() => (showDeleteConfirm = false)}
+/>

@@ -45,6 +45,8 @@ export interface CommandContext {
 	linkTaskToSession?: (taskId: string) => Promise<void>;
 	/** Get the current task ID (from task detail or selected in list). */
 	getCurrentTaskId?: () => string | undefined;
+	/** Navigate back after save (e.g. task detail -> tasks list). */
+	navigateBack?: () => void;
 }
 
 export interface Command {
@@ -115,6 +117,7 @@ export const commands: Command[] = [
 			if (!ctx.editorSubmit) return 'no active editor';
 			ctx.editorSubmit();
 			ctx.editorBlur?.();
+			ctx.navigateBack?.();
 		}
 	},
 	{

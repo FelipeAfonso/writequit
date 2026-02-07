@@ -38,6 +38,10 @@
 		ontagtoggle?: (index: number) => void;
 		/** Called whenever the selected task changes. */
 		onselect?: (taskId: string | undefined) => void;
+		/** Called on dd — delete the selected task. */
+		ondelete?: (id: string) => void;
+		/** Called on cc — edit the selected task. */
+		onedit?: (id: string) => void;
 	}
 
 	let {
@@ -50,7 +54,9 @@
 		onfilternext,
 		tagIds = [],
 		ontagtoggle,
-		onselect
+		onselect,
+		ondelete,
+		onedit
 	}: Props = $props();
 
 	/** Resolve tag IDs to tag objects using the provided map. */
@@ -67,8 +73,10 @@
 	let selectedIndex = $state(-1);
 	let pendingG = $state(false);
 	let pendingT = $state(false);
+	let pendingDC = $state('');
 	let gTimer: ReturnType<typeof setTimeout> | undefined;
 	let tTimer: ReturnType<typeof setTimeout> | undefined;
+	let dcTimer: ReturnType<typeof setTimeout> | undefined;
 	let listEl: HTMLDivElement | undefined = $state();
 
 	// Reset selection when tasks change
@@ -114,6 +122,33 @@
 
 	function handleKeydown(e: KeyboardEvent) {
 		if (isEditableTarget(e)) return;
+
+		// dd / cc sequence: delete or edit selected task
+		if (pendingDC) {
+			const combo = pendingDC + e.key;
+			pendingDC = '';
+			clearTimeout(dcTimer);
+
+			if (
+				combo === 'dd' &&
+				ondelete &&
+				selectedIndex >= 0 &&
+				tasks[selectedIndex]
+			) {
+				e.preventDefault();
+				ondelete(tasks[selectedIndex]._id);
+			}
+			if (
+				combo === 'cc' &&
+				onedit &&
+				selectedIndex >= 0 &&
+				tasks[selectedIndex]
+			) {
+				e.preventDefault();
+				onedit(tasks[selectedIndex]._id);
+			}
+			return;
+		}
 
 		// t+number sequence: toggle tag filter
 		if (pendingT) {
@@ -205,6 +240,14 @@
 				pendingG = true;
 				gTimer = setTimeout(() => {
 					pendingG = false;
+				}, 500);
+				break;
+
+			case 'd':
+			case 'c':
+				pendingDC = e.key;
+				dcTimer = setTimeout(() => {
+					pendingDC = '';
 				}, 500);
 				break;
 		}

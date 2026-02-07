@@ -65,6 +65,10 @@
 	// Compartment for dynamically toggling vim mode
 	const vimCompartment = new Compartment();
 
+	// Track last-configured viMode to avoid redundant reconfiguration
+	// (which would reset vim's internal state, e.g. INSERT -> NORMAL)
+	let lastConfiguredViMode: boolean | undefined;
+
 	// Compartment for autocomplete (reconfigured when tags list changes)
 	const autocompleteCompartment = new Compartment();
 
@@ -114,17 +118,28 @@
 	}
 
 	/**
-	 * In vim mode, Escape in normal mode should blur the editor.
-	 * We listen on keydown *before* vim processes the key so we can
-	 * check the mode at press-time: if already NORMAL, blur.
+	 * Register a vim normal-mode mapping so that pressing Escape
+	 * when already in NORMAL mode blurs the editor.  We use the
+	 * Vim API directly instead of a capture-phase DOM listener so
+	 * there are no timing issues with compartment reconfigures.
 	 */
-	function handleVimEscape(e: KeyboardEvent) {
-		if (!viMode || !view) return;
-		if (e.key !== 'Escape') return;
-		const mode = readVimMode(view);
-		if (mode === 'NORMAL') {
-			e.preventDefault();
-			view.contentDOM.blur();
+	let vimEscapeRegistered = false;
+	function registerVimEscape() {
+		if (!vimEscapeRegistered) {
+			Vim.defineEx('blurEditor', 'blurEditor', (cm: unknown) => {
+				const adapter = cm as { cm6: EditorView };
+				adapter.cm6.contentDOM.blur();
+			});
+			vimEscapeRegistered = true;
+		}
+		Vim.map('<Esc>', ':blurEditor<CR>', 'normal');
+	}
+
+	function unregisterVimEscape() {
+		try {
+			Vim.unmap('<Esc>', 'normal');
+		} catch {
+			// Ignore if not mapped
 		}
 	}
 
@@ -269,14 +284,18 @@
 			parent: editorContainer
 		});
 
+		// Record what viMode we configured at mount time
+		lastConfiguredViMode = viMode;
+
 		// Patch vim's command-line dialog when vim is initially enabled
 		if (viMode) {
 			patchVimDialog(view);
 		}
 
-		// Blur on Escape when already in normal mode (capture phase
-		// so we see the mode *before* vim processes the keypress).
-		editorContainer.addEventListener('keydown', handleVimEscape, true);
+		// Map Escape in vim normal mode to blur the editor
+		if (viMode) {
+			registerVimEscape();
+		}
 
 		if (autofocus) {
 			view.focus();
@@ -289,23 +308,36 @@
 		}
 
 		return () => {
-			editorContainer!.removeEventListener('keydown', handleVimEscape, true);
+			if (viMode) unregisterVimEscape();
 			view?.destroy();
 		};
 	});
 
-	// React to viMode prop changes and reconfigure the compartments
+	// React to viMode prop changes and reconfigure the compartments.
+	// Skip when viMode hasn't actually changed (avoids resetting vim
+	// internal state like INSERT mode on mount).
 	$effect(() => {
 		if (!view) return;
+		if (viMode === lastConfiguredViMode) return;
+		lastConfiguredViMode = viMode;
+
 		view.dispatch({
 			effects: [
 				vimCompartment.reconfigure(viMode ? vim() : []),
 				escapeCompartment.reconfigure(viMode ? [] : makeEscapeKeymap())
 			]
 		});
-		// Re-patch the dialog override after vim is (re)enabled
+		// Re-patch the dialog override and escape mapping after vim is (re)enabled
 		if (viMode) {
 			patchVimDialog(view);
+			registerVimEscape();
+			// If the editor is focused, re-enter insert mode since
+			// reconfigure created a fresh vim instance in NORMAL mode
+			if (view.hasFocus) {
+				enterInsertMode(view);
+			}
+		} else {
+			unregisterVimEscape();
 		}
 	});
 
