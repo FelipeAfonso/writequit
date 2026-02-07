@@ -112,13 +112,27 @@
 	});
 
 	/** Further filter by search query (case-insensitive title match). */
-	let filteredTasks = $derived.by(() => {
+	let searchFiltered = $derived.by(() => {
 		if (!searchQuery) return tagFiltered;
 		const q = searchQuery.toLowerCase();
 		return tagFiltered.filter(
 			(t: { title: string; rawContent: string }) =>
 				t.title.toLowerCase().includes(q) ||
 				t.rawContent.toLowerCase().includes(q)
+		);
+	});
+
+	/** Sort by status priority when showing all: active > inbox > done. */
+	const statusPriority: Record<string, number> = {
+		active: 0,
+		inbox: 1,
+		done: 2
+	};
+	let filteredTasks = $derived.by(() => {
+		if (settings.statusFilter !== 'all') return searchFiltered;
+		return [...searchFiltered].sort(
+			(a: { status: string }, b: { status: string }) =>
+				(statusPriority[a.status] ?? 9) - (statusPriority[b.status] ?? 9)
 		);
 	});
 
