@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import TagBadge from '$lib/components/tags/TagBadge.svelte';
@@ -9,20 +11,9 @@
 
 	let { data } = $props();
 
-	let searchQuery = $state('');
-
-	// Register page-specific command actions
-	$effect(() => {
-		commandPalette.registerActions({
-			setSearch: (query: string) => {
-				searchQuery = query;
-			}
-		});
-
-		return () => {
-			commandPalette.unregisterActions(['setSearch']);
-		};
-	});
+	// ── Search (URL-driven via ?q= param, filtered client-side) ────
+	let searchQuery = $derived(page.url.searchParams.get('q') || '');
+	let isSearching = $derived(searchQuery.length > 0);
 
 	const client = useConvexClient();
 	const allTags = useQuery(api.tags.list, {}, () => ({
@@ -135,9 +126,9 @@
 		if (showDeleteConfirm) return;
 
 		// Clear search with Escape
-		if (e.key === 'Escape' && searchQuery) {
+		if (e.key === 'Escape' && isSearching) {
 			e.preventDefault();
-			searchQuery = '';
+			goto('/app/tags');
 			return;
 		}
 
@@ -243,7 +234,7 @@
 	</p>
 
 	<!-- Search indicator -->
-	{#if searchQuery}
+	{#if isSearching}
 		<div
 			class="flex items-center gap-2 border border-border-highlight bg-surface-1 px-3 py-1.5"
 		>
@@ -252,7 +243,7 @@
 			<button
 				type="button"
 				class="ml-auto font-mono text-xs text-fg-muted transition-colors hover:text-red"
-				onclick={() => (searchQuery = '')}
+				onclick={() => goto('/app/tags')}
 			>
 				[x] clear
 				<kbd
@@ -273,7 +264,7 @@
 			No tags yet. Create a task with +tagname to get started.
 		</div>
 	{:else if allTags.data}
-		{#if searchQuery && filteredTags.length === 0}
+		{#if isSearching && filteredTags.length === 0}
 			<div class="py-8 text-center font-mono text-sm text-fg-muted">
 				no tags matching "{searchQuery}"
 			</div>

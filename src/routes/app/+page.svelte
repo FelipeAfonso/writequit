@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
+	import { goto } from '$app/navigation';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import { isEditableTarget } from '$lib/utils/keys';
@@ -15,10 +16,13 @@
 	let { data } = $props();
 
 	let editor: TaskEditor | undefined = $state();
-	let searchQuery = $state('');
 	let selectedTaskId = $state<string | undefined>(undefined);
 	let deleteTargetId = $state<string | undefined>(undefined);
 	let showDeleteConfirm = $state(false);
+
+	// ── Search (URL-driven via ?q= param, fetched server-side) ─────
+	let searchQuery = $derived(data.searchQuery ?? '');
+	let isSearching = $derived(searchQuery.length > 0);
 
 	// ── Server-side user settings ──────────────────────────────────
 	const userSettings = useQuery(api.users.getSettings, {});
@@ -36,9 +40,6 @@
 	$effect(() => {
 		commandPalette.registerActions({
 			focusEditor: () => editor?.focus(),
-			setSearch: (query: string) => {
-				searchQuery = query;
-			},
 			editorSubmit: () => editor?.submit() ?? false,
 			editorBlur: () => editor?.blur(),
 			getCurrentTaskId: () => selectedTaskId
@@ -47,7 +48,6 @@
 		return () => {
 			commandPalette.unregisterActions([
 				'focusEditor',
-				'setSearch',
 				'editorSubmit',
 				'editorBlur',
 				'getCurrentTaskId'
@@ -60,9 +60,9 @@
 		if (showDeleteConfirm) return;
 
 		// Clear search with Escape
-		if (e.key === 'Escape' && searchQuery) {
+		if (e.key === 'Escape' && isSearching) {
 			e.preventDefault();
-			searchQuery = '';
+			goto('/app');
 			return;
 		}
 
@@ -81,8 +81,6 @@
 
 	const PAGE_SIZE = 10;
 
-	let isSearching = $derived(searchQuery.length > 0);
-
 	/** Build query args based on the active status filter. */
 	let statusArg = $derived(
 		settings.statusFilter === 'all'
@@ -90,18 +88,11 @@
 			: (settings.statusFilter as TaskStatus)
 	);
 
-	// Paginated query — used when NOT searching
+	// Paginated query — skipped when searching (search results come from server load)
 	const tasks = usePaginatedQuery(
 		api.tasks.listPaginated,
 		() => (isSearching ? 'skip' : statusArg ? { status: statusArg } : {}),
 		{ initialNumItems: PAGE_SIZE }
-	);
-
-	// Server-side search query — used when searching (non-paginated, scans all tasks)
-	const searchResults = useQuery(api.tasks.search, () =>
-		isSearching
-			? { query: searchQuery, ...(statusArg ? { status: statusArg } : {}) }
-			: 'skip'
 	);
 
 	const allTags = useQuery(api.tags.list, {}, () => ({
@@ -123,9 +114,9 @@
 
 	let sortedTags = $derived(allTags.data ? sortTags(allTags.data) : []);
 
-	/** Pick the right result set depending on search mode. */
+	/** Pick the right result set: server search results or paginated tasks. */
 	let baseResults = $derived(
-		isSearching ? (searchResults.data ?? []) : tasks.results
+		isSearching ? (data.searchResults ?? []) : tasks.results
 	);
 
 	/** Filter tasks by tags (client-side, inclusive/AND — must have ALL selected tags). */
@@ -232,7 +223,7 @@
 	</div>
 
 	<!-- Search indicator -->
-	{#if searchQuery}
+	{#if isSearching}
 		<div
 			class="flex items-center gap-2 border border-border-highlight bg-surface-1 px-3 py-1.5"
 		>
@@ -241,7 +232,7 @@
 			<button
 				type="button"
 				class="ml-auto font-mono text-xs text-fg-muted transition-colors hover:text-red"
-				onclick={() => (searchQuery = '')}
+				onclick={() => goto('/app')}
 			>
 				[x] clear
 				<kbd
@@ -297,9 +288,9 @@
 	</div>
 
 	<!-- Task list -->
-	{#if isSearching ? searchResults.isLoading : tasks.status === 'LoadingFirstPage'}
+	{#if !isSearching && tasks.status === 'LoadingFirstPage'}
 		<div class="py-8 text-center font-mono text-sm text-fg-muted">
-			{isSearching ? 'searching...' : 'loading...'}
+			loading...
 		</div>
 	{:else}
 		<TaskList

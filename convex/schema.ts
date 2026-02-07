@@ -77,7 +77,11 @@ export default defineSchema({
 		.index('by_userId', ['userId'])
 		.index('by_status_userId', ['status', 'userId'])
 		.index('by_userId_statusPriority', ['userId', 'statusPriority'])
-		.index('by_dueDate', ['dueDate']),
+		.index('by_dueDate', ['dueDate'])
+		.searchIndex('search_content', {
+			searchField: 'rawContent',
+			filterFields: ['userId', 'status']
+		}),
 
 	invoices: defineTable({
 		/** Sequential invoice number, e.g. "INV-001". */

@@ -9,7 +9,6 @@
 import { goto } from '$app/navigation';
 import { parseTimeLog } from '$lib/parser/timeRange';
 import { extractTags } from '$lib/parser/tags';
-import { commandPalette } from '$lib/stores/commandPalette.svelte';
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -22,8 +21,6 @@ export interface CommandContext {
 	getTimezone: () => string;
 	/** Focus the task editor (only available on the tasks page). */
 	focusEditor?: () => void;
-	/** Set the search query filter (only available on the tasks page). */
-	setSearch?: (query: string) => void;
 	/** Submit the current editor content (save). */
 	editorSubmit?: () => boolean;
 	/** Blur the editor (quit). */
@@ -146,22 +143,18 @@ export const commands: Command[] = [
 		description: 'search tasks & tags',
 		args: 'optional',
 		argsPlaceholder: '<keyword>',
-		async execute(args, ctx) {
-			// If the current page already supports search, use it directly
-			if (ctx.setSearch) {
-				ctx.setSearch(args.trim());
-				return;
-			}
-			// Otherwise, navigate to tasks page as the default search target
-			await goto('/app');
-			// Small delay to let the page mount and register setSearch
-			await new Promise((r) => setTimeout(r, 50));
-			// Re-read context since page navigation may have registered new actions
-			const freshCtx = commandPalette.context;
-			if (freshCtx.setSearch) {
-				freshCtx.setSearch(args.trim());
+		async execute(args) {
+			const query = args.trim();
+			const path = window.location.pathname;
+
+			// Determine the base path (stay on tags page if already there)
+			const basePath =
+				path === '/app/tags' || path === '/app/tags/' ? '/app/tags' : '/app';
+
+			if (query) {
+				await goto(`${basePath}?q=${encodeURIComponent(query)}`);
 			} else {
-				return 'search is not available on this page';
+				await goto(basePath);
 			}
 		}
 	},

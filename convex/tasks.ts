@@ -120,11 +120,11 @@ export const listPaginated = query({
 });
 
 /**
- * Full-text search across all tasks (non-paginated).
+ * Full-text search across all tasks using Convex's built-in search index.
  *
- * Matches the query string against title, rawContent, and resolved tag names.
- * Optionally filters by status. Results are sorted by status priority
- * (active > inbox > done), then newest first within each group.
+ * Uses the `search_content` index on `rawContent` which covers title, body,
+ * and +tag tokens. Results are ranked by BM25 relevance with prefix matching
+ * on the last term (enables typeahead). Optionally filters by status.
  */
 export const search = query({
 	args: {
@@ -136,64 +136,15 @@ export const search = query({
 	handler: async (ctx, args) => {
 		const userId = await getAuthUserId(ctx);
 		if (userId === null) return [];
+		if (!args.query.trim()) return [];
 
-		const q = args.query.toLowerCase();
-		if (!q) return [];
-
-		// Fetch all tasks for this user (optionally filtered by status)
-		let tasks;
-		if (args.status !== undefined) {
-			tasks = await ctx.db
-				.query('tasks')
-				.withIndex('by_status_userId', (idx) =>
-					idx.eq('status', args.status!).eq('userId', userId)
-				)
-				.collect();
-		} else {
-			tasks = await ctx.db
-				.query('tasks')
-				.withIndex('by_userId_statusPriority', (idx) =>
-					idx.eq('userId', userId)
-				)
-				.order('asc')
-				.collect();
-		}
-
-		// Build a tag name lookup for all tags referenced by these tasks
-		const tagIdSet = new Set<string>();
-		for (const task of tasks) {
-			for (const tagId of task.tagIds) {
-				tagIdSet.add(tagId);
-			}
-		}
-		const tagNames = new Map<string, string>();
-		await Promise.all(
-			[...tagIdSet].map(async (tagId) => {
-				const tag = await ctx.db.get(tagId as Id<'tags'>);
-				if (tag) tagNames.set(tagId, tag.name.toLowerCase());
+		return await ctx.db
+			.query('tasks')
+			.withSearchIndex('search_content', (q) => {
+				const s = q.search('rawContent', args.query).eq('userId', userId);
+				return args.status !== undefined ? s.eq('status', args.status!) : s;
 			})
-		);
-
-		// Filter tasks by search query
-		const matched = tasks.filter((task) => {
-			if (task.title.toLowerCase().includes(q)) return true;
-			if (task.rawContent.toLowerCase().includes(q)) return true;
-			for (const tagId of task.tagIds) {
-				const name = tagNames.get(tagId);
-				if (name && name.includes(q)) return true;
-			}
-			return false;
-		});
-
-		// Sort: status priority (active=0 > inbox=1 > done=2), then newest first
-		matched.sort((a, b) => {
-			const pa = a.statusPriority ?? statusPriorityFor(a.status);
-			const pb = b.statusPriority ?? statusPriorityFor(b.status);
-			if (pa !== pb) return pa - pb;
-			return b.createdAt - a.createdAt;
-		});
-
-		return matched;
+			.take(50);
 	}
 });
 

@@ -4,8 +4,8 @@
  * Manages the open/close state of the command palette and the
  * context object that commands use to interact with the app.
  *
- * Pages can register page-specific actions (like focusEditor or
- * setSearch) by calling `commandPalette.registerActions()` and
+ * Pages can register page-specific actions (like focusEditor)
+ * by calling `commandPalette.registerActions()` and
  * cleaning up with `commandPalette.unregisterActions()`.
  */
 
