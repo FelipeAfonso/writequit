@@ -295,72 +295,140 @@
 				class="animate-fade-in mx-auto max-w-[48rem] px-8 py-12 max-sm:px-5"
 				style="animation-delay: 0.7s;"
 			>
-				<div class="overflow-hidden border border-primary/15 bg-[#0d0d12]">
-					<div
-						class="flex items-center gap-1.5 border-b border-primary/8 bg-primary/4 px-3 py-2"
-					>
-						<span class="size-2 rounded-full bg-red"></span>
-						<span class="size-2 rounded-full bg-warning"></span>
-						<span class="size-2 rounded-full bg-green"></span>
-						<span class="ml-2 text-[0.5rem] text-fg-muted">:wq - tasks</span>
-					</div>
-					<div class="p-4">
+				<div class="terminal-window">
+					<div class="terminal-inner">
+						<!-- Title bar -->
 						<div
-							class="flex items-center gap-3 border-l-2 border-transparent px-2 py-1.5 text-[0.6rem] transition-colors duration-150"
+							class="flex items-center justify-between border-b border-border px-3 py-1.5"
 						>
-							<span class="shrink-0 font-semibold text-green">[x]</span>
-							<span class="flex-1 text-fg-dark">
-								Set up CI/CD pipeline #devops
+							<span class="font-mono text-[0.5rem] text-fg-muted">
+								:wq - tasks
 							</span>
-							<span class="text-[0.5rem] text-fg-muted">2h 14m</span>
 						</div>
+
+						<!-- Demo content matching real app -->
 						<div
-							class="flex items-center gap-3 border-l-2 border-transparent px-2 py-1.5 text-[0.6rem] transition-colors duration-150"
+							class="flex flex-col gap-3 bg-bg p-4 font-mono"
+							style="font-size: 0.6rem;"
 						>
-							<span class="shrink-0 font-semibold text-green">[x]</span>
-							<span class="flex-1 text-fg-dark">
-								Fix auth token refresh bug #backend
-							</span>
-							<span class="text-[0.5rem] text-fg-muted">0h 47m</span>
-						</div>
-						<div
-							class="demo-line-active flex items-center gap-3 border-l-2 border-primary bg-primary/6 px-2 py-1.5 text-[0.6rem] transition-colors duration-150"
-						>
-							<span class="shrink-0 font-semibold text-primary">[*]</span>
-							<span class="flex-1 text-fg-dark">
-								Build landing page #frontend @acme
-							</span>
-							<span class="blink-slow text-[0.5rem] text-primary">1h 23m</span>
-						</div>
-						<div
-							class="flex items-center gap-3 border-l-2 border-transparent px-2 py-1.5 text-[0.6rem] transition-colors duration-150"
-						>
-							<span class="shrink-0 font-semibold text-fg-muted">[ ]</span>
-							<span class="flex-1 text-fg-dark">
-								Write API documentation #docs
-							</span>
-							<span class="text-[0.5rem] text-fg-muted">--:--</span>
-						</div>
-						<div
-							class="flex items-center gap-3 border-l-2 border-transparent px-2 py-1.5 text-[0.6rem] transition-colors duration-150"
-						>
-							<span class="shrink-0 font-semibold text-fg-muted">[ ]</span>
-							<span class="flex-1 text-fg-dark">
-								Invoice Acme Corp - December @acme
-							</span>
-							<span class="text-[0.5rem] text-fg-muted">--:--</span>
-						</div>
-						<div class="mt-3 border-t border-primary/8 pt-3 text-[0.6rem]">
-							<span class="font-bold text-primary">:</span>
-							<span class="text-[#cdd6f4]">
-								wq
-								<span
-									class="cursor-inline text-primary"
-									class:blink={showCursor}
-								>
-									█
+							<!-- Page header -->
+							<div class="flex items-baseline gap-2">
+								<span class="font-bold text-fg">
+									<span class="text-fg-muted">#</span>
+									tasks
 								</span>
-							</span>
+								<span class="text-fg-muted">5 tasks</span>
+							</div>
+
+							<!-- Editor area -->
+							<div class="border border-border bg-bg-dark px-2 py-1.5">
+								<span class="text-fg-muted">
+									Build landing page +frontend @acme due:friday
+									<span
+										class="cursor-inline text-primary"
+										class:blink={showCursor}
+									>
+										█
+									</span>
+								</span>
+							</div>
+
+							<!-- Filter row -->
+							<div class="flex items-center gap-1">
+								<span
+									class="border border-primary bg-surface-2 px-1.5 py-0.5 text-primary"
+								>
+									[~] all
+								</span>
+								<span class="border border-border px-1.5 py-0.5 text-fg-muted">
+									[&gt;] inbox
+								</span>
+								<span class="border border-border px-1.5 py-0.5 text-fg-muted">
+									[*] active
+								</span>
+								<span class="border border-border px-1.5 py-0.5 text-fg-muted">
+									[x] done
+								</span>
+							</div>
+
+							<!-- Task cards -->
+							<div class="flex flex-col gap-1">
+								<!-- Done task -->
+								<div
+									class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
+								>
+									<span class="text-green">[x]</span>
+									<span class="flex-1 text-fg-muted line-through">
+										Set up CI/CD pipeline
+									</span>
+									<span
+										class="border border-border-highlight bg-surface-2 px-1 text-teal"
+									>
+										+devops
+									</span>
+								</div>
+								<!-- Done task -->
+								<div
+									class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
+								>
+									<span class="text-green">[x]</span>
+									<span class="flex-1 text-fg-muted line-through">
+										Fix auth token refresh bug
+									</span>
+									<span
+										class="border border-border-highlight bg-surface-2 px-1 text-teal"
+									>
+										+backend
+									</span>
+								</div>
+								<!-- Active/selected task -->
+								<div
+									class="flex items-start gap-2 border border-primary bg-surface-1 px-2 py-1.5"
+								>
+									<span class="text-blue">[*]</span>
+									<span class="flex-1 text-fg">Build landing page</span>
+									<span
+										class="border border-border-highlight bg-surface-2 px-1 text-teal"
+									>
+										+frontend
+									</span>
+									<span class="text-warning">due:fri</span>
+								</div>
+								<!-- Inbox task -->
+								<div
+									class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
+								>
+									<span class="text-fg-muted">[&nbsp;]</span>
+									<span class="flex-1 text-fg">Write API documentation</span>
+									<span
+										class="border border-border-highlight bg-surface-2 px-1 text-teal"
+									>
+										+docs
+									</span>
+								</div>
+								<!-- Inbox task -->
+								<div
+									class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
+								>
+									<span class="text-fg-muted">[&nbsp;]</span>
+									<span class="flex-1 text-fg">
+										Invoice Acme Corp - December
+									</span>
+									<span
+										class="border border-border-highlight bg-surface-2 px-1 text-orange"
+									>
+										@acme
+									</span>
+								</div>
+							</div>
+
+							<!-- Status bar -->
+							<div
+								class="flex items-center justify-between border-t border-border pt-2"
+							>
+								<span class="font-bold text-green">-- NORMAL --</span>
+								<span class="text-fg-muted">3/5</span>
+							</div>
 						</div>
 					</div>
 				</div>
@@ -432,10 +500,6 @@
 	/* --- Animation utilities --- */
 	.animate-fade-in {
 		animation: fadeIn 0.6s ease both;
-	}
-
-	.blink-slow {
-		animation: blinkSlow 2s ease infinite;
 	}
 
 	/* --- Dot grid background --- */
@@ -565,6 +629,19 @@
 			transparent
 		);
 		animation: scanline 8s linear infinite;
+	}
+
+	/* --- Hyprland-style terminal window --- */
+	.terminal-window {
+		padding: 2px;
+		border-radius: 10px;
+		background: rgba(122, 162, 247, 0.4);
+	}
+
+	.terminal-inner {
+		border-radius: 8px;
+		background: #0d0d12;
+		overflow: hidden;
 	}
 
 	/* --- Boot cursor toggle (conditional class:blink) --- */
