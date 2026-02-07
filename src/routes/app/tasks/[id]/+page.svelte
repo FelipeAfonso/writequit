@@ -36,6 +36,8 @@
 		() => ({ initialData: data.preloaded?.task })
 	);
 
+	const allTags = useQuery(api.tags.list, {});
+
 	let isEditing = $state(false);
 	let editor: TaskEditor | undefined = $state();
 
@@ -236,6 +238,7 @@
 				placeholder="Edit your task..."
 				autofocus={true}
 				{viMode}
+				tags={allTags.data ?? []}
 			/>
 		{:else}
 			<Markdown content={task.data.rawContent} />

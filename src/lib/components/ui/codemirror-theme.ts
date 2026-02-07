@@ -70,9 +70,35 @@ export const tokyoNightTheme = EditorView.theme(
 			borderBottomColor: '#16161e'
 		},
 		'.cm-tooltip-autocomplete': {
+			fontFamily: "'Iosevka', ui-monospace, monospace",
+			fontSize: '13px',
+			border: '1px solid #292e42',
+			backgroundColor: '#16161e',
+			'& > ul': {
+				fontFamily: "'Iosevka', ui-monospace, monospace",
+				maxHeight: '16em'
+			},
+			'& > ul > li': {
+				padding: '2px 8px',
+				color: '#c0caf5'
+			},
 			'& > ul > li[aria-selected]': {
-				backgroundColor: '#283457'
+				backgroundColor: '#283457',
+				color: '#c0caf5'
 			}
+		},
+		'.cm-completionLabel': {
+			color: '#73daca'
+		},
+		'.cm-completionMatchedText': {
+			color: '#7aa2f7',
+			textDecoration: 'none',
+			fontWeight: 'bold'
+		},
+		'.cm-completionDetail': {
+			color: '#565f89',
+			fontStyle: 'italic',
+			marginLeft: '8px'
 		},
 		'.cm-searchMatch': {
 			backgroundColor: '#3d59a1',

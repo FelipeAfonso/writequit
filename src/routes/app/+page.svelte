@@ -232,6 +232,7 @@
 		onsubmit={handleCreateTask}
 		autofocus={false}
 		{viMode}
+		tags={allTags.data ?? []}
 	/>
 
 	<!-- Filters -->

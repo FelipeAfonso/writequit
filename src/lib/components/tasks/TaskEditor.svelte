@@ -11,8 +11,13 @@
 	import { languages } from '@codemirror/language-data';
 	import { defaultKeymap, history, historyKeymap } from '@codemirror/commands';
 	import { searchKeymap } from '@codemirror/search';
+	import { autocompletion, completionKeymap } from '@codemirror/autocomplete';
 	import { vim, getCM, Vim } from '@replit/codemirror-vim';
 	import { tokyoNight } from '$lib/components/ui/codemirror-theme';
+	import {
+		tagCompletionSource,
+		type TagOption
+	} from '$lib/components/tasks/tagCompletion';
 	import { getContext } from 'svelte';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 	import { parseTask } from '$lib/parser';
@@ -34,6 +39,8 @@
 		autofocus?: boolean;
 		/** Enable vim keybindings in the editor. */
 		viMode?: boolean;
+		/** Available tags for autocomplete suggestions. */
+		tags?: TagOption[];
 	}
 
 	let {
@@ -41,7 +48,8 @@
 		initialContent = '',
 		placeholder = '# Task title\nDescribe your task... +tag due:tomorrow',
 		autofocus = true,
-		viMode = false
+		viMode = false,
+		tags = []
 	}: Props = $props();
 
 	const getTz = getContext<TimezoneGetter>(TIMEZONE_CTX);
@@ -56,6 +64,9 @@
 
 	// Compartment for dynamically toggling vim mode
 	const vimCompartment = new Compartment();
+
+	// Compartment for autocomplete (reconfigured when tags list changes)
+	const autocompleteCompartment = new Compartment();
 
 	/**
 	 * Patch the vim adapter's `openDialog` so that pressing `:` in
@@ -217,8 +228,19 @@
 				vimCompartment.of(viMode ? vim() : []),
 				submitKeymap,
 				escapeCompartment.of(viMode ? [] : makeEscapeKeymap()),
-				keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap]),
+				keymap.of([
+					...completionKeymap,
+					...defaultKeymap,
+					...historyKeymap,
+					...searchKeymap
+				]),
 				history(),
+				autocompleteCompartment.of(
+					autocompletion({
+						activateOnTyping: true,
+						override: [tagCompletionSource(() => tags)]
+					})
+				),
 				markdown({ codeLanguages: languages }),
 				drawSelection(),
 				tokyoNight,
@@ -271,6 +293,21 @@
 		if (viMode) {
 			patchVimDialog(view);
 		}
+	});
+
+	// Reconfigure autocomplete when the tags list changes
+	$effect(() => {
+		if (!view) return;
+		// Access `tags` so Svelte tracks the dependency
+		const currentTags = tags;
+		view.dispatch({
+			effects: autocompleteCompartment.reconfigure(
+				autocompletion({
+					activateOnTyping: true,
+					override: [tagCompletionSource(() => currentTags)]
+				})
+			)
+		});
 	});
 </script>
 
