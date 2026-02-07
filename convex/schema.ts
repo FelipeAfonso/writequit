@@ -58,6 +58,12 @@ export default defineSchema({
 		dueDate: v.optional(v.number()),
 		/** Task lifecycle state. */
 		status: v.union(v.literal('inbox'), v.literal('active'), v.literal('done')),
+		/**
+		 * Numeric sort key derived from status: active=0, inbox=1, done=2.
+		 * Kept in sync by mutations. Used by the `by_userId_statusPriority`
+		 * index so paginated queries can sort by status before pagination.
+		 */
+		statusPriority: v.optional(v.number()),
 		/** References to tag documents. */
 		tagIds: v.array(v.id('tags')),
 		/** Owner — references the auth-managed users table. */
@@ -70,6 +76,7 @@ export default defineSchema({
 		.index('by_status', ['status'])
 		.index('by_userId', ['userId'])
 		.index('by_status_userId', ['status', 'userId'])
+		.index('by_userId_statusPriority', ['userId', 'statusPriority'])
 		.index('by_dueDate', ['dueDate']),
 
 	invoices: defineTable({

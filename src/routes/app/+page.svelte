@@ -129,19 +129,8 @@
 		);
 	});
 
-	/** Sort by status priority when showing all: active > inbox > done. */
-	const statusPriority: Record<string, number> = {
-		active: 0,
-		inbox: 1,
-		done: 2
-	};
-	let filteredTasks = $derived.by(() => {
-		if (settings.statusFilter !== 'all') return searchFiltered;
-		return [...searchFiltered].sort(
-			(a: { status: string }, b: { status: string }) =>
-				(statusPriority[a.status] ?? 9) - (statusPriority[b.status] ?? 9)
-		);
-	});
+	/** Backend already sorts by status priority, so no client-side sort needed. */
+	let filteredTasks = $derived(searchFiltered);
 
 	function toggleTag(tagId: string) {
 		const ids = settings.activeTagIds;

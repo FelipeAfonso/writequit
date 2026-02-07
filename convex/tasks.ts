@@ -1,4 +1,4 @@
-import { query, mutation } from './_generated/server';
+import { query, mutation, internalMutation } from './_generated/server';
 import { v } from 'convex/values';
 import { paginationOptsValidator } from 'convex/server';
 import { parseTask } from '../src/lib/parser/index.js';
@@ -7,6 +7,17 @@ import { autoLinkTask } from './sessions.js';
 import { getAuthUserId } from '@convex-dev/auth/server';
 import type { MutationCtx } from './_generated/server';
 import type { Id } from './_generated/dataModel';
+
+/** Map a task status to its numeric sort priority (lower = higher priority). */
+const STATUS_PRIORITY: Record<string, number> = {
+	active: 0,
+	inbox: 1,
+	done: 2
+};
+
+function statusPriorityFor(status: string): number {
+	return STATUS_PRIORITY[status] ?? 9;
+}
 
 /** Look up the user's timezone from their settings, defaulting to UTC. */
 async function getUserTimezone(
@@ -68,7 +79,10 @@ export const list = query({
  * Supports the same status filter as `list`. Tag and search filtering
  * are applied client-side across loaded pages.
  *
- * Results are ordered newest-first (descending _creationTime).
+ * When a specific status is selected, results are ordered newest-first
+ * (descending _creationTime). When showing all statuses, results are
+ * sorted by status priority (active > inbox > done), then newest-first
+ * within each group, using the `by_userId_statusPriority` index.
  */
 export const listPaginated = query({
 	args: {
@@ -83,20 +97,25 @@ export const listPaginated = query({
 			return { page: [], isDone: true, continueCursor: '' };
 		}
 
-		let q;
 		if (args.status !== undefined) {
-			q = ctx.db
+			// Single-status filter: use status+userId index, newest first
+			return await ctx.db
 				.query('tasks')
 				.withIndex('by_status_userId', (idx) =>
 					idx.eq('status', args.status!).eq('userId', userId)
-				);
-		} else {
-			q = ctx.db
-				.query('tasks')
-				.withIndex('by_userId', (idx) => idx.eq('userId', userId));
+				)
+				.order('desc')
+				.paginate(args.paginationOpts);
 		}
 
-		return await q.order('desc').paginate(args.paginationOpts);
+		// All statuses: sort by statusPriority (asc) so active < inbox < done,
+		// then by _creationTime (asc) within each group as the index tiebreaker.
+		// This gives us status-grouped results straight from the index.
+		return await ctx.db
+			.query('tasks')
+			.withIndex('by_userId_statusPriority', (idx) => idx.eq('userId', userId))
+			.order('asc')
+			.paginate(args.paginationOpts);
 	}
 });
 
@@ -148,11 +167,13 @@ export const create = mutation({
 			parsed.tags.map((name) => getOrCreateTag(ctx, name, userId))
 		);
 
+		const status = 'inbox';
 		return await ctx.db.insert('tasks', {
 			rawContent: content,
 			title: parsed.title,
 			dueDate: parsed.dueDate ?? undefined,
-			status: 'inbox',
+			status,
+			statusPriority: statusPriorityFor(status),
 			tagIds,
 			userId,
 			createdAt: now,
@@ -219,6 +240,7 @@ export const updateStatus = mutation({
 		const now = Date.now();
 		const patch: Record<string, unknown> = {
 			status: args.status,
+			statusPriority: statusPriorityFor(args.status),
 			updatedAt: now
 		};
 
@@ -235,6 +257,29 @@ export const updateStatus = mutation({
 		if (args.status === 'active' || args.status === 'done') {
 			await autoLinkTask(ctx, userId, args.id, existing.tagIds);
 		}
+	}
+});
+
+/**
+ * Backfill `statusPriority` for all tasks that are missing it.
+ * Run once via the dashboard or CLI:
+ *   bunx convex run --no-push tasks:backfillStatusPriority
+ */
+export const backfillStatusPriority = internalMutation({
+	args: {},
+	handler: async (ctx) => {
+		const tasks = await ctx.db.query('tasks').collect();
+
+		let updated = 0;
+		for (const task of tasks) {
+			if (task.statusPriority === undefined) {
+				await ctx.db.patch(task._id, {
+					statusPriority: statusPriorityFor(task.status)
+				});
+				updated++;
+			}
+		}
+		return { updated, total: tasks.length };
 	}
 });
 
