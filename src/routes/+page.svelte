@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { useAuthActions } from '$lib/auth';
 
 	let { data } = $props();
+
+	const { signIn } = useAuthActions();
 
 	let typedLines = $state<string[]>([]);
 	let currentLine = $state(0);
@@ -170,12 +173,12 @@
 					</span>
 				</div>
 				<div class="flex items-center gap-2 text-[0.55rem]">
-					<a
-						href="/login"
-						class="border border-primary/30 px-2.5 py-1 text-primary no-underline transition-all duration-150 hover:border-primary hover:bg-primary/10"
+					<button
+						onclick={() => signIn()}
+						class="border border-primary/30 px-2.5 py-1 text-primary transition-all duration-150 hover:border-primary hover:bg-primary/10"
 					>
 						:login
-					</a>
+					</button>
 				</div>
 			</header>
 
@@ -208,10 +211,10 @@
 					lifestyle.
 				</p>
 				<div class="flex items-center gap-6 max-sm:flex-col max-sm:items-start">
-					<a href="/login" class="btn-primary">
+					<button onclick={() => signIn()} class="btn-primary">
 						<span class="opacity-60">&gt;</span>
 						get started
-					</a>
+					</button>
 					<span class="text-[0.5rem] text-fg-muted">
 						free during beta &middot; no credit card
 					</span>
@@ -453,10 +456,13 @@
 						<span class="text-primary">&gt;</span>
 						spend less time managing. more time building.
 					</p>
-					<a href="/login" class="btn-primary btn-primary-large">
+					<button
+						onclick={() => signIn()}
+						class="btn-primary btn-primary-large"
+					>
 						<span class="opacity-60">&gt;</span>
 						start shipping
-					</a>
+					</button>
 				</div>
 			</section>
 

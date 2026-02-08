@@ -6,8 +6,8 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad = async ({ cookies }) => {
 	const client = createServerConvexClient(cookies);
 
-	// No auth token — redirect to login
-	if (!client) redirect(302, '/login');
+	// No auth token — redirect to landing page
+	if (!client) redirect(302, '/');
 
 	try {
 		const isAdmin = await client.query(api.admin.isAdmin);
@@ -15,8 +15,8 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		// Not admin — redirect to app home
 		if (!isAdmin) redirect(302, '/app');
 	} catch {
-		// Token expired or invalid — redirect to login
-		redirect(302, '/login');
+		// Token expired or invalid — redirect to landing page
+		redirect(302, '/');
 	}
 
 	return {};
