@@ -7,8 +7,8 @@ import type { Id } from './_generated/dataModel';
 
 const SETTINGS_DEFAULTS = {
 	viMode: false,
-	defaultStatusFilter: 'lastUsed' as const,
-	defaultTagFilter: 'lastUsed' as const,
+	defaultStatusFilter: 'all' as const,
+	defaultTagFilter: 'all' as const,
 	timezone: undefined as string | undefined,
 	invoiceFromAddress: undefined as string | undefined,
 	defaultHourlyRate: undefined as number | undefined,

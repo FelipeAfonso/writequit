@@ -4,7 +4,9 @@ import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ cookies }) => {
 	const client = createServerConvexClient(cookies);
-	if (!client) return { preloaded: {} };
+	if (!client) {
+		return { preloaded: {} };
+	}
 
 	try {
 		const [settings, activeSession] = await Promise.all([
@@ -15,8 +17,9 @@ export const load: LayoutServerLoad = async ({ cookies }) => {
 		return {
 			preloaded: { settings, activeSession }
 		};
-	} catch {
+	} catch (err) {
 		// Token expired or invalid — fall back to client-side loading
+		console.error('SSR preload failed:', err);
 		return { preloaded: {} };
 	}
 };

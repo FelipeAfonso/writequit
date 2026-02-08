@@ -8,12 +8,15 @@
 	import { settings } from '$lib/stores/settings.svelte';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 	import { usePaginatedQuery } from '$lib/stores/usePaginatedQuery.svelte';
+	import { useAuthState } from '$lib/auth';
 	import TaskEditor from '$lib/components/tasks/TaskEditor.svelte';
 	import TaskList from '$lib/components/tasks/TaskList.svelte';
 	import TagFilter from '$lib/components/tags/TagFilter.svelte';
 	import ConfirmDialog from '$lib/components/ui/ConfirmDialog.svelte';
 
 	let { data } = $props();
+
+	const auth = useAuthState();
 
 	let editor: TaskEditor | undefined = $state();
 	let selectedTaskId = $state<string | undefined>(undefined);
@@ -88,10 +91,17 @@
 			: (settings.statusFilter as TaskStatus)
 	);
 
-	// Paginated query — skipped when searching (search results come from server load)
+	// Paginated query — skipped when searching or when auth hasn't completed yet.
+	// Without the auth guard, the query fires before setAuth() completes in
+	// production (slower network), returning empty results.
 	const tasks = usePaginatedQuery(
 		api.tasks.listPaginated,
-		() => (isSearching ? 'skip' : statusArg ? { status: statusArg } : {}),
+		() =>
+			isSearching || !auth.isAuthenticated
+				? 'skip'
+				: statusArg
+					? { status: statusArg }
+					: {},
 		{ initialNumItems: PAGE_SIZE }
 	);
 
