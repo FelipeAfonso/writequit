@@ -186,7 +186,7 @@
 					class:blink={showCursor}>█</span>{/if}</pre>
 		{#if !bootComplete}
 			<span
-				class="absolute right-4 bottom-4 z-[101] font-[JetBrains_Mono,monospace] text-[0.65rem] text-[#6e7a96]"
+				class="absolute right-4 bottom-4 z-101 font-[JetBrains_Mono,monospace] text-[0.65rem] text-[#6e7a96]"
 			>
 				press any key or click to skip
 			</span>
@@ -223,12 +223,21 @@
 					{/if}
 				</div>
 				<div class="flex items-center gap-2 text-[0.55rem]">
-					<button
-						onclick={() => signIn()}
-						class="border border-primary/30 px-2.5 py-1 text-primary transition-all duration-150 hover:border-primary hover:bg-primary/10"
-					>
-						:login
-					</button>
+					{#if data.isLoggedIn}
+						<a
+							href="/app"
+							class="border border-primary/30 px-2.5 py-1 text-primary transition-all duration-150 hover:border-primary hover:bg-primary/10"
+						>
+							:login
+						</a>
+					{:else}
+						<button
+							onclick={() => signIn()}
+							class="border border-primary/30 px-2.5 py-1 text-primary transition-all duration-150 hover:border-primary hover:bg-primary/10"
+						>
+							:login
+						</button>
+					{/if}
 				</div>
 			</header>
 
@@ -259,13 +268,20 @@
 					lifestyle.
 				</p>
 				<div class="flex items-center gap-6 max-sm:flex-col max-sm:items-start">
-					<button onclick={() => signIn()} class="btn-primary">
-						<span class="opacity-60">&gt;</span>
-						get started
-					</button>
-					<span class="text-[0.5rem] text-fg-muted">
-						free during beta &middot; no credit card
-					</span>
+					{#if data.isLoggedIn}
+						<a href="/app" class="btn-primary">
+							<span class="opacity-60">&gt;</span>
+							get started
+						</a>
+					{:else}
+						<button onclick={() => signIn()} class="btn-primary">
+							<span class="opacity-60">&gt;</span>
+							get started
+						</button>
+						<span class="text-[0.5rem] text-fg-muted">
+							free during beta &middot; no credit card
+						</span>
+					{/if}
 				</div>
 			</section>
 
@@ -504,13 +520,21 @@
 						<span class="text-primary">&gt;</span>
 						spend less time managing. more time building.
 					</p>
-					<button
-						onclick={() => signIn()}
-						class="btn-primary btn-primary-large"
-					>
-						<span class="opacity-60">&gt;</span>
-						start shipping
-					</button>
+					{#if data.isLoggedIn}
+						<a href="/app" class="btn-primary btn-primary-large">
+							<span class="opacity-60">&gt;</span>
+							start shipping
+						</a>
+					{:else}
+						<button
+							onclick={() => signIn()}
+							class="btn-primary btn-primary-large"
+						>
+							<span class="opacity-60">&gt;</span>
+							start shipping
+						</button>
+						<!-- else content here -->
+					{/if}
 				</div>
 			</section>
 

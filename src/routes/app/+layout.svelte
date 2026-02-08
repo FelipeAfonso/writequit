@@ -49,9 +49,9 @@
 	setContext(TIMEZONE_CTX, () => timezone);
 
 	// Provide preloaded active session to StatusBar via context.
-	// Intentionally captures initial value — preloaded data is one-time SSR seed.
-	const preloadedActiveSession = data.preloaded?.activeSession;
-	setContext(PRELOADED_ACTIVE_SESSION_CTX, preloadedActiveSession);
+	// One-time SSR seed — intentionally captures initial value.
+	// svelte-ignore state_referenced_locally
+	setContext(PRELOADED_ACTIVE_SESSION_CTX, data.preloaded?.activeSession);
 
 	// Auto-detect and persist timezone on first visit (one-time)
 	let tzPersisted = false;
