@@ -19,6 +19,79 @@
 
 	const { signIn } = useAuthActions();
 
+	const softwareAppSchema = JSON.stringify({
+		'@context': 'https://schema.org',
+		'@type': 'SoftwareApplication',
+		name: 'writequit',
+		alternateName: ':wq',
+		url: 'https://writequit.dev',
+		applicationCategory: 'BusinessApplication',
+		operatingSystem: 'Web',
+		description:
+			'A task manager, time tracker, and invoice generator built for freelance developers. Features vim keybindings, markdown tasks, and a terminal-style interface.',
+		offers: {
+			'@type': 'Offer',
+			price: '0',
+			priceCurrency: 'USD',
+			description: 'Free during beta'
+		},
+		featureList: [
+			'Vim-native keyboard navigation',
+			'Markdown task descriptions',
+			'Built-in time tracking',
+			'Invoice generation with PDF export',
+			'Inline tag system',
+			'Project and client reports'
+		]
+	});
+
+	const faqSchema = JSON.stringify({
+		'@context': 'https://schema.org',
+		'@type': 'FAQPage',
+		mainEntity: [
+			{
+				'@type': 'Question',
+				name: 'What is writequit?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'writequit is a task manager, time tracker, and invoice generator designed for freelance developers. It combines vim-style keybindings with a terminal aesthetic so you can manage tasks, log hours, and generate invoices without leaving a keyboard-driven workflow.'
+				}
+			},
+			{
+				'@type': 'Question',
+				name: 'How does writequit handle time tracking?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'Type :track to start a timer and :stop to end it. Sessions are linked to tasks and projects automatically. When it is time to bill, select the sessions you need and generate a PDF invoice directly from your tracked hours.'
+				}
+			},
+			{
+				'@type': 'Question',
+				name: 'Do I need to know vim to use writequit?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'No. writequit borrows familiar vim patterns like j/k navigation and colon commands, but everything also works with a mouse and standard UI interactions. The vim keybindings are a power-user shortcut, not a requirement.'
+				}
+			},
+			{
+				'@type': 'Question',
+				name: 'Is writequit free?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'writequit is free during the beta period. No credit card is required to sign up. Pricing for future plans has not been announced yet.'
+				}
+			},
+			{
+				'@type': 'Question',
+				name: 'How does invoicing work in writequit?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'Select time sessions, set your hourly rate, and run :invoice. writequit generates a PDF invoice that downloads directly to your machine. No third-party integrations or payment processors required.'
+				}
+			}
+		]
+	});
+
 	let typedLines = $state<string[]>([]);
 	let currentLine = $state(0);
 	let currentChar = $state(0);
@@ -147,7 +220,67 @@
 <svelte:window onkeydown={skipAnimation} onclick={skipAnimation} />
 
 <svelte:head>
-	<title>:wq - write. quit. ship.</title>
+	<title>
+		writequit — task manager, time tracker & invoicing for freelance developers
+	</title>
+	<meta
+		name="description"
+		content="writequit is a task manager, time tracker, and invoice generator built for freelance developers. Vim keybindings, markdown tasks, terminal UI. Manage work, not a workspace."
+	/>
+	<link rel="canonical" href="https://writequit.dev/" />
+
+	<!-- Open Graph -->
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="https://writequit.dev/" />
+	<meta
+		property="og:title"
+		content="writequit — tasks, time tracking & invoices for dev freelancers"
+	/>
+	<meta
+		property="og:description"
+		content="Vim keybindings. Markdown tasks. Terminal aesthetics. A task manager, time tracker, and invoice generator that gets out of your way."
+	/>
+	<meta property="og:site_name" content="writequit" />
+	<meta property="og:image" content="https://writequit.dev/ogbanner.webp" />
+	<meta property="og:image:width" content="1200" />
+	<meta property="og:image:height" content="630" />
+	<meta property="og:image:type" content="image/webp" />
+
+	<!-- Twitter Card -->
+	<meta name="twitter:card" content="summary_large_image" />
+	<meta
+		name="twitter:title"
+		content="writequit — tasks, time tracking & invoices for dev freelancers"
+	/>
+	<meta
+		name="twitter:description"
+		content="Vim keybindings. Markdown tasks. Terminal aesthetics. A task manager, time tracker, and invoice generator that gets out of your way."
+	/>
+	<meta name="twitter:image" content="https://writequit.dev/ogbanner.webp" />
+
+	<!-- Additional SEO -->
+	<meta name="robots" content="index, follow" />
+	<meta
+		name="keywords"
+		content="freelance task manager, time tracker for developers, developer invoice tool, vim task manager, terminal task manager, freelance time tracking, developer productivity"
+	/>
+
+	<!-- JSON-LD: SoftwareApplication -->
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+	{@html '<scr' +
+		'ipt type="application/ld+json">' +
+		softwareAppSchema +
+		'</scr' +
+		'ipt>'}
+
+	<!-- JSON-LD: FAQPage -->
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+	{@html '<scr' +
+		'ipt type="application/ld+json">' +
+		faqSchema +
+		'</scr' +
+		'ipt>'}
+
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link
 		rel="preconnect"
@@ -290,6 +423,7 @@
 				class="animate-fade-in mx-auto max-w-5xl px-8 py-12 max-sm:px-5"
 				style="animation-delay: 0.5s;"
 			>
+				<h2 class="sr-only">Features</h2>
 				<div
 					class="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-px border border-primary/8 bg-primary/8"
 				>
@@ -510,10 +644,104 @@
 				</div>
 			</section>
 
+			<!-- What is writequit — AEO definition block -->
+			<section
+				class="animate-fade-in mx-auto max-w-3xl px-8 py-12 max-sm:px-5"
+				style="animation-delay: 0.85s;"
+			>
+				<h2
+					class="mb-4 text-[0.75rem] font-semibold tracking-wide text-[#cdd6f4]"
+				>
+					What is writequit?
+				</h2>
+				<p class="mb-3 text-[0.6rem] leading-[1.9] text-[#6e7a96]">
+					writequit is a task manager, time tracker, and invoice generator built
+					for freelance developers. It combines vim-style keybindings with a
+					terminal-inspired interface so you can manage projects, log hours, and
+					bill clients without context-switching away from how you already work.
+				</p>
+				<p class="text-[0.6rem] leading-[1.9] text-[#6e7a96]">
+					Tasks use markdown. Navigation uses <code class="faq-code">j/k</code>
+					. Commands start with
+					<code class="faq-code">:</code>
+					— the same muscle memory you use in your editor. Time tracking, tagging,
+					and invoicing are all built in, not bolted on.
+				</p>
+			</section>
+
+			<!-- FAQ — AEO-optimized -->
+			<section
+				class="animate-fade-in mx-auto max-w-3xl px-8 py-12 max-sm:px-5"
+				style="animation-delay: 0.9s;"
+			>
+				<h2
+					class="mb-6 text-[0.75rem] font-semibold tracking-wide text-[#cdd6f4]"
+				>
+					Frequently asked questions
+				</h2>
+				<div class="flex flex-col gap-5">
+					<div>
+						<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
+							How does time tracking work?
+						</h3>
+						<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
+							Type <code class="faq-code">:track</code>
+							to start a session and
+							<code class="faq-code">:stop</code>
+							to end it. Sessions link to tasks and projects automatically. When you
+							need to bill, select the sessions and generate a PDF invoice from your
+							tracked hours.
+						</p>
+					</div>
+					<div>
+						<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
+							Do I need to know vim?
+						</h3>
+						<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
+							No. writequit borrows familiar vim patterns like
+							<code class="faq-code">j/k</code>
+							navigation and colon commands, but everything works with a mouse too.
+							The keybindings are a power-user shortcut, not a requirement.
+						</p>
+					</div>
+					<div>
+						<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
+							Is writequit free?
+						</h3>
+						<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
+							writequit is free during the beta. No credit card required. Future
+							pricing has not been announced yet.
+						</p>
+					</div>
+					<div>
+						<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
+							How does invoicing work?
+						</h3>
+						<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
+							Select time sessions, set your rate, and run
+							<code class="faq-code">:invoice</code>
+							. A PDF downloads directly to your machine. No third-party payment processors
+							or integrations needed.
+						</p>
+					</div>
+					<div>
+						<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
+							What makes writequit different from other task managers?
+						</h3>
+						<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
+							Most project tools are built for managers, not makers. writequit
+							is built for developers who want to track tasks, log time, and
+							send invoices from one keyboard-driven interface — no Kanban
+							boards, no Gantt charts, no sprint ceremonies.
+						</p>
+					</div>
+				</div>
+			</section>
+
 			<!-- CTA -->
 			<section
 				class="animate-fade-in px-8 py-16 max-sm:px-5"
-				style="animation-delay: 0.9s;"
+				style="animation-delay: 0.95s;"
 			>
 				<div class="mx-auto max-w-3xl text-center">
 					<p class="mb-6 text-[0.8rem] text-[#6e7a96]">
@@ -860,5 +1088,26 @@
 		background: rgba(247, 118, 142, 0.08);
 		padding: 0.05rem 0.2rem;
 		font-size: 0.5rem;
+	}
+
+	/* --- FAQ inline code --- */
+	.faq-code {
+		color: var(--color-red);
+		background: rgba(247, 118, 142, 0.08);
+		padding: 0.05rem 0.25rem;
+		font-size: inherit;
+	}
+
+	/* --- Screen-reader only (visually hidden h2) --- */
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		white-space: nowrap;
+		border-width: 0;
 	}
 </style>

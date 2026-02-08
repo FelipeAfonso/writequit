@@ -1,3 +1,10 @@
-# allow crawling everything by default
+# writequit.dev robots.txt
+
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /app/
+Disallow: /api/
+Disallow: /auth/
+
+# Sitemap
+Sitemap: https://writequit.dev/sitemap.xml
