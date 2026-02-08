@@ -162,7 +162,7 @@ export function setupWorkOSAuth(
 	function registerConvexAuth() {
 		convexClient.setAuth(
 			async ({ forceRefreshToken }) => {
-				if (!authkitClient) return null;
+				if (!authkitClient || !isAuthenticated) return null;
 
 				if (forceRefreshToken) {
 					try {
