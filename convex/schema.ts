@@ -59,7 +59,11 @@ export default defineSchema({
 		/** Default currency code, e.g. "USD". */
 		defaultCurrency: v.optional(v.string()),
 		/** Default payment terms, e.g. "Net 30". */
-		defaultPaymentTerms: v.optional(v.string())
+		defaultPaymentTerms: v.optional(v.string()),
+		/** Default invoice PDF theme: "dark" or "light". */
+		defaultInvoiceTheme: v.optional(
+			v.union(v.literal('dark'), v.literal('light'))
+		)
 	}).index('by_userId', ['userId']),
 
 	tasks: defineTable({
