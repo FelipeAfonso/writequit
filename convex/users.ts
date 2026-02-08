@@ -13,7 +13,8 @@ const SETTINGS_DEFAULTS = {
 	invoiceFromAddress: undefined as string | undefined,
 	defaultHourlyRate: undefined as number | undefined,
 	defaultCurrency: undefined as string | undefined,
-	defaultPaymentTerms: undefined as string | undefined
+	defaultPaymentTerms: undefined as string | undefined,
+	defaultInvoiceTheme: undefined as 'dark' | 'light' | undefined
 };
 
 // ── Auth helpers ───────────────────────────────────────────────────
@@ -90,7 +91,8 @@ export const getSettings = query({
 			invoiceFromAddress: row.invoiceFromAddress,
 			defaultHourlyRate: row.defaultHourlyRate,
 			defaultCurrency: row.defaultCurrency,
-			defaultPaymentTerms: row.defaultPaymentTerms
+			defaultPaymentTerms: row.defaultPaymentTerms,
+			defaultInvoiceTheme: row.defaultInvoiceTheme
 		};
 	}
 });
@@ -188,7 +190,10 @@ export const updateSettings = mutation({
 		invoiceFromAddress: v.optional(v.string()),
 		defaultHourlyRate: v.optional(v.number()),
 		defaultCurrency: v.optional(v.string()),
-		defaultPaymentTerms: v.optional(v.string())
+		defaultPaymentTerms: v.optional(v.string()),
+		defaultInvoiceTheme: v.optional(
+			v.union(v.literal('dark'), v.literal('light'))
+		)
 	},
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
@@ -214,6 +219,8 @@ export const updateSettings = mutation({
 			patch.defaultCurrency = args.defaultCurrency;
 		if (args.defaultPaymentTerms !== undefined)
 			patch.defaultPaymentTerms = args.defaultPaymentTerms;
+		if (args.defaultInvoiceTheme !== undefined)
+			patch.defaultInvoiceTheme = args.defaultInvoiceTheme;
 
 		if (existing) {
 			await ctx.db.patch(existing._id, patch);
@@ -229,7 +236,8 @@ export const updateSettings = mutation({
 				invoiceFromAddress: args.invoiceFromAddress,
 				defaultHourlyRate: args.defaultHourlyRate,
 				defaultCurrency: args.defaultCurrency,
-				defaultPaymentTerms: args.defaultPaymentTerms
+				defaultPaymentTerms: args.defaultPaymentTerms,
+				defaultInvoiceTheme: args.defaultInvoiceTheme
 			});
 		}
 	}
