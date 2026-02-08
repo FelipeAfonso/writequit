@@ -4,7 +4,7 @@ import { paginationOptsValidator } from 'convex/server';
 import { parseTask } from '../src/lib/parser/index.js';
 import { getOrCreateTag } from './tags.js';
 import { autoLinkTask } from './sessions.js';
-import { getAuthUserId } from '@convex-dev/auth/server';
+import { getCurrentUser, getCurrentUserOrThrow } from './users.js';
 import type { MutationCtx } from './_generated/server';
 import type { Id } from './_generated/dataModel';
 
@@ -42,8 +42,9 @@ export const list = query({
 		tagId: v.optional(v.id('tags'))
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return [];
+		const user = await getCurrentUser(ctx);
+		if (user === null) return [];
+		const userId = user._id;
 
 		let tasks;
 
@@ -92,10 +93,11 @@ export const listPaginated = query({
 		)
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) {
+		const user = await getCurrentUser(ctx);
+		if (user === null) {
 			return { page: [], isDone: true, continueCursor: '' };
 		}
+		const userId = user._id;
 
 		if (args.status !== undefined) {
 			// Single-status filter: use status+userId index, newest first
@@ -134,9 +136,10 @@ export const search = query({
 		)
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return [];
+		const user = await getCurrentUser(ctx);
+		if (user === null) return [];
 		if (!args.query.trim()) return [];
+		const userId = user._id;
 
 		return await ctx.db
 			.query('tasks')
@@ -152,11 +155,11 @@ export const search = query({
 export const get = query({
 	args: { id: v.id('tasks') },
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return null;
+		const user = await getCurrentUser(ctx);
+		if (user === null) return null;
 
 		const task = await ctx.db.get(args.id);
-		if (task === null || task.userId !== userId) return null;
+		if (task === null || task.userId !== user._id) return null;
 
 		// Resolve tag documents so the client has names/colors
 		const tags = await Promise.all(task.tagIds.map((id) => ctx.db.get(id)));
@@ -181,8 +184,8 @@ export const get = query({
 export const create = mutation({
 	args: { rawContent: v.string() },
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
+		const userId = user._id;
 
 		const content = args.rawContent.trim();
 		if (content.length === 0) throw new Error('Task content cannot be empty');
@@ -221,8 +224,8 @@ export const update = mutation({
 		rawContent: v.string()
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
+		const userId = user._id;
 
 		const existing = await ctx.db.get(args.id);
 		if (existing === null || existing.userId !== userId) {
@@ -258,8 +261,8 @@ export const updateStatus = mutation({
 		status: v.union(v.literal('inbox'), v.literal('active'), v.literal('done'))
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
+		const userId = user._id;
 
 		const existing = await ctx.db.get(args.id);
 		if (existing === null || existing.userId !== userId) {
@@ -316,11 +319,10 @@ export const backfillStatusPriority = internalMutation({
 export const remove = mutation({
 	args: { id: v.id('tasks') },
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
 
 		const existing = await ctx.db.get(args.id);
-		if (existing === null || existing.userId !== userId) {
+		if (existing === null || existing.userId !== user._id) {
 			throw new Error('Task not found');
 		}
 

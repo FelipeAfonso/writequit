@@ -1,75 +1,52 @@
 /**
- * Svelte 5 auth adapter for @convex-dev/auth.
+ * Svelte 5 auth adapter for WorkOS AuthKit.
  *
- * This is a port of the React `AuthProvider` from @convex-dev/auth/react/client.tsx
- * to Svelte 5 runes. It manages JWT + refresh token storage, token refresh,
- * OAuth code handling, and exposes reactive auth state.
+ * Uses @workos-inc/authkit-js (vanilla JS SDK) to handle authentication
+ * via WorkOS's hosted UI. Provides reactive auth state and wires the
+ * access token into the Convex client for authenticated queries/mutations.
+ *
+ * After successful auth, calls the `users.store` mutation to upsert the
+ * user document in Convex.
  */
 import { getContext, setContext } from 'svelte';
-import { ConvexHttpClient, type ConvexClient } from 'convex/browser';
-import type { Value } from 'convex/values';
+import { createClient } from '@workos-inc/authkit-js';
+import type { ConvexClient } from 'convex/browser';
+import { ConvexHttpClient } from 'convex/browser';
 
-// ── Storage keys ───────────────────────────────────────────────────
-const VERIFIER_STORAGE_KEY = '__convexAuthOAuthVerifier';
-const JWT_STORAGE_KEY = '__convexAuthJWT';
-const REFRESH_TOKEN_STORAGE_KEY = '__convexAuthRefreshToken';
-
-// Cookie name used to mirror the JWT so SvelteKit server load functions
-// can read it and prefetch Convex data during SSR.
+// Cookie name used to mirror the access token so SvelteKit server load
+// functions can read it and prefetch Convex data during SSR.
 export const JWT_COOKIE_NAME = '__convex_jwt';
 
 // ── Context key ────────────────────────────────────────────────────
-const AUTH_CONTEXT_KEY = '$$_convexAuth';
-
-// ── Retry backoff for network errors ───────────────────────────────
-const RETRY_BACKOFF = [500, 2000];
-const RETRY_JITTER = 100;
+const AUTH_CONTEXT_KEY = '$$_workosAuth';
 
 // ── Types ──────────────────────────────────────────────────────────
 
 export interface AuthState {
 	readonly isLoading: boolean;
 	readonly isAuthenticated: boolean;
-	readonly token: string | null;
 }
 
 export interface AuthActions {
-	signIn(
-		provider: string,
-		params?: FormData | Record<string, Value>
-	): Promise<{ signingIn: boolean; redirect?: URL }>;
+	signIn(): Promise<void>;
 	signOut(): Promise<void>;
 }
 
-interface ConvexAuthContext {
+interface WorkOSAuthContext {
 	readonly state: AuthState;
 	readonly actions: AuthActions;
-}
-
-// ── Namespaced storage helpers ─────────────────────────────────────
-
-function makeStorageHelpers(namespace: string) {
-	const escaped = namespace.replace(/[^a-zA-Z0-9]/g, '');
-	const key = (k: string) => `${k}_${escaped}`;
-	return {
-		storageKey: key,
-		storageGet: (k: string) => localStorage.getItem(key(k)),
-		storageSet: (k: string, v: string) => localStorage.setItem(key(k), v),
-		storageRemove: (k: string) => localStorage.removeItem(key(k))
-	};
 }
 
 // ── Cookie mirror (for SSR) ─────────────────────────────────────────
 
 /**
- * Sync the JWT to a cookie so the SvelteKit server can read it during
- * SSR and prefetch Convex data. We parse the JWT's `exp` claim to set
- * an appropriate max-age so the cookie auto-expires with the token.
+ * Sync the access token to a cookie so the SvelteKit server can read
+ * it during SSR and prefetch Convex data.
  */
-function syncTokenCookie(jwt: string | null) {
+function syncTokenCookie(token: string | null) {
 	if (typeof document === 'undefined') return;
 
-	if (jwt === null) {
+	if (token === null) {
 		document.cookie = `${JWT_COOKIE_NAME}=; path=/; SameSite=Lax; Secure; max-age=0`;
 		return;
 	}
@@ -77,7 +54,7 @@ function syncTokenCookie(jwt: string | null) {
 	// Parse JWT expiry to set cookie max-age
 	let maxAge = 3600; // fallback: 1 hour
 	try {
-		const payload = JSON.parse(atob(jwt.split('.')[1]));
+		const payload = JSON.parse(atob(token.split('.')[1]));
 		if (payload.exp) {
 			const secondsLeft = payload.exp - Math.floor(Date.now() / 1000);
 			if (secondsLeft > 0) maxAge = secondsLeft;
@@ -86,279 +63,166 @@ function syncTokenCookie(jwt: string | null) {
 		// If we can't parse the JWT, use the fallback
 	}
 
-	document.cookie = `${JWT_COOKIE_NAME}=${encodeURIComponent(jwt)}; path=/; SameSite=Lax; Secure; max-age=${maxAge}`;
+	document.cookie = `${JWT_COOKIE_NAME}=${encodeURIComponent(token)}; path=/; SameSite=Lax; Secure; max-age=${maxAge}`;
 }
 
-// ── Network error detection ────────────────────────────────────────
-
-function isNetworkError(error: unknown): boolean {
-	return (
-		error instanceof TypeError &&
-		(error.message === 'Failed to fetch' ||
-			error.message === 'NetworkError when attempting to fetch resource.' ||
-			error.message === 'Network request failed' ||
-			error.message.includes('network'))
-	);
-}
-
-// ── Core: setupConvexAuth ──────────────────────────────────────────
+// ── Core: setupWorkOSAuth ──────────────────────────────────────────
 
 /**
- * Initialize Convex Auth in a Svelte component tree. Call this once in
- * your root layout, after `setupConvex()`.
+ * Initialize WorkOS AuthKit in a Svelte component tree. Call this once
+ * in your root layout, after `setupConvex()`.
  *
  * This sets up:
- * - JWT token management (storage, refresh, sync across tabs)
+ * - WorkOS AuthKit client for hosted authentication
  * - `client.setAuth()` integration with the ConvexClient
- * - OAuth redirect code handling
  * - Reactive auth state available via `useAuthState()` and `useAuthActions()`
+ * - User document upsert in Convex after authentication
  */
-export function setupConvexAuth(client: ConvexClient, convexUrl: string) {
-	const { storageGet, storageSet, storageRemove, storageKey } =
-		makeStorageHelpers(convexUrl);
-
+export function setupWorkOSAuth(
+	convexClient: ConvexClient,
+	clientId: string,
+	convexUrl: string
+) {
 	// ── Reactive state ───────────────────────────────────────────
-	let token: string | null = $state(null);
 	let isLoading = $state(true);
+	let isAuthenticated = $state(false);
+	let authkitClient: Awaited<ReturnType<typeof createClient>> | null =
+		$state(null);
 
-	// ── Token management ─────────────────────────────────────────
+	// ── Store the current access token ───────────────────────────
+	let currentAccessToken: string | null = null;
 
-	function setToken(
-		args:
-			| { shouldStore: true; tokens: { token: string; refreshToken: string } }
-			| { shouldStore: false; tokens: { token: string } }
-			| { shouldStore: boolean; tokens: null }
-	) {
-		if (args.tokens === null) {
-			token = null;
+	// ── Initialize AuthKit client ────────────────────────────────
+
+	async function initialize() {
+		try {
+			const client = await createClient(clientId, {
+				redirectUri: `${window.location.origin}/callback`
+			});
+			authkitClient = client;
+
+			const user = client.getUser();
+			if (user) {
+				const token = await client.getAccessToken();
+				currentAccessToken = token;
+				syncTokenCookie(token);
+				isAuthenticated = true;
+
+				// Wire up Convex auth
+				registerConvexAuth();
+
+				// Upsert user document in Convex
+				await storeUser(convexUrl, token);
+			} else {
+				currentAccessToken = null;
+				syncTokenCookie(null);
+				isAuthenticated = false;
+
+				// Clear Convex auth
+				registerConvexAuth();
+			}
+		} catch (error) {
+			console.error('Failed to initialize WorkOS AuthKit:', error);
+			currentAccessToken = null;
 			syncTokenCookie(null);
-			if (args.shouldStore) {
-				storageRemove(JWT_STORAGE_KEY);
-				storageRemove(REFRESH_TOKEN_STORAGE_KEY);
-			}
-		} else {
-			token = args.tokens.token;
-			syncTokenCookie(args.tokens.token);
-			if (args.shouldStore && 'refreshToken' in args.tokens) {
-				storageSet(JWT_STORAGE_KEY, args.tokens.token);
-				storageSet(REFRESH_TOKEN_STORAGE_KEY, args.tokens.refreshToken);
-			}
+			isAuthenticated = false;
+			registerConvexAuth();
+		} finally {
+			isLoading = false;
 		}
-		isLoading = false;
-	}
-
-	// ── Verify code / refresh token with server ──────────────────
-
-	async function verifyCode(
-		args: { code: string; verifier?: string } | { refreshToken: string }
-	): Promise<{ tokens: { token: string; refreshToken: string } | null }> {
-		const httpClient = new ConvexHttpClient(convexUrl);
-		let lastError: unknown;
-
-		for (let retry = 0; retry <= RETRY_BACKOFF.length; retry++) {
-			try {
-				/* eslint-disable @typescript-eslint/no-explicit-any -- Convex Auth internal actions are untyped */
-				const signInArgs =
-					'code' in args
-						? { params: { code: args.code }, verifier: args.verifier }
-						: args;
-				return await (httpClient as any).action(
-					'auth:signIn' as any,
-					signInArgs
-				);
-				/* eslint-enable @typescript-eslint/no-explicit-any */
-			} catch (e) {
-				lastError = e;
-				if (!isNetworkError(e) || retry >= RETRY_BACKOFF.length) break;
-				const wait = RETRY_BACKOFF[retry] + RETRY_JITTER * Math.random();
-				await new Promise((resolve) => setTimeout(resolve, wait));
-			}
-		}
-		throw lastError;
-	}
-
-	async function verifyCodeAndSetToken(
-		args: { code: string; verifier?: string } | { refreshToken: string }
-	): Promise<boolean> {
-		const { tokens } = await verifyCode(args);
-		setToken({ shouldStore: true, tokens: tokens ?? null });
-		return tokens !== null;
-	}
-
-	// ── fetchToken callback for client.setAuth ───────────────────
-	// This is called by the Convex client when it needs a token.
-
-	async function fetchToken({
-		forceRefreshToken
-	}: {
-		forceRefreshToken: boolean;
-	}): Promise<string | null | undefined> {
-		if (forceRefreshToken) {
-			const refreshToken = storageGet(REFRESH_TOKEN_STORAGE_KEY);
-			if (refreshToken !== null) {
-				try {
-					await verifyCodeAndSetToken({ refreshToken });
-				} catch {
-					setToken({ shouldStore: true, tokens: null });
-					return null;
-				}
-				return token;
-			}
-			return null;
-		}
-		return token;
-	}
-
-	function onAuthChange(isAuthenticated: boolean) {
-		if (!isAuthenticated && token !== null) {
-			// Server rejected our token
-			setToken({ shouldStore: true, tokens: null });
-		}
-		isLoading = false;
 	}
 
 	/**
-	 * Re-register setAuth with the Convex client. This triggers a
-	 * fresh fetchToken call, which lets the WebSocket authenticate
-	 * with the newly stored JWT.
+	 * Register (or re-register) the fetchToken callback with the Convex
+	 * client so it can authenticate WebSocket requests.
 	 */
-	function refreshClientAuth() {
-		client.setAuth(fetchToken, onAuthChange);
+	function registerConvexAuth() {
+		convexClient.setAuth(
+			async ({ forceRefreshToken }) => {
+				if (!authkitClient) return null;
+
+				if (forceRefreshToken) {
+					try {
+						const token = await authkitClient.getAccessToken();
+						currentAccessToken = token;
+						syncTokenCookie(token);
+						return token;
+					} catch {
+						currentAccessToken = null;
+						syncTokenCookie(null);
+						isAuthenticated = false;
+						return null;
+					}
+				}
+
+				return currentAccessToken;
+			},
+			(isAuthd) => {
+				if (!isAuthd && isAuthenticated) {
+					// Server rejected our token
+					currentAccessToken = null;
+					syncTokenCookie(null);
+					isAuthenticated = false;
+				}
+				isLoading = false;
+			}
+		);
 	}
 
-	// Initial registration
-	refreshClientAuth();
+	/**
+	 * Upsert the user document in Convex via an HTTP client call.
+	 * We use an HTTP client so this works independently of the
+	 * WebSocket client's auth state.
+	 */
+	async function storeUser(url: string, token: string) {
+		try {
+			const httpClient = new ConvexHttpClient(url);
+			httpClient.setAuth(token);
+			await httpClient.mutation('users:store' as never, {} as never);
+		} catch (error) {
+			console.error('Failed to store user in Convex:', error);
+		}
+	}
+
+	// Start initialization
+	$effect(() => {
+		initialize();
+	});
 
 	// ── Sign in ──────────────────────────────────────────────────
 
-	async function signIn(
-		provider: string,
-		params?: FormData | Record<string, Value>
-	): Promise<{ signingIn: boolean; redirect?: URL }> {
-		const paramsObj =
-			params instanceof FormData
-				? Array.from(params.entries()).reduce(
-						(acc, [key, value]) => {
-							acc[key] = value as string;
-							return acc;
-						},
-						{} as Record<string, string>
-					)
-				: (params ?? {});
-
-		const verifier = storageGet(VERIFIER_STORAGE_KEY) ?? undefined;
-		storageRemove(VERIFIER_STORAGE_KEY);
-
-		// Use an unauthenticated HTTP client for sign-in calls so
-		// they work before the user has a valid session.
-		const httpClient = new ConvexHttpClient(convexUrl);
-
-		/* eslint-disable @typescript-eslint/no-explicit-any -- Convex Auth internal actions are untyped */
-		const result: any = await (httpClient as any).action('auth:signIn' as any, {
-			provider,
-			params: paramsObj,
-			verifier
-		});
-		/* eslint-enable @typescript-eslint/no-explicit-any */
-
-		if (result.redirect !== undefined) {
-			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- not reactive state
-			const url = new URL(result.redirect as string);
-			storageSet(VERIFIER_STORAGE_KEY, result.verifier!);
-			window.location.href = url.toString();
-			return { signingIn: false, redirect: url };
-		} else if (result.tokens !== undefined) {
-			setToken({ shouldStore: true, tokens: result.tokens });
-			// Re-register auth so the Convex client picks up the new token
-			refreshClientAuth();
-			return { signingIn: result.tokens !== null };
+	async function signIn(): Promise<void> {
+		if (!authkitClient) {
+			console.error('AuthKit client not initialized');
+			return;
 		}
-
-		return { signingIn: false };
+		await authkitClient.signIn();
 	}
 
 	// ── Sign out ─────────────────────────────────────────────────
 
 	async function signOut(): Promise<void> {
-		try {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Convex Auth internal action
-			await client.action('auth:signOut' as any, {} as never);
-		} catch {
-			// Ignore — usually means already signed out
+		if (!authkitClient) {
+			console.error('AuthKit client not initialized');
+			return;
 		}
-		setToken({ shouldStore: true, tokens: null });
-		// Re-register so the Convex client clears its auth
-		refreshClientAuth();
+		await authkitClient.signOut();
+		currentAccessToken = null;
+		syncTokenCookie(null);
+		isAuthenticated = false;
+		registerConvexAuth();
 	}
-
-	// ── Initialize: read from storage or handle OAuth code ───────
-
-	$effect(() => {
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative, not reactive
-		const code = new URLSearchParams(window.location.search).get('code');
-
-		if (code) {
-			// OAuth redirect — consume the code
-			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- imperative, not reactive
-			const url = new URL(window.location.href);
-			url.searchParams.delete('code');
-			window.history.replaceState({}, '', url.pathname + url.search + url.hash);
-
-			// Retrieve and clear the PKCE verifier that was stored before redirect
-			const verifier = storageGet(VERIFIER_STORAGE_KEY) ?? undefined;
-			storageRemove(VERIFIER_STORAGE_KEY);
-
-			verifyCodeAndSetToken({ code, verifier })
-				.then(() => refreshClientAuth())
-				.catch(() => {
-					const stored = storageGet(JWT_STORAGE_KEY);
-					setToken({
-						shouldStore: false,
-						tokens: stored ? { token: stored } : null
-					});
-					refreshClientAuth();
-				});
-		} else {
-			// Normal load — read token from storage
-			const stored = storageGet(JWT_STORAGE_KEY);
-			if (stored) {
-				setToken({ shouldStore: false, tokens: { token: stored } });
-				// Re-register so the client fetches this token
-				refreshClientAuth();
-			} else {
-				setToken({ shouldStore: false, tokens: null });
-			}
-		}
-
-		// Listen for storage changes from other tabs
-		function onStorage(event: StorageEvent) {
-			if (event.key === storageKey(JWT_STORAGE_KEY)) {
-				const value = event.newValue;
-				setToken({
-					shouldStore: false,
-					tokens: value ? { token: value } : null
-				});
-				refreshClientAuth();
-			}
-		}
-
-		window.addEventListener('storage', onStorage);
-		return () => window.removeEventListener('storage', onStorage);
-	});
 
 	// ── Expose via context ───────────────────────────────────────
 
-	const authContext: ConvexAuthContext = {
+	const authContext: WorkOSAuthContext = {
 		get state(): AuthState {
 			return {
 				get isLoading() {
 					return isLoading;
 				},
 				get isAuthenticated() {
-					return token !== null;
-				},
-				get token() {
-					return token;
+					return isAuthenticated;
 				}
 			};
 		},
@@ -375,12 +239,12 @@ export function setupConvexAuth(client: ConvexClient, convexUrl: string) {
 
 // ── Consumer hooks ─────────────────────────────────────────────────
 
-/** Get the reactive auth state (isLoading, isAuthenticated, token). */
+/** Get the reactive auth state (isLoading, isAuthenticated). */
 export function useAuthState(): AuthState {
-	const ctx = getContext<ConvexAuthContext>(AUTH_CONTEXT_KEY);
+	const ctx = getContext<WorkOSAuthContext>(AUTH_CONTEXT_KEY);
 	if (!ctx) {
 		throw new Error(
-			'No Convex Auth context found. Did you call setupConvexAuth() in a parent component?'
+			'No WorkOS Auth context found. Did you call setupWorkOSAuth() in a parent component?'
 		);
 	}
 	return ctx.state;
@@ -388,10 +252,10 @@ export function useAuthState(): AuthState {
 
 /** Get the signIn and signOut actions. */
 export function useAuthActions(): AuthActions {
-	const ctx = getContext<ConvexAuthContext>(AUTH_CONTEXT_KEY);
+	const ctx = getContext<WorkOSAuthContext>(AUTH_CONTEXT_KEY);
 	if (!ctx) {
 		throw new Error(
-			'No Convex Auth context found. Did you call setupConvexAuth() in a parent component?'
+			'No WorkOS Auth context found. Did you call setupWorkOSAuth() in a parent component?'
 		);
 	}
 	return ctx.actions;

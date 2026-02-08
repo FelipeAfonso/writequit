@@ -1,5 +1,5 @@
 export {
-	setupConvexAuth,
+	setupWorkOSAuth,
 	useAuthState,
 	useAuthActions,
 	JWT_COOKIE_NAME

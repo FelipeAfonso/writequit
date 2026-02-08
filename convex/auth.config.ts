@@ -1,8 +1,12 @@
+const clientId = process.env.WORKOS_CLIENT_ID;
+
 export default {
 	providers: [
 		{
-			domain: process.env.CONVEX_SITE_URL,
-			applicationID: 'convex'
+			type: 'customJwt' as const,
+			issuer: `https://api.workos.com/user_management/${clientId}`,
+			algorithm: 'RS256' as const,
+			jwks: `https://api.workos.com/sso/jwks/${clientId}`
 		}
 	]
 };

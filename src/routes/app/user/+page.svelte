@@ -18,9 +18,6 @@
 	const userSettings = useQuery(api.users.getSettings, {}, () => ({
 		initialData: data.preloaded?.settings
 	}));
-	const hasPassword = useQuery(api.users.hasPasswordAccount, {}, () => ({
-		initialData: data.preloaded?.hasPassword
-	}));
 
 	// ── Profile state ──────────────────────────────────────────────
 	let editingName = $state(false);
@@ -55,51 +52,6 @@
 	function cancelEditName() {
 		editingName = false;
 		nameError = '';
-	}
-
-	// ── Password state ─────────────────────────────────────────────
-	let currentPassword = $state('');
-	let newPassword = $state('');
-	let confirmPassword = $state('');
-	let passwordSaving = $state(false);
-	let passwordError = $state('');
-	let passwordSuccess = $state('');
-
-	const MIN_PASSWORD_LENGTH = 6;
-
-	async function handleChangePassword() {
-		passwordError = '';
-		passwordSuccess = '';
-
-		if (currentPassword.length < MIN_PASSWORD_LENGTH) {
-			passwordError = `current password must be at least ${MIN_PASSWORD_LENGTH} characters`;
-			return;
-		}
-		if (newPassword.length < MIN_PASSWORD_LENGTH) {
-			passwordError = `new password must be at least ${MIN_PASSWORD_LENGTH} characters`;
-			return;
-		}
-		if (newPassword !== confirmPassword) {
-			passwordError = 'passwords do not match';
-			return;
-		}
-
-		passwordSaving = true;
-		try {
-			await client.action(api.users.changePassword, {
-				currentPassword,
-				newPassword
-			});
-			passwordSuccess = 'password changed successfully';
-			currentPassword = '';
-			newPassword = '';
-			confirmPassword = '';
-		} catch (err) {
-			passwordError =
-				err instanceof Error ? err.message : 'failed to change password';
-		} finally {
-			passwordSaving = false;
-		}
 	}
 
 	// ── Settings state ─────────────────────────────────────────────
@@ -269,88 +221,6 @@
 			</div>
 		{/if}
 	</section>
-
-	<!-- ─── Password section ────────────────────────────────────── -->
-	{#if hasPassword.data}
-		<section class="flex flex-col gap-4">
-			<h2
-				class="border-b border-border pb-2 font-mono text-sm font-bold text-fg-dark"
-			>
-				-- password
-			</h2>
-
-			<form
-				class="flex flex-col gap-3"
-				onsubmit={(e) => {
-					e.preventDefault();
-					handleChangePassword();
-				}}
-			>
-				<div class="flex flex-col gap-1">
-					<label for="current-password" class="font-mono text-xs text-fg-muted">
-						current password
-					</label>
-					<input
-						id="current-password"
-						type="password"
-						bind:value={currentPassword}
-						class={inputClass}
-						placeholder="********"
-						autocomplete="current-password"
-					/>
-				</div>
-
-				<div class="flex flex-col gap-1">
-					<label for="new-password" class="font-mono text-xs text-fg-muted">
-						new password
-						<span class="text-fg-gutter">
-							(min {MIN_PASSWORD_LENGTH} chars)
-						</span>
-					</label>
-					<input
-						id="new-password"
-						type="password"
-						bind:value={newPassword}
-						class={inputClass}
-						placeholder="********"
-						autocomplete="new-password"
-					/>
-				</div>
-
-				<div class="flex flex-col gap-1">
-					<label
-						for="confirm-new-password"
-						class="font-mono text-xs text-fg-muted"
-					>
-						confirm new password
-					</label>
-					<input
-						id="confirm-new-password"
-						type="password"
-						bind:value={confirmPassword}
-						class={inputClass}
-						placeholder="********"
-						autocomplete="new-password"
-					/>
-				</div>
-
-				{#if passwordError}
-					<p class="font-mono text-xs text-red">{passwordError}</p>
-				{/if}
-				{#if passwordSuccess}
-					<p class="font-mono text-xs text-green">{passwordSuccess}</p>
-				{/if}
-
-				<button
-					type="submit"
-					disabled={passwordSaving}
-					class="border border-primary px-4 py-2 font-mono text-sm text-primary transition-colors hover:bg-primary hover:text-bg-dark disabled:opacity-50"
-				>
-					{passwordSaving ? 'changing...' : ':passwd change password'}
-				</button>
-			</form>
-		</section>
-	{/if}
 
 	<!-- ─── Settings section ────────────────────────────────────── -->
 	<section class="flex flex-col gap-5">

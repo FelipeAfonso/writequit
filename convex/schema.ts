@@ -2,72 +2,19 @@ import { defineSchema, defineTable } from 'convex/server';
 import { v } from 'convex/values';
 
 export default defineSchema({
-	// ── Auth tables (inlined from @convex-dev/auth to extend users) ──
+	// ── Users (synced from WorkOS via client-side store mutation) ──
 
 	users: defineTable({
 		name: v.optional(v.string()),
-		image: v.optional(v.string()),
 		email: v.optional(v.string()),
-		emailVerificationTime: v.optional(v.number()),
-		phone: v.optional(v.string()),
-		phoneVerificationTime: v.optional(v.number()),
-		isAnonymous: v.optional(v.boolean()),
+		image: v.optional(v.string()),
+		/** WorkOS user ID (subject claim from JWT), e.g. "user_01XXX..." */
+		externalId: v.string(),
 		/** User role for authorization. Set directly in the DB. */
 		role: v.optional(v.union(v.literal('admin'), v.literal('user')))
 	})
-		.index('email', ['email'])
-		.index('phone', ['phone']),
-
-	authSessions: defineTable({
-		userId: v.id('users'),
-		expirationTime: v.number()
-	}).index('userId', ['userId']),
-
-	authAccounts: defineTable({
-		userId: v.id('users'),
-		provider: v.string(),
-		providerAccountId: v.string(),
-		secret: v.optional(v.string()),
-		emailVerified: v.optional(v.string()),
-		phoneVerified: v.optional(v.string())
-	})
-		.index('userIdAndProvider', ['userId', 'provider'])
-		.index('providerAndAccountId', ['provider', 'providerAccountId']),
-
-	authRefreshTokens: defineTable({
-		sessionId: v.id('authSessions'),
-		expirationTime: v.number(),
-		firstUsedTime: v.optional(v.number()),
-		parentRefreshTokenId: v.optional(v.id('authRefreshTokens'))
-	})
-		.index('sessionId', ['sessionId'])
-		.index('sessionIdAndParentRefreshTokenId', [
-			'sessionId',
-			'parentRefreshTokenId'
-		]),
-
-	authVerificationCodes: defineTable({
-		accountId: v.id('authAccounts'),
-		provider: v.string(),
-		code: v.string(),
-		expirationTime: v.number(),
-		verifier: v.optional(v.string()),
-		emailVerified: v.optional(v.string()),
-		phoneVerified: v.optional(v.string())
-	})
-		.index('accountId', ['accountId'])
-		.index('code', ['code']),
-
-	authVerifiers: defineTable({
-		sessionId: v.optional(v.id('authSessions')),
-		signature: v.optional(v.string())
-	}).index('signature', ['signature']),
-
-	authRateLimits: defineTable({
-		identifier: v.string(),
-		lastAttemptTime: v.number(),
-		attemptsLeft: v.number()
-	}).index('identifier', ['identifier']),
+		.index('by_externalId', ['externalId'])
+		.index('email', ['email']),
 
 	// ── App tables ──────────────────────────────────────────────────
 
@@ -81,7 +28,7 @@ export default defineSchema({
 		type: v.optional(v.string()),
 		/** Optional hex color for UI display, e.g. "#f7768e". */
 		color: v.optional(v.string()),
-		/** Owner — references the auth-managed users table. */
+		/** Owner — references the users table. */
 		userId: v.id('users'),
 		createdAt: v.number()
 	})
@@ -132,7 +79,7 @@ export default defineSchema({
 		statusPriority: v.optional(v.number()),
 		/** References to tag documents. */
 		tagIds: v.array(v.id('tags')),
-		/** Owner — references the auth-managed users table. */
+		/** Owner — references the users table. */
 		userId: v.id('users'),
 		createdAt: v.number(),
 		updatedAt: v.number(),
@@ -206,7 +153,7 @@ export default defineSchema({
 		tagIds: v.array(v.id('tags')),
 		/** Tasks linked to this session (many-to-many). */
 		taskIds: v.array(v.id('tasks')),
-		/** Owner — references the auth-managed users table. */
+		/** Owner — references the users table. */
 		userId: v.id('users'),
 		createdAt: v.number(),
 		updatedAt: v.number()

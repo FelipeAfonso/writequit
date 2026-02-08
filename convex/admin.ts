@@ -1,5 +1,5 @@
 import { query, mutation } from './_generated/server';
-import { getAuthUserId } from '@convex-dev/auth/server';
+import { getCurrentUser, getCurrentUserOrThrow } from './users.js';
 import type { MutationCtx } from './_generated/server';
 import type { Id } from './_generated/dataModel';
 
@@ -10,15 +10,13 @@ import type { Id } from './_generated/dataModel';
  * or not an admin. Returns the userId for convenience.
  */
 async function requireAdmin(ctx: MutationCtx): Promise<Id<'users'>> {
-	const userId = await getAuthUserId(ctx);
-	if (userId === null) throw new Error('Not authenticated');
+	const user = await getCurrentUserOrThrow(ctx);
 
-	const user = await ctx.db.get(userId);
-	if (!user || user.role !== 'admin') {
+	if (user.role !== 'admin') {
 		throw new Error('Forbidden: admin access required');
 	}
 
-	return userId;
+	return user._id;
 }
 
 // ── Queries ────────────────────────────────────────────────────────
@@ -27,11 +25,10 @@ async function requireAdmin(ctx: MutationCtx): Promise<Id<'users'>> {
 export const isAdmin = query({
 	args: {},
 	handler: async (ctx) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return false;
+		const user = await getCurrentUser(ctx);
+		if (user === null) return false;
 
-		const user = await ctx.db.get(userId);
-		return user?.role === 'admin';
+		return user.role === 'admin';
 	}
 });
 

@@ -1,10 +1,11 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { useAuthState } from '$lib/auth';
-	import OAuthButton from '$lib/components/auth/OAuthButton.svelte';
-	import SignInForm from '$lib/components/auth/SignInForm.svelte';
+	import { useAuthState, useAuthActions } from '$lib/auth';
 
 	const auth = useAuthState();
+	const { signIn } = useAuthActions();
+
+	let loading = $state(false);
 
 	// If already authenticated, redirect to inbox
 	$effect(() => {
@@ -12,6 +13,15 @@
 			goto('/app');
 		}
 	});
+
+	async function handleSignIn() {
+		loading = true;
+		try {
+			await signIn();
+		} catch {
+			loading = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -31,21 +41,18 @@
 				<p class="mt-2 font-mono text-sm text-fg-muted">write, quit, ship.</p>
 			</div>
 
-			<!-- OAuth Buttons -->
-			<div class="space-y-2">
-				<OAuthButton provider="github" label="sign in with github" icon="$" />
-				<OAuthButton provider="google" label="sign in with google" icon="@" />
-			</div>
-
-			<!-- Divider -->
-			<div class="flex items-center gap-3">
-				<div class="h-px flex-1 bg-border"></div>
-				<span class="font-mono text-xs text-fg-muted">or</span>
-				<div class="h-px flex-1 bg-border"></div>
-			</div>
-
-			<!-- Password Form -->
-			<SignInForm />
+			<!-- Sign In Button -->
+			<button
+				onclick={handleSignIn}
+				disabled={loading}
+				class="flex w-full items-center justify-center border border-green bg-surface-1 px-4 py-2.5 font-mono text-sm text-green transition-colors hover:bg-green hover:text-bg disabled:opacity-50"
+			>
+				{#if loading}
+					<span class="animate-pulse">connecting...</span>
+				{:else}
+					:auth sign in
+				{/if}
+			</button>
 
 			<!-- Footer -->
 			<p class="text-center font-mono text-xs text-fg-muted">

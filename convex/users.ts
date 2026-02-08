@@ -1,13 +1,7 @@
-import { query, mutation, action } from './_generated/server';
+import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
-import {
-	getAuthUserId,
-	getAuthSessionId,
-	retrieveAccount,
-	modifyAccountCredentials,
-	invalidateSessions
-} from '@convex-dev/auth/server';
-import { api } from './_generated/api';
+import type { QueryCtx, MutationCtx } from './_generated/server';
+import type { Id } from './_generated/dataModel';
 
 // ── Settings defaults ──────────────────────────────────────────────
 
@@ -22,15 +16,55 @@ const SETTINGS_DEFAULTS = {
 	defaultPaymentTerms: undefined as string | undefined
 };
 
+// ── Auth helpers ───────────────────────────────────────────────────
+
+/**
+ * Look up the current user from the WorkOS JWT identity.
+ *
+ * Uses `ctx.auth.getUserIdentity()` to get the JWT claims, then finds
+ * the matching user document by `externalId` (the JWT `subject` field,
+ * which is the WorkOS user ID).
+ *
+ * Returns null if not authenticated or user document doesn't exist yet.
+ */
+export async function getCurrentUser(ctx: QueryCtx | MutationCtx) {
+	const identity = await ctx.auth.getUserIdentity();
+	if (identity === null) return null;
+
+	return await ctx.db
+		.query('users')
+		.withIndex('by_externalId', (q) => q.eq('externalId', identity.subject))
+		.unique();
+}
+
+/**
+ * Same as `getCurrentUser` but throws if not authenticated or user
+ * document doesn't exist. Use in mutations that require auth.
+ */
+export async function getCurrentUserOrThrow(ctx: QueryCtx | MutationCtx) {
+	const user = await getCurrentUser(ctx);
+	if (!user) throw new Error('Not authenticated');
+	return user;
+}
+
+/**
+ * Get just the current user's ID, or null.
+ * Convenience wrapper for code that only needs the ID.
+ */
+export async function getCurrentUserId(
+	ctx: QueryCtx | MutationCtx
+): Promise<Id<'users'> | null> {
+	const user = await getCurrentUser(ctx);
+	return user?._id ?? null;
+}
+
 // ── Queries ────────────────────────────────────────────────────────
 
 /** Get the current authenticated user. */
 export const currentUser = query({
 	args: {},
 	handler: async (ctx) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return null;
-		return await ctx.db.get(userId);
+		return await getCurrentUser(ctx);
 	}
 });
 
@@ -38,12 +72,12 @@ export const currentUser = query({
 export const getSettings = query({
 	args: {},
 	handler: async (ctx) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return SETTINGS_DEFAULTS;
+		const user = await getCurrentUser(ctx);
+		if (user === null) return SETTINGS_DEFAULTS;
 
 		const row = await ctx.db
 			.query('userSettings')
-			.withIndex('by_userId', (q) => q.eq('userId', userId))
+			.withIndex('by_userId', (q) => q.eq('userId', user._id))
 			.unique();
 
 		if (!row) return SETTINGS_DEFAULTS;
@@ -61,37 +95,67 @@ export const getSettings = query({
 	}
 });
 
-/** Check whether the current user has a password-based auth account. */
-export const hasPasswordAccount = query({
+// ── Mutations ──────────────────────────────────────────────────────
+
+/**
+ * Upsert the current user from WorkOS JWT claims.
+ *
+ * Called client-side after successful authentication. Creates the user
+ * document if it doesn't exist, or updates name/email/image if changed.
+ */
+export const store = mutation({
 	args: {},
 	handler: async (ctx) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return false;
+		const identity = await ctx.auth.getUserIdentity();
+		if (!identity) {
+			throw new Error('Called store without authentication present');
+		}
 
-		const account = await ctx.db
-			.query('authAccounts')
-			.withIndex('userIdAndProvider', (q) =>
-				q.eq('userId', userId).eq('provider', 'password')
-			)
+		const existing = await ctx.db
+			.query('users')
+			.withIndex('by_externalId', (q) => q.eq('externalId', identity.subject))
 			.unique();
 
-		return account !== null;
+		if (existing !== null) {
+			// Update if any fields changed
+			const updates: Record<string, string | undefined> = {};
+			if (identity.name && identity.name !== existing.name) {
+				updates.name = identity.name;
+			}
+			if (identity.email && identity.email !== existing.email) {
+				updates.email = identity.email;
+			}
+			if (identity.pictureUrl !== existing.image) {
+				updates.image = identity.pictureUrl;
+			}
+
+			if (Object.keys(updates).length > 0) {
+				await ctx.db.patch(existing._id, updates);
+			}
+
+			return existing._id;
+		}
+
+		// Create new user document
+		return await ctx.db.insert('users', {
+			externalId: identity.subject,
+			name: identity.name ?? undefined,
+			email: identity.email ?? undefined,
+			image: identity.pictureUrl ?? undefined
+		});
 	}
 });
-
-// ── Mutations ──────────────────────────────────────────────────────
 
 /** Update the current user's display name. */
 export const updateName = mutation({
 	args: { name: v.string() },
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
 
 		const trimmed = args.name.trim();
 		if (trimmed.length === 0) throw new Error('Name cannot be empty');
 
-		await ctx.db.patch(userId, { name: trimmed });
+		await ctx.db.patch(user._id, { name: trimmed });
 	}
 });
 
@@ -118,12 +182,11 @@ export const updateSettings = mutation({
 		defaultPaymentTerms: v.optional(v.string())
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
 
 		const existing = await ctx.db
 			.query('userSettings')
-			.withIndex('by_userId', (q) => q.eq('userId', userId))
+			.withIndex('by_userId', (q) => q.eq('userId', user._id))
 			.unique();
 
 		// Build patch from only the provided fields
@@ -147,7 +210,7 @@ export const updateSettings = mutation({
 			await ctx.db.patch(existing._id, patch);
 		} else {
 			await ctx.db.insert('userSettings', {
-				userId,
+				userId: user._id,
 				viMode: args.viMode ?? SETTINGS_DEFAULTS.viMode,
 				defaultStatusFilter:
 					args.defaultStatusFilter ?? SETTINGS_DEFAULTS.defaultStatusFilter,
@@ -158,60 +221,6 @@ export const updateSettings = mutation({
 				defaultHourlyRate: args.defaultHourlyRate,
 				defaultCurrency: args.defaultCurrency,
 				defaultPaymentTerms: args.defaultPaymentTerms
-			});
-		}
-	}
-});
-
-// ── Actions ────────────────────────────────────────────────────────
-
-const MIN_PASSWORD_LENGTH = 6;
-
-/** Change the current user's password. */
-export const changePassword = action({
-	args: {
-		currentPassword: v.string(),
-		newPassword: v.string()
-	},
-	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
-
-		// Get the user to find their email
-		const user = await ctx.runQuery(api.users.currentUser);
-		if (!user || !user.email) {
-			throw new Error('No email associated with this account');
-		}
-
-		// Verify the current password (throws on mismatch or rate limit)
-		try {
-			await retrieveAccount(ctx, {
-				provider: 'password',
-				account: { id: user.email, secret: args.currentPassword }
-			});
-		} catch {
-			throw new Error('Current password is incorrect');
-		}
-
-		// Validate the new password
-		if (args.newPassword.length < MIN_PASSWORD_LENGTH) {
-			throw new Error(
-				`New password must be at least ${MIN_PASSWORD_LENGTH} characters`
-			);
-		}
-
-		// Update the password hash
-		await modifyAccountCredentials(ctx, {
-			provider: 'password',
-			account: { id: user.email, secret: args.newPassword }
-		});
-
-		// Invalidate all other sessions for security
-		const sessionId = await getAuthSessionId(ctx);
-		if (sessionId) {
-			await invalidateSessions(ctx, {
-				userId,
-				except: [sessionId]
 			});
 		}
 	}
