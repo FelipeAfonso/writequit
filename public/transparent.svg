@@ -2,9 +2,9 @@
 <!-- Created with Inkscape (http://www.inkscape.org/) -->
 
 <svg
-   width="48"
-   height="48"
-   viewBox="0 0 48 48"
+   width="37.912327"
+   height="28.65144"
+   viewBox="0 0 37.912327 28.65144"
    version="1.1"
    id="svg1"
    sodipodi:docname="favicon.svg"
@@ -35,9 +35,9 @@
     <inkscape:page
        x="0"
        y="0"
-       width="48"
-       height="48"
-       id="page2"
+       width="37.912327"
+       height="28.65144"
+       id="page1"
        margin="0"
        bleed="0" />
   </sodipodi:namedview>
@@ -46,10 +46,14 @@
   <g
      inkscape:label="Layer 1"
      inkscape:groupmode="layer"
-     id="layer1">
+     id="layer1"
+     transform="translate(-5.043838,-9.674282)">
     <g
        id="g1"
-       transform="matrix(12.145458,0,0,12.145458,-216.12923,-328.80875)">
+       transform="matrix(12.145458,0,0,12.145458,-216.12923,-328.80875)"
+       inkscape:export-filename="g1.svg"
+       inkscape:export-xdpi="962.22003"
+       inkscape:export-ydpi="962.22003">
       <text
          xml:space="preserve"
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;line-height:0;font-family:'IosevkaTerm Nerd Font';-inkscape-font-specification:'IosevkaTerm Nerd Font';letter-spacing:-0.298979px;writing-mode:lr-tb;direction:ltr;fill:#000000;stroke-width:0.264583"

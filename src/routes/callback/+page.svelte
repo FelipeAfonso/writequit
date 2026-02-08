@@ -20,7 +20,7 @@
 			if (auth.isAuthenticated) {
 				goto('/app');
 			} else {
-				goto('/login');
+				goto('/');
 			}
 		}
 	});

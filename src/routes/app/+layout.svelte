@@ -54,10 +54,10 @@
 		}
 	});
 
-	// Auth guard: redirect to /login if not authenticated
+	// Auth guard: redirect to landing page if not authenticated
 	$effect(() => {
 		if (!auth.isLoading && !auth.isAuthenticated) {
-			goto('/login');
+			goto('/');
 		}
 	});
 
