@@ -97,7 +97,18 @@ export function setupWorkOSAuth(
 	async function initialize() {
 		try {
 			const client = await createClient(clientId, {
-				redirectUri: `${window.location.origin}/callback`
+				redirectUri: `${window.location.origin}/callback`,
+				// Force devMode so the refresh token is stored in localStorage
+				// instead of relying on a third-party cookie from api.workos.com
+				// (which modern browsers block). Without this, sessions don't
+				// survive page reloads in production.
+				devMode: true,
+				// Keep the JWT cookie in sync whenever the SDK auto-refreshes
+				// the access token, so SSR auth guards always have a valid token.
+				onRefresh({ accessToken }) {
+					currentAccessToken = accessToken;
+					syncTokenCookie(accessToken);
+				}
 			});
 			authkitClient = client;
 

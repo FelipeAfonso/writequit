@@ -6,7 +6,9 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 	const client = createServerConvexClient(cookies);
 	const searchQuery = url.searchParams.get('q') || '';
 
-	if (!client) return { preloaded: {}, searchQuery, searchResults: null };
+	if (!client) {
+		return { preloaded: {}, searchQuery, searchResults: null };
+	}
 
 	try {
 		// Tasks are loaded client-side via usePaginatedQuery (cursor-based).
@@ -28,7 +30,8 @@ export const load: PageServerLoad = async ({ cookies, url }) => {
 			searchQuery,
 			searchResults
 		};
-	} catch {
+	} catch (err) {
+		console.error('SSR preload failed:', err);
 		return { preloaded: {}, searchQuery, searchResults: null };
 	}
 };

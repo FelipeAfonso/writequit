@@ -120,12 +120,10 @@ export function usePaginatedQuery<Query extends PaginatedQueryReference>(
 			},
 			(error: Error) => {
 				if (error.message.includes('InvalidCursor')) {
-					console.warn(
-						'usePaginatedQuery: InvalidCursor, resetting pagination'
-					);
+					console.warn('InvalidCursor, resetting pagination');
 					// Will be picked up on next effect re-run via args dependency
 				} else {
-					console.error('usePaginatedQuery page error:', error);
+					console.error('Paginated query error:', error);
 				}
 			}
 		);
