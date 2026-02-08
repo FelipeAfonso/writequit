@@ -15,7 +15,7 @@ import { ConvexHttpClient } from 'convex/browser';
 
 // Cookie name used to mirror the access token so SvelteKit server load
 // functions can read it and prefetch Convex data during SSR.
-export const JWT_COOKIE_NAME = '__convex_jwt';
+export const JWT_COOKIE_NAME = '__:wq_convex_jwt';
 
 // ── Context key ────────────────────────────────────────────────────
 const AUTH_CONTEXT_KEY = '$$_workosAuth';
