@@ -184,7 +184,7 @@
 
 			<!-- Hero -->
 			<section
-				class="animate-fade-in relative mx-auto max-w-[52rem] px-8 pt-20 pb-16"
+				class="animate-fade-in relative mx-auto max-w-208 px-8 pt-20 pb-16"
 				style="animation-delay: 0.3s;"
 			>
 				<div class="hero-glow"></div>
@@ -204,9 +204,7 @@
 					</span>
 					<span class="block text-primary">tasks. time. invoices.</span>
 				</h1>
-				<p
-					class="mb-8 max-w-[38rem] text-[0.75rem] leading-[1.8] text-[#6e7a96]"
-				>
+				<p class="mb-8 max-w-152 text-[0.75rem] leading-[1.8] text-[#6e7a96]">
 					vim keybindings. markdown tasks. terminal aesthetics. a tool, not a
 					lifestyle.
 				</p>
@@ -223,7 +221,7 @@
 
 			<!-- Feature grid -->
 			<section
-				class="animate-fade-in mx-auto max-w-[64rem] px-8 py-12 max-sm:px-5"
+				class="animate-fade-in mx-auto max-w-5xl px-8 py-12 max-sm:px-5"
 				style="animation-delay: 0.5s;"
 			>
 				<div
@@ -303,7 +301,7 @@
 
 			<!-- Terminal demo -->
 			<section
-				class="animate-fade-in mx-auto max-w-[48rem] px-8 py-12 max-sm:px-5"
+				class="animate-fade-in mx-auto max-w-3xl px-8 py-12 max-sm:px-5"
 				style="animation-delay: 0.7s;"
 			>
 				<div class="terminal-window">
@@ -451,7 +449,7 @@
 				class="animate-fade-in px-8 py-16 max-sm:px-5"
 				style="animation-delay: 0.9s;"
 			>
-				<div class="mx-auto max-w-[48rem] text-center">
+				<div class="mx-auto max-w-3xl text-center">
 					<p class="mb-6 text-[0.8rem] text-[#6e7a96]">
 						<span class="text-primary">&gt;</span>
 						spend less time managing. more time building.

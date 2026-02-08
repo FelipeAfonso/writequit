@@ -103,11 +103,23 @@ export function setupWorkOSAuth(
 				// (which modern browsers block). Without this, sessions don't
 				// survive page reloads in production.
 				devMode: true,
-				// Keep the JWT cookie in sync whenever the SDK auto-refreshes
-				// the access token, so SSR auth guards always have a valid token.
-				onRefresh({ accessToken }) {
+				// Called right after the auth code exchange on the redirect
+				// back from WorkOS. This is the earliest moment we have
+				// both the access token and user profile data.
+				async onRedirectCallback({ user, accessToken }) {
 					currentAccessToken = accessToken;
 					syncTokenCookie(accessToken);
+					isAuthenticated = true;
+					registerConvexAuth();
+					await storeUser(convexUrl, accessToken, user);
+				},
+				// Keep the JWT cookie in sync whenever the SDK auto-refreshes
+				// the access token, so SSR auth guards always have a valid token.
+				onRefresh({ accessToken, user }) {
+					currentAccessToken = accessToken;
+					syncTokenCookie(accessToken);
+					// Also sync profile in case it changed
+					storeUser(convexUrl, accessToken, user);
 				}
 			});
 			authkitClient = client;
@@ -123,7 +135,7 @@ export function setupWorkOSAuth(
 				registerConvexAuth();
 
 				// Upsert user document in Convex
-				await storeUser(convexUrl, token);
+				await storeUser(convexUrl, token, user);
 			} else {
 				currentAccessToken = null;
 				syncTokenCookie(null);
@@ -184,12 +196,32 @@ export function setupWorkOSAuth(
 	 * Upsert the user document in Convex via an HTTP client call.
 	 * We use an HTTP client so this works independently of the
 	 * WebSocket client's auth state.
+	 *
+	 * The WorkOS access token JWT does NOT contain profile claims
+	 * (name, email, pictureUrl), so we pass them from the client-side
+	 * SDK's User object.
 	 */
-	async function storeUser(url: string, token: string) {
+	async function storeUser(
+		url: string,
+		token: string,
+		user: {
+			firstName: string | null;
+			lastName: string | null;
+			email: string;
+			profilePictureUrl: string | null;
+		}
+	) {
 		try {
+			const name =
+				[user.firstName, user.lastName].filter(Boolean).join(' ') || undefined;
+			const args = {
+				name,
+				email: user.email,
+				image: user.profilePictureUrl ?? undefined
+			};
 			const httpClient = new ConvexHttpClient(url);
 			httpClient.setAuth(token);
-			await httpClient.mutation('users:store' as never, {} as never);
+			await httpClient.mutation('users:store' as never, args as never);
 		} catch (error) {
 			console.error('Failed to store user in Convex:', error);
 		}

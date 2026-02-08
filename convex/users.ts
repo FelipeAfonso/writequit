@@ -98,14 +98,23 @@ export const getSettings = query({
 // ── Mutations ──────────────────────────────────────────────────────
 
 /**
- * Upsert the current user from WorkOS JWT claims.
+ * Upsert the current user from WorkOS user profile data.
  *
- * Called client-side after successful authentication. Creates the user
- * document if it doesn't exist, or updates name/email/image if changed.
+ * Called client-side after successful authentication. The WorkOS access
+ * token JWT does NOT contain profile claims (name, email, etc.), so
+ * this mutation accepts them as arguments from the client-side SDK
+ * which has the full User object.
+ *
+ * Creates the user document if it doesn't exist, or updates
+ * name/email/image if changed.
  */
 export const store = mutation({
-	args: {},
-	handler: async (ctx) => {
+	args: {
+		name: v.optional(v.string()),
+		email: v.optional(v.string()),
+		image: v.optional(v.string())
+	},
+	handler: async (ctx, args) => {
 		const identity = await ctx.auth.getUserIdentity();
 		if (!identity) {
 			throw new Error('Called store without authentication present');
@@ -119,14 +128,14 @@ export const store = mutation({
 		if (existing !== null) {
 			// Update if any fields changed
 			const updates: Record<string, string | undefined> = {};
-			if (identity.name && identity.name !== existing.name) {
-				updates.name = identity.name;
+			if (args.name && args.name !== existing.name) {
+				updates.name = args.name;
 			}
-			if (identity.email && identity.email !== existing.email) {
-				updates.email = identity.email;
+			if (args.email && args.email !== existing.email) {
+				updates.email = args.email;
 			}
-			if (identity.pictureUrl !== existing.image) {
-				updates.image = identity.pictureUrl;
+			if (args.image !== undefined && args.image !== existing.image) {
+				updates.image = args.image;
 			}
 
 			if (Object.keys(updates).length > 0) {
@@ -139,9 +148,9 @@ export const store = mutation({
 		// Create new user document
 		return await ctx.db.insert('users', {
 			externalId: identity.subject,
-			name: identity.name ?? undefined,
-			email: identity.email ?? undefined,
-			image: identity.pictureUrl ?? undefined
+			name: args.name,
+			email: args.email,
+			image: args.image
 		});
 	}
 });
