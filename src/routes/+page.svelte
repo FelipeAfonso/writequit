@@ -40,6 +40,22 @@
 		'typing1'
 	);
 
+	function skipAnimation() {
+		if (phase === 'done') return;
+		// Fill all lines instantly
+		typedLines = [...bootSequence];
+		currentLine = bootSequence.length;
+		currentChar = 0;
+		bootComplete = true;
+		phase = 'done';
+		// Transition immediately to final state
+		if (data.isLoggedIn) {
+			goto('/app');
+		} else {
+			showContent = true;
+		}
+	}
+
 	function advanceTick() {
 		if (currentLine < bootSequence.length) {
 			const line = bootSequence[currentLine];
@@ -115,6 +131,8 @@
 	});
 </script>
 
+<svelte:window onkeydown={skipAnimation} onclick={skipAnimation} />
+
 <svelte:head>
 	<title>:wq - write. quit. ship.</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -153,6 +171,13 @@
 			{/each}{#if !bootComplete}<span
 					class="cursor text-primary"
 					class:blink={showCursor}>█</span>{/if}</pre>
+		{#if !bootComplete}
+			<span
+				class="absolute right-4 bottom-4 z-[101] font-[JetBrains_Mono,monospace] text-[0.65rem] text-[#6e7a96]"
+			>
+				press any key or click to skip
+			</span>
+		{/if}
 	</div>
 
 	<!-- Main content -->
