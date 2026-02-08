@@ -5,12 +5,25 @@
 	import { useAuthState, useAuthActions } from '$lib/auth';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
+	import { PUBLIC_CONVEX_URL } from '$env/static/public';
 	import { isEditableTarget } from '$lib/utils/keys';
 	import { detectTimezone, TIMEZONE_CTX } from '$lib/utils/datetime';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 	import { PRELOADED_ACTIVE_SESSION_CTX } from '$lib/utils/preload';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import StatusBar from '$lib/components/StatusBar.svelte';
+
+	const isLocal = import.meta.env.DEV;
+	const isDevConvex = PUBLIC_CONVEX_URL.includes(
+		'REDACTED_DEV_DEPLOYMENT.convex.cloud'
+	);
+	const envBadge: 'dev-local' | 'local-prod' | 'dev-cloud' | null = isLocal
+		? isDevConvex
+			? 'dev-local'
+			: 'local-prod'
+		: isDevConvex
+			? 'dev-cloud'
+			: null;
 
 	let { data, children } = $props();
 
@@ -207,7 +220,21 @@
 		<header
 			class="flex shrink-0 items-center justify-between border-b border-border px-4 py-2"
 		>
-			<a href="/app" class="font-mono text-sm font-bold text-green">:wq</a>
+			<div class="flex items-center gap-2">
+				<a href="/app" class="font-mono text-sm font-bold text-green">:wq</a>
+				{#if envBadge}
+					<span
+						class="animate-env-pulse border px-1.5 py-0.5 font-mono text-[10px] leading-none
+						{envBadge === 'dev-local'
+							? 'border-orange/50 text-orange'
+							: envBadge === 'local-prod'
+								? 'border-red/50 text-red'
+								: 'border-cyan/50 text-cyan'}"
+					>
+						{envBadge}
+					</span>
+				{/if}
+			</div>
 			<div class="flex items-center gap-3">
 				<nav class="flex items-center gap-1">
 					{#each nav as item (item.href)}

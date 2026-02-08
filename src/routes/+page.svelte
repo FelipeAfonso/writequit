@@ -1,8 +1,21 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { useAuthActions } from '$lib/auth';
+	import { PUBLIC_CONVEX_URL } from '$env/static/public';
 
 	let { data } = $props();
+
+	const isLocal = import.meta.env.DEV;
+	const isDevConvex = PUBLIC_CONVEX_URL.includes(
+		'REDACTED_DEV_DEPLOYMENT.convex.cloud'
+	);
+	const envBadge: 'dev-local' | 'local-prod' | 'dev-cloud' | null = isLocal
+		? isDevConvex
+			? 'dev-local'
+			: 'local-prod'
+		: isDevConvex
+			? 'dev-cloud'
+			: null;
 
 	const { signIn } = useAuthActions();
 
@@ -196,6 +209,18 @@
 					<span class="text-base font-bold -tracking-wide text-primary">
 						:wq
 					</span>
+					{#if envBadge}
+						<span
+							class="animate-env-pulse border px-1.5 py-0.5 font-mono text-[10px] leading-none
+							{envBadge === 'dev-local'
+								? 'border-orange/50 text-orange'
+								: envBadge === 'local-prod'
+									? 'border-red/50 text-red'
+									: 'border-cyan/50 text-cyan'}"
+						>
+							{envBadge}
+						</span>
+					{/if}
 				</div>
 				<div class="flex items-center gap-2 text-[0.55rem]">
 					<button
