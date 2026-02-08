@@ -1,6 +1,6 @@
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
-import { getAuthUserId } from '@convex-dev/auth/server';
+import { getCurrentUser, getCurrentUserOrThrow } from './users.js';
 
 // ── Queries ────────────────────────────────────────────────────────
 
@@ -8,12 +8,12 @@ import { getAuthUserId } from '@convex-dev/auth/server';
 export const list = query({
 	args: {},
 	handler: async (ctx) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return [];
+		const user = await getCurrentUser(ctx);
+		if (user === null) return [];
 
 		const invoices = await ctx.db
 			.query('invoices')
-			.withIndex('by_userId_createdAt', (q) => q.eq('userId', userId))
+			.withIndex('by_userId_createdAt', (q) => q.eq('userId', user._id))
 			.collect();
 
 		// Newest first
@@ -27,11 +27,11 @@ export const list = query({
 export const get = query({
 	args: { id: v.id('invoices') },
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return null;
+		const user = await getCurrentUser(ctx);
+		if (user === null) return null;
 
 		const invoice = await ctx.db.get(args.id);
-		if (invoice === null || invoice.userId !== userId) return null;
+		if (invoice === null || invoice.userId !== user._id) return null;
 
 		return invoice;
 	}
@@ -65,8 +65,8 @@ export const create = mutation({
 		notes: v.optional(v.string())
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
+		const userId = user._id;
 
 		// Generate sequential invoice number
 		const existing = await ctx.db
@@ -110,11 +110,10 @@ export const updateStatus = mutation({
 		status: v.union(v.literal('draft'), v.literal('sent'), v.literal('paid'))
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
 
 		const invoice = await ctx.db.get(args.id);
-		if (invoice === null || invoice.userId !== userId) {
+		if (invoice === null || invoice.userId !== user._id) {
 			throw new Error('Invoice not found');
 		}
 
@@ -126,11 +125,10 @@ export const updateStatus = mutation({
 export const remove = mutation({
 	args: { id: v.id('invoices') },
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
 
 		const invoice = await ctx.db.get(args.id);
-		if (invoice === null || invoice.userId !== userId) {
+		if (invoice === null || invoice.userId !== user._id) {
 			throw new Error('Invoice not found');
 		}
 

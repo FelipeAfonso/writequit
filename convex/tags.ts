@@ -2,7 +2,7 @@ import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
 import type { MutationCtx, QueryCtx } from './_generated/server';
 import type { Id } from './_generated/dataModel';
-import { getAuthUserId } from '@convex-dev/auth/server';
+import { getCurrentUser, getCurrentUserOrThrow } from './users.js';
 
 // ── Queries ────────────────────────────────────────────────────────
 
@@ -10,12 +10,12 @@ import { getAuthUserId } from '@convex-dev/auth/server';
 export const list = query({
 	args: {},
 	handler: async (ctx) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return [];
+		const user = await getCurrentUser(ctx);
+		if (user === null) return [];
 
 		return await ctx.db
 			.query('tags')
-			.withIndex('by_userId', (q) => q.eq('userId', userId))
+			.withIndex('by_userId', (q) => q.eq('userId', user._id))
 			.collect();
 	}
 });
@@ -24,11 +24,11 @@ export const list = query({
 export const get = query({
 	args: { id: v.id('tags') },
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return null;
+		const user = await getCurrentUser(ctx);
+		if (user === null) return null;
 
 		const tag = await ctx.db.get(args.id);
-		if (tag === null || tag.userId !== userId) return null;
+		if (tag === null || tag.userId !== user._id) return null;
 		return tag;
 	}
 });
@@ -43,8 +43,8 @@ export const create = mutation({
 		color: v.optional(v.string())
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
+		const userId = user._id;
 
 		const name = args.name.toLowerCase().trim();
 		if (name.length === 0) throw new Error('Tag name cannot be empty');
@@ -71,11 +71,11 @@ export const update = mutation({
 		color: v.optional(v.string())
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
 
 		const tag = await ctx.db.get(args.id);
-		if (tag === null || tag.userId !== userId) throw new Error('Tag not found');
+		if (tag === null || tag.userId !== user._id)
+			throw new Error('Tag not found');
 
 		await ctx.db.patch(args.id, {
 			type: args.type,
@@ -88,11 +88,11 @@ export const update = mutation({
 export const remove = mutation({
 	args: { id: v.id('tags') },
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
 
 		const tag = await ctx.db.get(args.id);
-		if (tag === null || tag.userId !== userId) throw new Error('Tag not found');
+		if (tag === null || tag.userId !== user._id)
+			throw new Error('Tag not found');
 
 		await ctx.db.delete(args.id);
 	}

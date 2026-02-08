@@ -3,7 +3,7 @@ import { v } from 'convex/values';
 import type { MutationCtx, QueryCtx } from './_generated/server';
 import type { Id } from './_generated/dataModel';
 import { getOrCreateTag } from './tags.js';
-import { getAuthUserId } from '@convex-dev/auth/server';
+import { getCurrentUser, getCurrentUserOrThrow } from './users.js';
 
 // ── Queries ────────────────────────────────────────────────────────
 
@@ -20,8 +20,9 @@ export const list = query({
 		tagId: v.optional(v.id('tags'))
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return [];
+		const user = await getCurrentUser(ctx);
+		if (user === null) return [];
+		const userId = user._id;
 
 		let sessions;
 
@@ -92,8 +93,9 @@ export const listWithTasks = query({
 		tagId: v.optional(v.id('tags'))
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return [];
+		const user = await getCurrentUser(ctx);
+		if (user === null) return [];
+		const userId = user._id;
 
 		let sessions;
 
@@ -159,11 +161,11 @@ export const listWithTasks = query({
 export const get = query({
 	args: { id: v.id('sessions') },
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return null;
+		const user = await getCurrentUser(ctx);
+		if (user === null) return null;
 
 		const session = await ctx.db.get(args.id);
-		if (session === null || session.userId !== userId) return null;
+		if (session === null || session.userId !== user._id) return null;
 
 		const tags = await Promise.all(session.tagIds.map((id) => ctx.db.get(id)));
 		const tasks = await Promise.all(
@@ -182,10 +184,10 @@ export const get = query({
 export const active = query({
 	args: {},
 	handler: async (ctx) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) return null;
+		const user = await getCurrentUser(ctx);
+		if (user === null) return null;
 
-		return await getActiveSession(ctx, userId);
+		return await getActiveSession(ctx, user._id);
 	}
 });
 
@@ -205,8 +207,8 @@ export const log = mutation({
 		tags: v.array(v.string())
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
+		const userId = user._id;
 
 		if (args.endTime <= args.startTime) {
 			throw new Error('End time must be after start time');
@@ -243,8 +245,8 @@ export const start = mutation({
 		tags: v.array(v.string())
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
+		const userId = user._id;
 
 		// Check for existing running session
 		const existing = await getActiveSession(ctx, userId);
@@ -293,10 +295,9 @@ export const start = mutation({
 export const stop = mutation({
 	args: {},
 	handler: async (ctx) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
 
-		const session = await getActiveSession(ctx, userId);
+		const session = await getActiveSession(ctx, user._id);
 		if (session === null) {
 			throw new Error('No timer is running');
 		}
@@ -315,16 +316,15 @@ export const linkTask = mutation({
 		taskId: v.id('tasks')
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
 
 		const session = await ctx.db.get(args.sessionId);
-		if (session === null || session.userId !== userId) {
+		if (session === null || session.userId !== user._id) {
 			throw new Error('Session not found');
 		}
 
 		const task = await ctx.db.get(args.taskId);
-		if (task === null || task.userId !== userId) {
+		if (task === null || task.userId !== user._id) {
 			throw new Error('Task not found');
 		}
 
@@ -345,11 +345,10 @@ export const unlinkTask = mutation({
 		taskId: v.id('tasks')
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
 
 		const session = await ctx.db.get(args.sessionId);
-		if (session === null || session.userId !== userId) {
+		if (session === null || session.userId !== user._id) {
 			throw new Error('Session not found');
 		}
 
@@ -370,8 +369,8 @@ export const update = mutation({
 		tags: v.optional(v.array(v.string()))
 	},
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
+		const userId = user._id;
 
 		const session = await ctx.db.get(args.id);
 		if (session === null || session.userId !== userId) {
@@ -398,11 +397,10 @@ export const update = mutation({
 export const remove = mutation({
 	args: { id: v.id('sessions') },
 	handler: async (ctx, args) => {
-		const userId = await getAuthUserId(ctx);
-		if (userId === null) throw new Error('Not authenticated');
+		const user = await getCurrentUserOrThrow(ctx);
 
 		const session = await ctx.db.get(args.id);
-		if (session === null || session.userId !== userId) {
+		if (session === null || session.userId !== user._id) {
 			throw new Error('Session not found');
 		}
 
