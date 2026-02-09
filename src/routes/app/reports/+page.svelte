@@ -34,6 +34,7 @@
 
 	// ── Tab state ─────────────────────────────────────────────────
 	let activeTab = $state<'sessions' | 'invoices'>('sessions');
+	let reportTheme = $state<InvoiceTheme>('dark');
 
 	// ── Date range state ───────────────────────────────────────────
 	let dateFrom = $state('');
@@ -187,7 +188,8 @@
 			timezone,
 			groups: reportGroups,
 			totalMs,
-			totalSessions
+			totalSessions,
+			theme: reportTheme
 		};
 
 		downloadReportPdf(data);
@@ -567,7 +569,7 @@
 			{#each [{ key: 'thisWeek', label: 'this week' }, { key: 'lastWeek', label: 'last week' }, { key: 'thisMonth', label: 'this month' }, { key: 'lastMonth', label: 'last month' }] as preset (preset.key)}
 				<button
 					type="button"
-					class="border border-border px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
+					class="cursor-pointer border border-border px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
 					onclick={() =>
 						setPreset(
 							preset.key as 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth'
@@ -583,7 +585,7 @@
 	<div class="flex items-center gap-0 border-b border-border">
 		<button
 			type="button"
-			class="border-b-2 px-4 py-2 font-mono text-sm transition-colors"
+			class="cursor-pointer border-b-2 px-4 py-2 font-mono text-sm transition-colors"
 			class:border-primary={activeTab === 'sessions'}
 			class:text-primary={activeTab === 'sessions'}
 			class:border-transparent={activeTab !== 'sessions'}
@@ -604,7 +606,7 @@
 		</button>
 		<button
 			type="button"
-			class="border-b-2 px-4 py-2 font-mono text-sm transition-colors"
+			class="cursor-pointer border-b-2 px-4 py-2 font-mono text-sm transition-colors"
 			class:border-primary={activeTab === 'invoices'}
 			class:text-primary={activeTab === 'invoices'}
 			class:border-transparent={activeTab !== 'invoices'}
@@ -637,14 +639,44 @@
 				<h2 class="font-mono text-sm font-bold text-fg-dark">
 					-- sessions in range
 				</h2>
-				<button
-					type="button"
-					class="border border-primary px-3 py-1.5 font-mono text-xs text-primary transition-colors hover:bg-primary hover:text-bg-dark disabled:opacity-50"
-					disabled={totalSessions === 0}
-					onclick={handleGenerateReport}
-				>
-					:report
-				</button>
+				<div class="flex items-center gap-2">
+					<div class="flex items-center">
+						<button
+							type="button"
+							class="relative cursor-pointer border px-2 py-1.5 font-mono text-xs transition-colors"
+							class:z-10={reportTheme === 'dark'}
+							class:border-primary={reportTheme === 'dark'}
+							class:text-primary={reportTheme === 'dark'}
+							class:bg-surface-2={reportTheme === 'dark'}
+							class:border-border={reportTheme !== 'dark'}
+							class:text-fg-muted={reportTheme !== 'dark'}
+							onclick={() => (reportTheme = 'dark')}
+						>
+							dark
+						</button>
+						<button
+							type="button"
+							class="relative -ml-px cursor-pointer border px-2 py-1.5 font-mono text-xs transition-colors"
+							class:z-10={reportTheme === 'light'}
+							class:border-primary={reportTheme === 'light'}
+							class:text-primary={reportTheme === 'light'}
+							class:bg-surface-2={reportTheme === 'light'}
+							class:border-border={reportTheme !== 'light'}
+							class:text-fg-muted={reportTheme !== 'light'}
+							onclick={() => (reportTheme = 'light')}
+						>
+							light
+						</button>
+					</div>
+					<button
+						type="button"
+						class="cursor-copy border border-primary px-3 py-1.5 font-mono text-xs text-primary transition-colors hover:bg-primary hover:text-bg-dark disabled:cursor-not-allowed disabled:opacity-50"
+						disabled={totalSessions === 0}
+						onclick={handleGenerateReport}
+					>
+						:report
+					</button>
+				</div>
 			</div>
 
 			{#if sessions.isLoading}
@@ -750,7 +782,7 @@
 				<h2 class="font-mono text-sm font-bold text-fg-dark">-- invoices</h2>
 				<button
 					type="button"
-					class="border border-green px-3 py-1.5 font-mono text-xs text-green transition-colors hover:bg-green hover:text-bg-dark"
+					class="cursor-pointer border border-green px-3 py-1.5 font-mono text-xs text-green transition-colors hover:bg-green hover:text-bg-dark"
 					onclick={() => {
 						showInvoiceForm = !showInvoiceForm;
 						invoiceError = '';
@@ -801,7 +833,7 @@
 								<!-- Status badge -->
 								<button
 									type="button"
-									class="shrink-0 border px-2 py-0.5 font-mono text-xs transition-colors"
+									class="shrink-0 cursor-pointer border px-2 py-0.5 font-mono text-xs transition-colors"
 									class:border-fg-muted={invRecord.status === 'draft'}
 									class:text-fg-muted={invRecord.status === 'draft'}
 									class:border-yellow={invRecord.status === 'sent'}
@@ -821,7 +853,7 @@
 								<div class="flex items-center">
 									<button
 										type="button"
-										class="relative border px-2 py-0.5 font-mono text-xs transition-colors"
+										class="relative cursor-pointer border px-2 py-0.5 font-mono text-xs transition-colors"
 										class:z-10={dlTheme === 'dark'}
 										class:border-primary={dlTheme === 'dark'}
 										class:text-primary={dlTheme === 'dark'}
@@ -835,7 +867,7 @@
 									</button>
 									<button
 										type="button"
-										class="relative -ml-px border px-2 py-0.5 font-mono text-xs transition-colors"
+										class="relative -ml-px cursor-pointer border px-2 py-0.5 font-mono text-xs transition-colors"
 										class:z-10={dlTheme === 'light'}
 										class:border-primary={dlTheme === 'light'}
 										class:text-primary={dlTheme === 'light'}
@@ -852,7 +884,7 @@
 								<!-- Download -->
 								<button
 									type="button"
-									class="border border-border px-2 py-0.5 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
+									class="cursor-copy border border-border px-2 py-0.5 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
 									title="download PDF"
 									onclick={() => redownloadInvoice(invRecord, dlTheme)}
 								>
@@ -862,7 +894,7 @@
 								<!-- Follow-up -->
 								<button
 									type="button"
-									class="ml-auto border border-border px-2 py-0.5 font-mono text-xs text-fg-muted transition-colors hover:border-green hover:text-green"
+									class="ml-auto cursor-alias border border-border px-2 py-0.5 font-mono text-xs text-fg-muted transition-colors hover:border-green hover:text-green"
 									title="create follow-up invoice pre-filled from this one"
 									onclick={() => prefillFromInvoice(invRecord)}
 								>
@@ -903,7 +935,7 @@
 						<div class="flex items-center">
 							<button
 								type="button"
-								class="relative border px-3 py-2 font-mono text-xs transition-colors"
+								class="relative cursor-pointer border px-3 py-2 font-mono text-xs transition-colors"
 								class:z-10={invTheme === 'dark'}
 								class:border-primary={invTheme === 'dark'}
 								class:text-primary={invTheme === 'dark'}
@@ -916,7 +948,7 @@
 							</button>
 							<button
 								type="button"
-								class="relative -ml-px border px-3 py-2 font-mono text-xs transition-colors"
+								class="relative -ml-px cursor-pointer border px-3 py-2 font-mono text-xs transition-colors"
 								class:z-10={invTheme === 'light'}
 								class:border-primary={invTheme === 'light'}
 								class:text-primary={invTheme === 'light'}
@@ -1150,7 +1182,7 @@
 
 				<button
 					type="button"
-					class="border border-green px-4 py-2 font-mono text-sm text-green transition-colors hover:bg-green hover:text-bg-dark disabled:opacity-50"
+					class="cursor-copy border border-green px-4 py-2 font-mono text-sm text-green transition-colors hover:bg-green hover:text-bg-dark disabled:cursor-wait disabled:opacity-50"
 					disabled={invoiceSaving}
 					onclick={handleCreateInvoice}
 				>
