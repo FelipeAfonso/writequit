@@ -3,5 +3,5 @@
  * that aren't directly connected to SvelteKit page data.
  */
 
-/** Context key for the preloaded active session (used by StatusBar). */
+/** Context key for the preloaded active session (used by StatusLine). */
 export const PRELOADED_ACTIVE_SESSION_CTX = '$$_preloadedActiveSession';

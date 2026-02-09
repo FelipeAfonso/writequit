@@ -10,8 +10,7 @@
 	import { detectTimezone, TIMEZONE_CTX } from '$lib/utils/datetime';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 	import { PRELOADED_ACTIVE_SESSION_CTX } from '$lib/utils/preload';
-	import CommandPalette from '$lib/components/CommandPalette.svelte';
-	import StatusBar from '$lib/components/StatusBar.svelte';
+	import StatusLine from '$lib/components/StatusLine.svelte';
 	import Tutorial from '$lib/components/Tutorial.svelte';
 
 	const isLocal = import.meta.env.DEV;
@@ -893,15 +892,12 @@
 		{/if}
 
 		<!-- Main content -->
-		<main class="flex-1 overflow-y-auto pb-10">
+		<main class="flex-1 overflow-y-auto">
 			{@render children()}
 		</main>
 
-		<!-- Command palette -->
-		<CommandPalette />
-
-		<!-- Global status bar (shows when timer is running) -->
-		<StatusBar />
+		<!-- Unified status line / command bar -->
+		<StatusLine />
 
 		<!-- Tutorial overlay (auto-shown for new users, or via :tutorial command) -->
 		{#if showTutorial}
