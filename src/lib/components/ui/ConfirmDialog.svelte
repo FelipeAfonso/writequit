@@ -46,14 +46,14 @@
 			<div class="flex items-center gap-4">
 				<button
 					type="button"
-					class="border border-red px-3 py-1 text-xs text-red transition-colors hover:bg-red hover:text-bg-dark"
+					class="cursor-pointer border border-red px-3 py-1 text-xs text-red transition-colors hover:bg-red hover:text-bg-dark"
 					onclick={onconfirm}
 				>
 					[y]es
 				</button>
 				<button
 					type="button"
-					class="border border-border px-3 py-1 text-xs text-fg-muted transition-colors hover:border-border-highlight hover:text-fg-dark"
+					class="cursor-pointer border border-border px-3 py-1 text-xs text-fg-muted transition-colors hover:border-border-highlight hover:text-fg-dark"
 					onclick={oncancel}
 				>
 					[n]o

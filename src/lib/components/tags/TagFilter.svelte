@@ -25,7 +25,7 @@
 	<div class="flex flex-wrap items-center gap-1.5">
 		<button
 			type="button"
-			class="border px-1.5 py-0.5 font-mono text-xs transition-colors"
+			class="cursor-pointer border px-1.5 py-0.5 font-mono text-xs transition-colors"
 			class:border-primary={selectedTagIds.size === 0}
 			class:text-primary={selectedTagIds.size === 0}
 			class:border-border={selectedTagIds.size > 0}

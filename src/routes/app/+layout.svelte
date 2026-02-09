@@ -94,8 +94,16 @@
 		return path.startsWith(href);
 	}
 
+	// Close sidebar on route change
+	$effect(() => {
+		// eslint-disable-next-line @typescript-eslint/no-unused-expressions
+		page.url.pathname;
+		sidebarOpen = false;
+	});
+
 	// ── Global keyboard shortcuts ──
 	let showHelp = $state(false);
+	let sidebarOpen = $state(false);
 	let pendingG = $state(false);
 	let gTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -170,7 +178,11 @@
 			return;
 		}
 
-		// Escape closes help
+		// Escape closes help or sidebar
+		if (e.key === 'Escape' && sidebarOpen) {
+			sidebarOpen = false;
+			return;
+		}
 		if (e.key === 'Escape' && showHelp) {
 			showHelp = false;
 			return;
@@ -235,12 +247,14 @@
 					</span>
 				{/if}
 			</div>
-			<div class="flex items-center gap-3">
+
+			<!-- Desktop nav (hidden on sm and below) -->
+			<div class="hidden items-center gap-3 md:flex">
 				<nav class="flex items-center gap-1">
 					{#each nav as item (item.href)}
 						<a
 							href={item.href}
-							class="border px-2.5 py-1 font-mono text-xs transition-colors"
+							class="cursor-pointer border px-2.5 py-1 font-mono text-xs transition-colors"
 							class:border-primary={isActive(item.href)}
 							class:text-primary={isActive(item.href)}
 							class:bg-surface-2={isActive(item.href)}
@@ -252,7 +266,7 @@
 						>
 							<span class="opacity-60">{item.icon}</span>
 							{item.label}
-							<span class="ml-1 hidden text-fg-muted opacity-50 sm:inline">
+							<span class="ml-1 text-fg-muted opacity-50">
 								{item.shortcut}
 							</span>
 						</a>
@@ -260,7 +274,7 @@
 				</nav>
 				<a
 					href="/app/user"
-					class="border px-2 py-1 font-mono text-xs transition-colors"
+					class="cursor-pointer border px-2 py-1 font-mono text-xs transition-colors"
 					class:border-primary={isActive('/app/user')}
 					class:text-primary={isActive('/app/user')}
 					class:bg-surface-2={isActive('/app/user')}
@@ -272,38 +286,130 @@
 				>
 					<span class="opacity-60">@</span>
 					user
-					<span class="ml-1 hidden text-fg-muted opacity-50 sm:inline">
-						g u
-					</span>
+					<span class="ml-1 text-fg-muted opacity-50">g u</span>
 				</a>
-				{#if isAdminUser}
-					<a
-						href="/app/admin"
-						class="border px-2 py-1 font-mono text-xs transition-colors"
-						class:border-yellow={isActive('/app/admin')}
-						class:text-yellow={isActive('/app/admin')}
-						class:bg-surface-2={isActive('/app/admin')}
-						class:border-transparent={!isActive('/app/admin')}
-						class:text-fg-muted={!isActive('/app/admin')}
-						class:hover:text-yellow={!isActive('/app/admin')}
-						class:hover:border-border={!isActive('/app/admin')}
-						title="admin (g d)"
-					>
-						<span class="opacity-60">*</span>
-						admin
-						<span class="ml-1 hidden text-fg-muted opacity-50 sm:inline">
-							g d
-						</span>
-					</a>
-				{/if}
 				<button
 					onclick={() => signOut()}
-					class="border border-transparent px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-red hover:text-red"
+					class="cursor-pointer border border-transparent px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-red hover:text-red"
 				>
 					:q!
 				</button>
 			</div>
+
+			<!-- Mobile hamburger (visible on sm and below) -->
+			<button
+				onclick={() => (sidebarOpen = !sidebarOpen)}
+				class="cursor-pointer border border-transparent px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border hover:text-fg-dark md:hidden"
+				aria-label="Toggle menu"
+			>
+				{sidebarOpen ? '[x]' : '[=]'}
+			</button>
 		</header>
+
+		<!-- Mobile sidebar overlay -->
+		{#if sidebarOpen}
+			<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
+			<div
+				class="fixed inset-0 z-40 md:hidden"
+				onclick={() => (sidebarOpen = false)}
+			>
+				<!-- Backdrop -->
+				<div class="absolute inset-0 bg-bg-dark/60"></div>
+
+				<!-- Sidebar panel -->
+				<!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
+				<div
+					class="absolute top-0 right-0 flex h-full w-64 flex-col border-l border-border bg-bg"
+					onclick={(e) => e.stopPropagation()}
+				>
+					<!-- Sidebar header -->
+					<div
+						class="flex items-center justify-between border-b border-border px-4 py-2"
+					>
+						<span class="font-mono text-xs text-fg-muted">nav</span>
+						<button
+							onclick={() => (sidebarOpen = false)}
+							class="cursor-pointer border border-transparent px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border hover:text-fg-dark"
+						>
+							[x]
+						</button>
+					</div>
+
+					<!-- Nav links -->
+					<nav class="flex flex-1 flex-col gap-1 p-3">
+						{#each nav as item (item.href)}
+							<a
+								href={item.href}
+								class="flex items-center justify-between border px-3 py-2 font-mono text-xs transition-colors"
+								class:border-primary={isActive(item.href)}
+								class:text-primary={isActive(item.href)}
+								class:bg-surface-2={isActive(item.href)}
+								class:border-transparent={!isActive(item.href)}
+								class:text-fg-muted={!isActive(item.href)}
+								class:hover:text-fg-dark={!isActive(item.href)}
+								class:hover:border-border={!isActive(item.href)}
+							>
+								<span>
+									<span class="opacity-60">{item.icon}</span>
+									{item.label}
+								</span>
+								<span class="text-fg-muted opacity-50">{item.shortcut}</span>
+							</a>
+						{/each}
+
+						<div class="my-2 border-t border-border"></div>
+
+						<a
+							href="/app/user"
+							class="flex items-center justify-between border px-3 py-2 font-mono text-xs transition-colors"
+							class:border-primary={isActive('/app/user')}
+							class:text-primary={isActive('/app/user')}
+							class:bg-surface-2={isActive('/app/user')}
+							class:border-transparent={!isActive('/app/user')}
+							class:text-fg-muted={!isActive('/app/user')}
+							class:hover:text-fg-dark={!isActive('/app/user')}
+							class:hover:border-border={!isActive('/app/user')}
+						>
+							<span>
+								<span class="opacity-60">@</span>
+								user
+							</span>
+							<span class="text-fg-muted opacity-50">g u</span>
+						</a>
+
+						{#if isAdminUser}
+							<a
+								href="/app/admin"
+								class="flex items-center justify-between border px-3 py-2 font-mono text-xs transition-colors"
+								class:border-primary={isActive('/app/admin')}
+								class:text-primary={isActive('/app/admin')}
+								class:bg-surface-2={isActive('/app/admin')}
+								class:border-transparent={!isActive('/app/admin')}
+								class:text-fg-muted={!isActive('/app/admin')}
+								class:hover:text-fg-dark={!isActive('/app/admin')}
+								class:hover:border-border={!isActive('/app/admin')}
+							>
+								<span>
+									<span class="opacity-60">%</span>
+									admin
+								</span>
+								<span class="text-fg-muted opacity-50">g d</span>
+							</a>
+						{/if}
+					</nav>
+
+					<!-- Sign out at bottom -->
+					<div class="border-t border-border p-3">
+						<button
+							onclick={() => signOut()}
+							class="w-full cursor-pointer border border-transparent px-3 py-2 text-left font-mono text-xs text-fg-muted transition-colors hover:border-red hover:text-red"
+						>
+							:q!
+						</button>
+					</div>
+				</div>
+			</div>
+		{/if}
 
 		<!-- Pending g indicator -->
 		{#if pendingG}

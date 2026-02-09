@@ -56,7 +56,7 @@
 			<button
 				onclick={handleSeed}
 				disabled={seeding}
-				class="border border-yellow bg-transparent px-4 py-2 font-mono text-sm text-yellow transition-colors hover:bg-yellow hover:text-bg-dark disabled:cursor-not-allowed disabled:opacity-50"
+				class="cursor-pointer border border-yellow bg-transparent px-4 py-2 font-mono text-sm text-yellow transition-colors hover:bg-yellow hover:text-bg-dark disabled:cursor-not-allowed disabled:opacity-50"
 			>
 				{#if seeding}
 					seeding...
