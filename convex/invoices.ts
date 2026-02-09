@@ -1,8 +1,36 @@
 import { query, mutation } from './_generated/server';
+import type { QueryCtx, MutationCtx } from './_generated/server';
 import { v } from 'convex/values';
+import type { Id } from './_generated/dataModel';
 import { getCurrentUser, getCurrentUserOrThrow } from './users.js';
 
+// ── Helpers ─────────────────────────────────────────────────────────
+
+/** Compute the next sequential invoice number for a user. */
+async function computeNextNumber(
+	ctx: QueryCtx | MutationCtx,
+	userId: Id<'users'>
+) {
+	const existing = await ctx.db
+		.query('invoices')
+		.withIndex('by_userId', (q) => q.eq('userId', userId))
+		.collect();
+
+	const nextNum = existing.length + 1;
+	return `INV-${String(nextNum).padStart(3, '0')}`;
+}
+
 // ── Queries ────────────────────────────────────────────────────────
+
+/** Get the next suggested invoice number for the current user. */
+export const getNextNumber = query({
+	args: {},
+	handler: async (ctx) => {
+		const user = await getCurrentUser(ctx);
+		if (user === null) return 'INV-001';
+		return await computeNextNumber(ctx, user._id);
+	}
+});
 
 /** List all invoices for the current user, newest first. */
 export const list = query({
@@ -48,6 +76,7 @@ const lineItemValidator = v.object({
 /** Create a new invoice with all data captured at creation time. */
 export const create = mutation({
 	args: {
+		invoiceNumber: v.optional(v.string()),
 		startDate: v.number(),
 		endDate: v.number(),
 		fromName: v.string(),
@@ -68,14 +97,9 @@ export const create = mutation({
 		const user = await getCurrentUserOrThrow(ctx);
 		const userId = user._id;
 
-		// Generate sequential invoice number
-		const existing = await ctx.db
-			.query('invoices')
-			.withIndex('by_userId', (q) => q.eq('userId', userId))
-			.collect();
-
-		const nextNum = existing.length + 1;
-		const invoiceNumber = `INV-${String(nextNum).padStart(3, '0')}`;
+		// Use user-provided invoice number or generate sequential one
+		const invoiceNumber =
+			args.invoiceNumber?.trim() || (await computeNextNumber(ctx, userId));
 
 		const id = await ctx.db.insert('invoices', {
 			invoiceNumber,

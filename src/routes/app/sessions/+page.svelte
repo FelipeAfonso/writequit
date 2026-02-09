@@ -176,7 +176,7 @@
 			{#each dateOptions as opt (opt.value)}
 				<button
 					type="button"
-					class="border px-2 py-1 font-mono text-xs transition-colors"
+					class="cursor-pointer border px-2 py-1 font-mono text-xs transition-colors"
 					class:border-primary={dateRange === opt.value}
 					class:text-primary={dateRange === opt.value}
 					class:bg-surface-2={dateRange === opt.value}

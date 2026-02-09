@@ -39,7 +39,7 @@
 {#if onclick}
 	<button
 		type="button"
-		class="inline-flex items-center border px-1.5 py-0.5 font-mono text-xs transition-colors"
+		class="inline-flex cursor-pointer items-center border px-1.5 py-0.5 font-mono text-xs transition-colors"
 		class:opacity-50={!active}
 		style="border-color: {resolvedColor}; color: {resolvedColor};"
 		onclick={() => onclick?.()}

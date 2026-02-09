@@ -419,7 +419,7 @@
 		</span>
 		<button
 			type="button"
-			class="border border-green bg-transparent px-3 py-1 font-mono text-xs text-green transition-colors hover:bg-green hover:text-bg-dark"
+			class="cursor-pointer border border-green bg-transparent px-3 py-1 font-mono text-xs text-green transition-colors hover:bg-green hover:text-bg-dark"
 			onclick={submit}
 		>
 			:w

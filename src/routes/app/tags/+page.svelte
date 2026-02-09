@@ -242,7 +242,7 @@
 			<span class="font-mono text-sm text-primary">{searchQuery}</span>
 			<button
 				type="button"
-				class="ml-auto font-mono text-xs text-fg-muted transition-colors hover:text-red"
+				class="ml-auto cursor-pointer font-mono text-xs text-fg-muted transition-colors hover:text-red"
 				onclick={() => goto('/app/tags')}
 			>
 				[x] clear
@@ -290,7 +290,7 @@
 						{#each TAG_TYPES as opt (opt.label)}
 							<button
 								type="button"
-								class="border px-1.5 py-0.5 text-xs transition-colors"
+								class="cursor-pointer border px-1.5 py-0.5 text-xs transition-colors"
 								class:border-primary={tag.type === opt.value}
 								class:text-primary={tag.type === opt.value}
 								class:border-border={tag.type !== opt.value}
@@ -305,7 +305,7 @@
 					<!-- Delete button -->
 					<button
 						type="button"
-						class="ml-auto border border-border px-1.5 py-0.5 text-xs text-fg-muted transition-colors hover:border-red hover:text-red"
+						class="ml-auto cursor-pointer border border-border px-1.5 py-0.5 text-xs text-fg-muted transition-colors hover:border-red hover:text-red"
 						onclick={() => requestDelete(tag._id)}
 					>
 						:d
