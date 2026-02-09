@@ -6,6 +6,7 @@
 		isValidTimezone,
 		detectTimezone
 	} from '$lib/utils/datetime';
+	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 
 	let { data } = $props();
 
@@ -357,5 +358,30 @@
 				</div>
 			</div>
 		{/if}
+	</section>
+
+	<!-- ─── Tutorial section ─────────────────────────────────────── -->
+	<section class="flex flex-col gap-4">
+		<h2
+			class="border-b border-border pb-2 font-mono text-sm font-bold text-fg-dark"
+		>
+			-- tutorial
+		</h2>
+
+		<div class="flex items-center justify-between">
+			<div class="flex flex-col gap-0.5">
+				<span class="font-mono text-sm text-fg-dark">onboarding</span>
+				<span class="font-mono text-xs text-fg-muted">
+					replay the getting started walkthrough
+				</span>
+			</div>
+			<button
+				type="button"
+				class="cursor-pointer border border-border px-3 py-1.5 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
+				onclick={() => commandPalette.context.showTutorial?.()}
+			>
+				:tutorial
+			</button>
+		</div>
 	</section>
 </div>

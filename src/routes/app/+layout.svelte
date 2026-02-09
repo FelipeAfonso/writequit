@@ -12,6 +12,7 @@
 	import { PRELOADED_ACTIVE_SESSION_CTX } from '$lib/utils/preload';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import StatusBar from '$lib/components/StatusBar.svelte';
+	import Tutorial from '$lib/components/Tutorial.svelte';
 
 	const isLocal = import.meta.env.DEV;
 	const isDevConvex = PUBLIC_CONVEX_URL.includes(
@@ -101,6 +102,28 @@
 		sidebarOpen = false;
 	});
 
+	// ── Tutorial ────────────────────────────────────────────────────
+	let showTutorial = $state(false);
+
+	// Auto-show tutorial for new users who haven't completed it
+	let tutorialAutoShown = false;
+	$effect(() => {
+		if (
+			!tutorialAutoShown &&
+			auth.isAuthenticated &&
+			userSettings.data &&
+			!userSettings.data.tutorialCompleted
+		) {
+			tutorialAutoShown = true;
+			showTutorial = true;
+		}
+	});
+
+	function completeTutorial() {
+		showTutorial = false;
+		client.mutation(api.users.updateSettings, { tutorialCompleted: true });
+	}
+
 	// ── Global keyboard shortcuts ──
 	let showHelp = $state(false);
 	let sidebarOpen = $state(false);
@@ -136,6 +159,9 @@
 			},
 			stopTimer: async () => {
 				await client.mutation(api.sessions.stop, {});
+			},
+			showTutorial: () => {
+				showTutorial = true;
 			},
 			linkTaskToSession: async (taskId: string) => {
 				// Find the active session first
@@ -876,5 +902,10 @@
 
 		<!-- Global status bar (shows when timer is running) -->
 		<StatusBar />
+
+		<!-- Tutorial overlay (auto-shown for new users, or via :tutorial command) -->
+		{#if showTutorial}
+			<Tutorial oncomplete={completeTutorial} />
+		{/if}
 	</div>
 {/if}
