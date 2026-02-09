@@ -6,6 +6,7 @@
 		isValidTimezone,
 		detectTimezone
 	} from '$lib/utils/datetime';
+	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 
 	let { data } = $props();
 
@@ -187,7 +188,7 @@
 						<div class="flex gap-2">
 							<button
 								type="button"
-								class="border border-green px-3 py-1 font-mono text-xs text-green transition-colors hover:bg-green hover:text-bg-dark disabled:opacity-50"
+								class="cursor-pointer border border-green px-3 py-1 font-mono text-xs text-green transition-colors hover:bg-green hover:text-bg-dark disabled:cursor-wait disabled:opacity-50"
 								onclick={saveName}
 								disabled={nameSaving}
 							>
@@ -195,7 +196,7 @@
 							</button>
 							<button
 								type="button"
-								class="border border-border px-3 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border-highlight hover:text-fg-dark"
+								class="cursor-pointer border border-border px-3 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border-highlight hover:text-fg-dark"
 								onclick={cancelEditName}
 							>
 								:q cancel
@@ -211,7 +212,7 @@
 						</div>
 						<button
 							type="button"
-							class="border border-border px-3 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
+							class="cursor-pointer border border-border px-3 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
 							onclick={startEditName}
 						>
 							:e edit
@@ -255,7 +256,7 @@
 					/>
 					<button
 						type="button"
-						class="shrink-0 border border-border px-3 py-2 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
+						class="shrink-0 cursor-pointer border border-border px-3 py-2 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
 						onclick={saveTimezone}
 					>
 						:w
@@ -281,7 +282,7 @@
 				</div>
 				<button
 					type="button"
-					class="border px-3 py-1.5 font-mono text-xs transition-colors"
+					class="cursor-pointer border px-3 py-1.5 font-mono text-xs transition-colors"
 					class:border-green={userSettings.data.viMode}
 					class:text-green={userSettings.data.viMode}
 					class:bg-surface-2={userSettings.data.viMode}
@@ -307,7 +308,7 @@
 					{#each statusOptions as opt (opt.value)}
 						<button
 							type="button"
-							class="border px-2 py-1 font-mono text-xs transition-colors"
+							class="cursor-pointer border px-2 py-1 font-mono text-xs transition-colors"
 							class:border-primary={userSettings.data.defaultStatusFilter ===
 								opt.value}
 							class:text-primary={userSettings.data.defaultStatusFilter ===
@@ -338,7 +339,7 @@
 					{#each tagOptions as opt (opt.value)}
 						<button
 							type="button"
-							class="border px-2 py-1 font-mono text-xs transition-colors"
+							class="cursor-pointer border px-2 py-1 font-mono text-xs transition-colors"
 							class:border-primary={userSettings.data.defaultTagFilter ===
 								opt.value}
 							class:text-primary={userSettings.data.defaultTagFilter ===
@@ -357,5 +358,30 @@
 				</div>
 			</div>
 		{/if}
+	</section>
+
+	<!-- ─── Tutorial section ─────────────────────────────────────── -->
+	<section class="flex flex-col gap-4">
+		<h2
+			class="border-b border-border pb-2 font-mono text-sm font-bold text-fg-dark"
+		>
+			-- tutorial
+		</h2>
+
+		<div class="flex items-center justify-between">
+			<div class="flex flex-col gap-0.5">
+				<span class="font-mono text-sm text-fg-dark">onboarding</span>
+				<span class="font-mono text-xs text-fg-muted">
+					replay the getting started walkthrough
+				</span>
+			</div>
+			<button
+				type="button"
+				class="cursor-pointer border border-border px-3 py-1.5 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
+				onclick={() => commandPalette.context.showTutorial?.()}
+			>
+				:tutorial
+			</button>
+		</div>
 	</section>
 </div>

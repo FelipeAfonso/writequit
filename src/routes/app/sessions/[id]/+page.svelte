@@ -396,7 +396,7 @@
 	<!-- Back link -->
 	<a
 		href="/app/sessions"
-		class="inline-flex items-center gap-1 font-mono text-xs text-fg-muted transition-colors hover:text-fg-dark"
+		class="inline-flex cursor-pointer items-center gap-1 font-mono text-xs text-fg-muted transition-colors hover:text-fg-dark"
 	>
 		&lt;- back
 		<span class="opacity-50">(Backspace)</span>
@@ -459,7 +459,7 @@
 					<!-- Edit toggle -->
 					<button
 						type="button"
-						class="border border-border px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border-highlight hover:text-fg-dark"
+						class="cursor-pointer border border-border px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border-highlight hover:text-fg-dark"
 						onclick={() => {
 							if (isEditing) {
 								exitEditMode();
@@ -474,7 +474,7 @@
 					{#if isRunning}
 						<button
 							type="button"
-							class="border border-orange px-2 py-1 font-mono text-xs text-orange transition-colors hover:bg-orange hover:text-bg-dark"
+							class="cursor-pointer border border-orange px-2 py-1 font-mono text-xs text-orange transition-colors hover:bg-orange hover:text-bg-dark"
 							onclick={handleStop}
 						>
 							:stop
@@ -482,7 +482,7 @@
 					{/if}
 					<button
 						type="button"
-						class="border border-border px-2 py-1 font-mono text-xs text-red transition-colors hover:border-red hover:bg-red hover:text-bg-dark"
+						class="cursor-pointer border border-border px-2 py-1 font-mono text-xs text-red transition-colors hover:border-red hover:bg-red hover:text-bg-dark"
 						onclick={handleDelete}
 					>
 						:d
@@ -644,7 +644,7 @@
 				</h2>
 				<button
 					type="button"
-					class="border border-border px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
+					class="cursor-alias border border-border px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
 					onclick={openTaskPicker}
 				>
 					+ link task
@@ -671,7 +671,7 @@
 						/>
 						<button
 							type="button"
-							class="font-mono text-xs text-fg-muted transition-colors hover:text-red"
+							class="cursor-pointer font-mono text-xs text-fg-muted transition-colors hover:text-red"
 							onclick={closeTaskPicker}
 						>
 							[x]
@@ -683,7 +683,7 @@
 							{#each filteredLinkable as task (task._id)}
 								<button
 									type="button"
-									class="flex items-center gap-2 px-2 py-1.5 text-left font-mono text-sm text-fg-dark transition-colors hover:bg-surface-2 hover:text-fg"
+									class="flex cursor-alias items-center gap-2 px-2 py-1.5 text-left font-mono text-sm text-fg-dark transition-colors hover:bg-surface-2 hover:text-fg"
 									onclick={() => handleLinkTask(task._id)}
 								>
 									<TaskStatusBadge status={task.status} />
@@ -708,7 +708,7 @@
 							<TaskStatusBadge status={task.status} />
 							<a
 								href="/app/tasks/{task._id}"
-								class="min-w-0 truncate text-fg-dark transition-colors hover:text-fg"
+								class="min-w-0 cursor-pointer truncate text-fg-dark transition-colors hover:text-fg"
 								class:line-through={task.status === 'done'}
 								class:opacity-60={task.status === 'done'}
 							>
@@ -716,7 +716,7 @@
 							</a>
 							<button
 								type="button"
-								class="ml-auto shrink-0 font-mono text-xs text-fg-muted transition-colors hover:text-red"
+								class="ml-auto shrink-0 cursor-pointer font-mono text-xs text-fg-muted transition-colors hover:text-red"
 								onclick={() => handleUnlinkTask(task._id)}
 								title="Unlink task"
 							>

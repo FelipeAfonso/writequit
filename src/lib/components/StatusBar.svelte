@@ -77,7 +77,7 @@
 			<!-- Timer -->
 			<a
 				href="/app/sessions/{session._id}"
-				class="font-mono text-sm font-bold text-green transition-colors hover:text-teal"
+				class="cursor-pointer font-mono text-sm font-bold text-green transition-colors hover:text-teal"
 			>
 				{elapsed}
 			</a>
@@ -113,7 +113,7 @@
 			<!-- Stop button -->
 			<button
 				onclick={handleStop}
-				class="border border-red/50 px-2 py-0.5 font-mono text-xs text-red transition-colors hover:border-red hover:bg-red hover:text-bg-dark"
+				class="cursor-pointer border border-red/50 px-2 py-0.5 font-mono text-xs text-red transition-colors hover:border-red hover:bg-red hover:text-bg-dark"
 			>
 				:stop
 			</button>

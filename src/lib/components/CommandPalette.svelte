@@ -124,7 +124,7 @@
 					{#each suggestions as cmd, i (cmd.name)}
 						<button
 							type="button"
-							class="flex w-full items-center gap-3 px-4 py-1.5 text-left font-mono text-xs transition-colors"
+							class="flex w-full cursor-pointer items-center gap-3 px-4 py-1.5 text-left font-mono text-xs transition-colors"
 							class:bg-surface-2={i === selectedIndex}
 							class:text-primary={i === selectedIndex}
 							class:text-fg-dark={i !== selectedIndex}
@@ -156,7 +156,7 @@
 					bind:value={input}
 					onkeydown={handleKeydown}
 					type="text"
-					class="flex-1 border-none bg-transparent font-mono text-sm text-fg outline-none placeholder:text-fg-muted"
+					class="flex-1 cursor-text border-none bg-transparent font-mono text-sm text-fg outline-none placeholder:text-fg-muted"
 					placeholder="type a command..."
 					spellcheck="false"
 					autocomplete="off"

@@ -241,7 +241,7 @@
 			<span class="font-mono text-sm text-primary">{searchQuery}</span>
 			<button
 				type="button"
-				class="ml-auto font-mono text-xs text-fg-muted transition-colors hover:text-red"
+				class="ml-auto cursor-pointer font-mono text-xs text-fg-muted transition-colors hover:text-red"
 				onclick={() => goto('/app')}
 			>
 				[x] clear
@@ -270,7 +270,7 @@
 			{#each statusOptions as opt (opt.value)}
 				<button
 					type="button"
-					class="border px-2 py-1 font-mono text-xs transition-colors"
+					class="cursor-pointer border px-2 py-1 font-mono text-xs transition-colors"
 					class:border-primary={settings.statusFilter === opt.value}
 					class:text-primary={settings.statusFilter === opt.value}
 					class:bg-surface-2={settings.statusFilter === opt.value}

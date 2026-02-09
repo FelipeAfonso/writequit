@@ -15,6 +15,8 @@ export interface InvoiceLineItem {
 	amount: number;
 }
 
+export type InvoiceTheme = 'dark' | 'light';
+
 export interface InvoiceData {
 	invoiceNumber: string;
 	createdAt: string; // formatted date string
@@ -38,6 +40,8 @@ export interface InvoiceData {
 	paymentTerms?: string;
 	dueDate?: string; // formatted date string
 	notes?: string;
+	// Theme
+	theme?: InvoiceTheme;
 }
 
 // ── Constants ──────────────────────────────────────────────────────
@@ -47,19 +51,48 @@ const PAGE_WIDTH = 210; // A4 mm
 const CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN;
 const LINE_HEIGHT = 5;
 
-// Colors
-const COLOR_FG = [200, 200, 214] as const;
-const COLOR_MUTED = [120, 120, 140] as const;
-const COLOR_GREEN = [115, 218, 202] as const;
-const COLOR_PRIMARY = [122, 162, 247] as const;
-const COLOR_BG = [26, 27, 38] as const;
-const COLOR_SURFACE = [36, 40, 59] as const;
+// Color palettes
+type RGB = readonly [number, number, number];
+
+interface ThemeColors {
+	fg: RGB;
+	muted: RGB;
+	green: RGB;
+	primary: RGB;
+	bg: RGB;
+	surface: RGB;
+	altRow: RGB;
+}
+
+const DARK_COLORS: ThemeColors = {
+	fg: [200, 200, 214],
+	muted: [120, 120, 140],
+	green: [115, 218, 202],
+	primary: [122, 162, 247],
+	bg: [26, 27, 38],
+	surface: [36, 40, 59],
+	altRow: [30, 33, 48]
+};
+
+const LIGHT_COLORS: ThemeColors = {
+	fg: [30, 30, 40],
+	muted: [100, 100, 120],
+	green: [22, 163, 74],
+	primary: [59, 130, 246],
+	bg: [255, 255, 255],
+	surface: [243, 244, 246],
+	altRow: [249, 250, 251]
+};
+
+function getColors(theme: InvoiceTheme): ThemeColors {
+	return theme === 'light' ? LIGHT_COLORS : DARK_COLORS;
+}
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-function addPageBg(doc: jsPDF) {
+function addPageBg(doc: jsPDF, colors: ThemeColors) {
 	const pageH = doc.internal.pageSize.getHeight();
-	doc.setFillColor(...COLOR_BG);
+	doc.setFillColor(...colors.bg);
 	doc.rect(0, 0, PAGE_WIDTH, pageH, 'F');
 }
 
@@ -85,25 +118,28 @@ function formatCurrency(amount: number, currency: string): string {
 // ── Main export ────────────────────────────────────────────────────
 
 export function generateInvoicePdf(data: InvoiceData): jsPDF {
+	const theme = data.theme ?? 'dark';
+	const c = getColors(theme);
+
 	const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-	addPageBg(doc);
+	addPageBg(doc, c);
 	doc.setFont('courier', 'normal');
 
 	let y = MARGIN;
 
 	// ── Header: INVOICE title + number ──
 	doc.setFontSize(20);
-	doc.setTextColor(...COLOR_FG);
+	doc.setTextColor(...c.fg);
 	doc.text('INVOICE', MARGIN, y);
 
 	doc.setFontSize(10);
-	doc.setTextColor(...COLOR_PRIMARY);
+	doc.setTextColor(...c.primary);
 	rightAlignText(doc, data.invoiceNumber, y);
 	y += LINE_HEIGHT * 2;
 
 	// ── Date + period ──
 	doc.setFontSize(8);
-	doc.setTextColor(...COLOR_MUTED);
+	doc.setTextColor(...c.muted);
 	doc.text(`Date: ${data.createdAt}`, MARGIN, y);
 	rightAlignText(doc, `Period: ${data.startDate} -- ${data.endDate}`, y);
 	y += LINE_HEIGHT;
@@ -123,19 +159,19 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
 	const colMid = MARGIN + CONTENT_WIDTH / 2;
 
 	doc.setFontSize(7);
-	doc.setTextColor(...COLOR_MUTED);
+	doc.setTextColor(...c.muted);
 	doc.text('FROM', MARGIN, y);
 	doc.text('BILL TO', colMid, y);
 	y += LINE_HEIGHT;
 
 	doc.setFontSize(9);
-	doc.setTextColor(...COLOR_FG);
+	doc.setTextColor(...c.fg);
 	doc.text(data.fromName, MARGIN, y);
 	doc.text(data.clientName, colMid, y);
 	y += LINE_HEIGHT;
 
 	doc.setFontSize(8);
-	doc.setTextColor(...COLOR_MUTED);
+	doc.setTextColor(...c.muted);
 	doc.text(data.fromEmail, MARGIN, y);
 	y += LINE_HEIGHT;
 
@@ -159,11 +195,11 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
 
 	// ── Line items table ──
 	// Table header
-	doc.setFillColor(...COLOR_SURFACE);
+	doc.setFillColor(...c.surface);
 	doc.rect(MARGIN, y - 3.5, CONTENT_WIDTH, LINE_HEIGHT + 2, 'F');
 
 	doc.setFontSize(7);
-	doc.setTextColor(...COLOR_MUTED);
+	doc.setTextColor(...c.muted);
 	doc.text('DESCRIPTION', MARGIN + 2, y);
 
 	const colHours = MARGIN + CONTENT_WIDTH - 70;
@@ -181,11 +217,11 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
 
 		// Alternating row bg
 		if (i % 2 === 0) {
-			doc.setFillColor(30, 33, 48);
+			doc.setFillColor(...c.altRow);
 			doc.rect(MARGIN, y - 3.5, CONTENT_WIDTH, LINE_HEIGHT + 1, 'F');
 		}
 
-		doc.setTextColor(...COLOR_FG);
+		doc.setTextColor(...c.fg);
 		// Truncate long labels
 		const maxLabelW = colHours - MARGIN - 6;
 		let label = item.label;
@@ -194,11 +230,11 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
 		}
 		doc.text(label, MARGIN + 2, y);
 
-		doc.setTextColor(...COLOR_MUTED);
+		doc.setTextColor(...c.muted);
 		doc.text(item.hours.toFixed(1), colHours, y);
 		doc.text(formatCurrency(data.hourlyRate, data.currency), colRate, y);
 
-		doc.setTextColor(...COLOR_GREEN);
+		doc.setTextColor(...c.green);
 		rightAlignText(doc, formatCurrency(item.amount, data.currency), y);
 
 		y += LINE_HEIGHT + 1;
@@ -207,25 +243,25 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
 	y += LINE_HEIGHT;
 
 	// ── Totals ──
-	doc.setDrawColor(...COLOR_MUTED);
+	doc.setDrawColor(...c.muted);
 	doc.setLineWidth(0.2);
 	doc.line(colRate - 5, y, MARGIN + CONTENT_WIDTH, y);
 	y += LINE_HEIGHT;
 
 	doc.setFontSize(8);
-	doc.setTextColor(...COLOR_MUTED);
+	doc.setTextColor(...c.muted);
 	doc.text('Subtotal', colRate - 5, y);
-	doc.setTextColor(...COLOR_FG);
+	doc.setTextColor(...c.fg);
 	rightAlignText(doc, formatCurrency(data.subtotal, data.currency), y);
 	y += LINE_HEIGHT + 1;
 
 	// Total (bold line)
-	doc.setDrawColor(...COLOR_GREEN);
+	doc.setDrawColor(...c.green);
 	doc.setLineWidth(0.3);
 	doc.line(colRate - 5, y - 1, MARGIN + CONTENT_WIDTH, y - 1);
 
 	doc.setFontSize(10);
-	doc.setTextColor(...COLOR_GREEN);
+	doc.setTextColor(...c.green);
 	doc.text('TOTAL', colRate - 5, y + LINE_HEIGHT - 1);
 	rightAlignText(
 		doc,
@@ -237,12 +273,12 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
 	// ── Notes ──
 	if (data.notes) {
 		doc.setFontSize(7);
-		doc.setTextColor(...COLOR_MUTED);
+		doc.setTextColor(...c.muted);
 		doc.text('NOTES', MARGIN, y);
 		y += LINE_HEIGHT;
 
 		doc.setFontSize(8);
-		doc.setTextColor(...COLOR_FG);
+		doc.setTextColor(...c.fg);
 		const noteLines = doc.splitTextToSize(data.notes, CONTENT_WIDTH);
 		for (const line of noteLines) {
 			doc.text(line, MARGIN, y);
@@ -256,7 +292,7 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
 		doc.setPage(i);
 		const pageH = doc.internal.pageSize.getHeight();
 		doc.setFontSize(7);
-		doc.setTextColor(...COLOR_MUTED);
+		doc.setTextColor(...c.muted);
 		doc.text(':wq', MARGIN, pageH - 10);
 		const pageText = `page ${i}/${totalPages}`;
 		const pw = doc.getTextWidth(pageText);

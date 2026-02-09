@@ -7,14 +7,15 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	if (!client) return { preloaded: {} };
 
 	try {
-		const [user, settings, invoices] = await Promise.all([
+		const [user, settings, invoices, nextInvoiceNumber] = await Promise.all([
 			client.query(api.users.currentUser),
 			client.query(api.users.getSettings),
-			client.query(api.invoices.list)
+			client.query(api.invoices.list),
+			client.query(api.invoices.getNextNumber)
 		]);
 
 		return {
-			preloaded: { user, settings, invoices }
+			preloaded: { user, settings, invoices, nextInvoiceNumber }
 		};
 	} catch {
 		return { preloaded: {} };

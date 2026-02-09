@@ -70,7 +70,7 @@
 	<!-- Status toggle area -->
 	<button
 		type="button"
-		class="mt-0.5 shrink-0 opacity-70 transition-opacity hover:opacity-100"
+		class="mt-0.5 shrink-0 cursor-pointer opacity-70 transition-opacity hover:opacity-100"
 		onclick={handleStatusClick}
 		title="Cycle status"
 	>

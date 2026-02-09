@@ -26,6 +26,7 @@ function createCommandPalette() {
 		| 'startTimer'
 		| 'stopTimer'
 		| 'linkTaskToSession'
+		| 'showTutorial'
 	> | null = null;
 
 	// Page-specific extensions — set by individual pages
@@ -77,6 +78,7 @@ function createCommandPalette() {
 				| 'startTimer'
 				| 'stopTimer'
 				| 'linkTaskToSession'
+				| 'showTutorial'
 			>
 		) {
 			baseCtx = ctx;
@@ -107,6 +109,7 @@ function createCommandPalette() {
 				startTimer: baseCtx?.startTimer,
 				stopTimer: baseCtx?.stopTimer,
 				linkTaskToSession: baseCtx?.linkTaskToSession,
+				showTutorial: baseCtx?.showTutorial,
 				...pageActions
 			};
 		}

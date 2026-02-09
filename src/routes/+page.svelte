@@ -366,7 +366,7 @@
 					{:else}
 						<button
 							onclick={() => signIn()}
-							class="border border-primary/30 px-2.5 py-1 text-primary transition-all duration-150 hover:border-primary hover:bg-primary/10"
+							class="cursor-pointer border border-primary/30 px-2.5 py-1 text-primary transition-all duration-150 hover:border-primary hover:bg-primary/10"
 						>
 							:login
 						</button>

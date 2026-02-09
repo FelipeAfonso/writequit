@@ -180,7 +180,7 @@
 	<!-- Back link -->
 	<a
 		href="/app"
-		class="inline-flex items-center gap-1 font-mono text-xs text-fg-muted transition-colors hover:text-fg-dark"
+		class="inline-flex cursor-pointer items-center gap-1 font-mono text-xs text-fg-muted transition-colors hover:text-fg-dark"
 	>
 		&lt;- back
 		<span class="opacity-50">(Backspace)</span>
@@ -204,7 +204,7 @@
 				<div class="flex shrink-0 items-center gap-2">
 					<button
 						type="button"
-						class="border border-border px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border-highlight hover:text-fg-dark"
+						class="cursor-pointer border border-border px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border-highlight hover:text-fg-dark"
 						onclick={() => {
 							isEditing = !isEditing;
 						}}
@@ -213,7 +213,7 @@
 					</button>
 					<button
 						type="button"
-						class="border border-border px-2 py-1 font-mono text-xs text-red transition-colors hover:border-red hover:bg-red hover:text-bg-dark"
+						class="cursor-pointer border border-border px-2 py-1 font-mono text-xs text-red transition-colors hover:border-red hover:bg-red hover:text-bg-dark"
 						onclick={handleDelete}
 					>
 						:d
@@ -227,7 +227,7 @@
 			>
 				<button
 					type="button"
-					class="transition-opacity hover:opacity-80"
+					class="cursor-pointer transition-opacity hover:opacity-80"
 					onclick={handleStatusCycle}
 					title="Cycle status"
 				>
