@@ -14,7 +14,8 @@ const SETTINGS_DEFAULTS = {
 	defaultHourlyRate: undefined as number | undefined,
 	defaultCurrency: undefined as string | undefined,
 	defaultPaymentTerms: undefined as string | undefined,
-	defaultInvoiceTheme: undefined as 'dark' | 'light' | undefined
+	defaultInvoiceTheme: undefined as 'dark' | 'light' | undefined,
+	tutorialCompleted: false
 };
 
 // ── Auth helpers ───────────────────────────────────────────────────
@@ -92,7 +93,8 @@ export const getSettings = query({
 			defaultHourlyRate: row.defaultHourlyRate,
 			defaultCurrency: row.defaultCurrency,
 			defaultPaymentTerms: row.defaultPaymentTerms,
-			defaultInvoiceTheme: row.defaultInvoiceTheme
+			defaultInvoiceTheme: row.defaultInvoiceTheme,
+			tutorialCompleted: row.tutorialCompleted ?? false
 		};
 	}
 });
@@ -193,7 +195,8 @@ export const updateSettings = mutation({
 		defaultPaymentTerms: v.optional(v.string()),
 		defaultInvoiceTheme: v.optional(
 			v.union(v.literal('dark'), v.literal('light'))
-		)
+		),
+		tutorialCompleted: v.optional(v.boolean())
 	},
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
@@ -221,6 +224,8 @@ export const updateSettings = mutation({
 			patch.defaultPaymentTerms = args.defaultPaymentTerms;
 		if (args.defaultInvoiceTheme !== undefined)
 			patch.defaultInvoiceTheme = args.defaultInvoiceTheme;
+		if (args.tutorialCompleted !== undefined)
+			patch.tutorialCompleted = args.tutorialCompleted;
 
 		if (existing) {
 			await ctx.db.patch(existing._id, patch);
@@ -237,7 +242,8 @@ export const updateSettings = mutation({
 				defaultHourlyRate: args.defaultHourlyRate,
 				defaultCurrency: args.defaultCurrency,
 				defaultPaymentTerms: args.defaultPaymentTerms,
-				defaultInvoiceTheme: args.defaultInvoiceTheme
+				defaultInvoiceTheme: args.defaultInvoiceTheme,
+				tutorialCompleted: args.tutorialCompleted
 			});
 		}
 	}

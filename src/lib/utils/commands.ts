@@ -41,6 +41,8 @@ export interface CommandContext {
 	stopTimer?: () => Promise<void>;
 	/** Link a task (by ID) to the active session. */
 	linkTaskToSession?: (taskId: string) => Promise<void>;
+	/** Show the onboarding tutorial overlay. */
+	showTutorial?: () => void;
 	/** Get the current task ID (from task detail or selected in list). */
 	getCurrentTaskId?: () => string | undefined;
 	/** Navigate back after save (e.g. task detail -> tasks list). */
@@ -165,6 +167,16 @@ export const commands: Command[] = [
 		args: 'none',
 		execute(_args, ctx) {
 			ctx.toggleHelp();
+		}
+	},
+	{
+		name: 'tutorial',
+		aliases: ['tutorial'],
+		description: 'replay the onboarding tutorial',
+		args: 'none',
+		execute(_args, ctx) {
+			if (!ctx.showTutorial) return 'tutorial not available';
+			ctx.showTutorial();
 		}
 	},
 	{
