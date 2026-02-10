@@ -137,6 +137,21 @@ body {
 	animation: env-pulse 3s ease-in-out infinite;
 }
 
+/* Blinking cursor */
+@keyframes blink {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0;
+	}
+}
+
+.animate-blink {
+	animation: blink 1.2s step-end infinite;
+}
+
 /* Focus ring */
 :focus-visible {
 	outline: 1px solid var(--color-primary);
