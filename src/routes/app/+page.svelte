@@ -124,9 +124,24 @@
 
 	let sortedTags = $derived(allTags.data ? sortTags(allTags.data) : []);
 
-	/** Pick the right result set: server search results or paginated tasks. */
+	/**
+	 * Pick the right result set: server search results, preloaded tasks
+	 * (while the paginated subscription is still connecting), or live
+	 * paginated results.
+	 */
 	let baseResults = $derived(
-		isSearching ? (data.searchResults ?? []) : tasks.results
+		isSearching
+			? (data.searchResults ?? [])
+			: tasks.status === 'LoadingFirstPage'
+				? (data.preloaded?.tasks ?? [])
+				: tasks.results
+	);
+
+	/** Whether we're showing preloaded (non-live) task data. */
+	let isShowingPreloaded = $derived(
+		!isSearching &&
+			tasks.status === 'LoadingFirstPage' &&
+			(data.preloaded?.tasks?.length ?? 0) > 0
 	);
 
 	/** Filter tasks by tags (client-side, inclusive/AND — must have ALL selected tags). */
@@ -136,6 +151,42 @@
 			[...activeTagIds].every((id) => t.tagIds.includes(id))
 		);
 	});
+
+	// ── Auto-load for tag filtering ──────────────────────────────────
+	// When tag filters are active and the visible (filtered) results are
+	// fewer than a full page, automatically load more pages until we have
+	// enough results or exhaust the data. This prevents the scenario
+	// where matching tasks are deeper in the list and not yet loaded.
+	const MAX_AUTO_LOADS = 20; // safety cap: ~200 tasks max
+	let autoLoadCount = $state(0);
+
+	// Reset the counter whenever the tag selection changes
+	$effect(() => {
+		void activeTagIds.size; // track dependency
+		autoLoadCount = 0;
+	});
+
+	// Auto-load effect — self-throttling via the CanLoadMore guard
+	$effect(() => {
+		if (activeTagIds.size === 0) return;
+		if (isShowingPreloaded) return;
+		if (tasks.status !== 'CanLoadMore') return;
+		if (filteredTasks.length >= PAGE_SIZE) return;
+		if (autoLoadCount >= MAX_AUTO_LOADS) return;
+
+		autoLoadCount++;
+		tasks.loadMore(PAGE_SIZE);
+	});
+
+	/** True while we're still fetching more pages to satisfy a tag filter. */
+	let isAutoLoadingForTags = $derived(
+		activeTagIds.size > 0 &&
+			filteredTasks.length < PAGE_SIZE &&
+			autoLoadCount < MAX_AUTO_LOADS &&
+			!isSearching &&
+			!isShowingPreloaded &&
+			(tasks.status === 'CanLoadMore' || tasks.status === 'LoadingMore')
+	);
 
 	function toggleTag(tagId: string) {
 		const ids = settings.activeTagIds;
@@ -298,7 +349,7 @@
 	</div>
 
 	<!-- Task list -->
-	{#if !isSearching && tasks.status === 'LoadingFirstPage'}
+	{#if !isSearching && tasks.status === 'LoadingFirstPage' && !data.preloaded?.tasks?.length}
 		<div class="py-8 text-center font-mono text-sm text-fg-muted">
 			loading...
 		</div>
@@ -308,7 +359,9 @@
 			{tagsMap}
 			emptyMessage={isSearching
 				? `no tasks matching "${searchQuery}"`
-				: 'No tasks yet. Type above to dump a task.'}
+				: isAutoLoadingForTags
+					? 'filtering...'
+					: 'No tasks yet. Type above to dump a task.'}
 			ontaskclick={(id) => {
 				window.location.href = `/app/tasks/${id}`;
 			}}
@@ -331,7 +384,13 @@
 			onedit={(id) => {
 				window.location.href = `/app/tasks/${id}?edit=1`;
 			}}
-			paginationStatus={isSearching ? 'Exhausted' : tasks.status}
+			paginationStatus={isSearching
+				? 'Exhausted'
+				: isShowingPreloaded
+					? 'Exhausted'
+					: isAutoLoadingForTags
+						? 'LoadingMore'
+						: tasks.status}
 			onloadmore={() => tasks.loadMore(PAGE_SIZE)}
 		/>
 	{/if}
