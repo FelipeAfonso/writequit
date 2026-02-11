@@ -104,7 +104,10 @@
 	// ── Tutorial ────────────────────────────────────────────────────
 	let showTutorial = $state(false);
 
-	// Auto-show tutorial for new users who haven't completed it
+	// Auto-show tutorial for new users who haven't completed it.
+	// The local guard prevents re-triggering within the same mount;
+	// after completeTutorial persists the flag, subsequent mounts read
+	// tutorialCompleted === true from the DB and never enter the branch.
 	let tutorialAutoShown = false;
 	$effect(() => {
 		if (
@@ -118,9 +121,15 @@
 		}
 	});
 
-	function completeTutorial() {
+	async function completeTutorial() {
 		showTutorial = false;
-		client.mutation(api.users.updateSettings, { tutorialCompleted: true });
+		try {
+			await client.mutation(api.users.updateSettings, {
+				tutorialCompleted: true
+			});
+		} catch (err) {
+			console.error('Failed to persist tutorial completion:', err);
+		}
 	}
 
 	// ── Global keyboard shortcuts ──
