@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack, tick } from 'svelte';
 	import { isEditableTarget } from '$lib/utils/keys';
 	import type { PaginationStatus } from '$lib/stores/usePaginatedQuery.svelte';
 	import TaskCard from './TaskCard.svelte';
@@ -116,22 +117,47 @@
 	let dcTimer: ReturnType<typeof setTimeout> | undefined;
 	let listEl: HTMLDivElement | undefined = $state();
 
-	// Reset selection when tasks change
+	// Track the selected task's ID so we can follow it when the list reorders/changes.
+	// This is intentionally NOT reactive ($state) to avoid circular effect dependencies.
+	let trackedTaskId: string | undefined;
+
+	// When the task list changes, try to follow the previously tracked task by ID.
+	// If it's gone (e.g. moved to another filter), keep the same index position.
+	// Uses untrack for selectedIndex so this only re-runs when `tasks` changes.
 	$effect(() => {
-		// Access tasks.length to create a dependency
-		if (tasks.length === 0) {
+		const len = tasks.length;
+		const curIdx = untrack(() => selectedIndex);
+
+		if (len === 0) {
 			selectedIndex = -1;
-		} else if (selectedIndex >= tasks.length) {
-			selectedIndex = tasks.length - 1;
+			return;
 		}
+
+		if (curIdx < 0) return;
+
+		// If the task is still in the list, follow it
+		if (trackedTaskId) {
+			const newIdx = tasks.findIndex((t) => t._id === trackedTaskId);
+			if (newIdx >= 0) {
+				selectedIndex = newIdx;
+				tick().then(() => scrollToSelected(newIdx));
+				return;
+			}
+		}
+
+		// Task is gone — clamp index to stay at the same position (or the last item)
+		const newIdx = Math.min(curIdx, len - 1);
+		selectedIndex = newIdx;
+		tick().then(() => scrollToSelected(newIdx));
 	});
 
-	// Notify parent of selection changes
+	// Notify parent of selection changes & update tracked task ID
 	$effect(() => {
 		const taskId =
 			selectedIndex >= 0 && selectedIndex < tasks.length
 				? tasks[selectedIndex]._id
 				: undefined;
+		trackedTaskId = taskId;
 		onselect?.(taskId);
 	});
 
