@@ -807,7 +807,8 @@ export const migrateData = internalMutation({
 				viMode: true,
 				defaultStatusFilter: 'lastUsed',
 				defaultTagFilter: 'lastUsed',
-				timezone: 'America/Sao_Paulo'
+				timezone: 'America/Sao_Paulo',
+				autoLinkMode: 'scoped'
 			});
 		}
 
