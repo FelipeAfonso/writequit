@@ -190,8 +190,28 @@
 
 	function toggleTag(tagId: string) {
 		const ids = settings.activeTagIds;
+
+		// If already selected, just deselect it
 		if (ids.includes(tagId)) {
 			settings.activeTagIds = ids.filter((id) => id !== tagId);
+			return;
+		}
+
+		// Enforce single-select for priority and project tag types:
+		// selecting one deselects any other of the same type.
+		const tag = sortedTags.find((t) => t._id === tagId);
+		const tagType = tag?.type;
+
+		if (tagType === 'priority' || tagType === 'project') {
+			const sameTypeIds = new Set<string>(
+				sortedTags
+					.filter((t) => t.type === tagType && t._id !== tagId)
+					.map((t) => t._id as string)
+			);
+			settings.activeTagIds = [
+				...ids.filter((id) => !sameTypeIds.has(id)),
+				tagId
+			];
 		} else {
 			settings.activeTagIds = [...ids, tagId];
 		}

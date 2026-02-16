@@ -65,7 +65,22 @@ export default defineSchema({
 			v.union(v.literal('dark'), v.literal('light'))
 		),
 		/** Whether the user has completed (or skipped) the onboarding tutorial. */
-		tutorialCompleted: v.optional(v.boolean())
+		tutorialCompleted: v.optional(v.boolean()),
+		/**
+		 * Controls how tasks are automatically linked to sessions.
+		 *   "all"       – link all active tasks (ignore tag scoping)
+		 *   "scoped"    – link only tasks sharing at least one tag with the session (default)
+		 *   "startOnly" – auto-link at timer start only (tag-scoped), not on status changes
+		 *   "off"       – never auto-link; manual linking only
+		 */
+		autoLinkMode: v.optional(
+			v.union(
+				v.literal('all'),
+				v.literal('scoped'),
+				v.literal('startOnly'),
+				v.literal('off')
+			)
+		)
 	}).index('by_userId', ['userId']),
 
 	tasks: defineTable({
