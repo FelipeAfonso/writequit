@@ -5,6 +5,22 @@ import type { Id } from './_generated/dataModel';
 import { getOrCreateTag } from './tags.js';
 import { getCurrentUser, getCurrentUserOrThrow } from './users.js';
 
+// ── Settings helper ────────────────────────────────────────────────
+
+type AutoLinkMode = 'all' | 'scoped' | 'startOnly' | 'off';
+
+/** Read the user's auto-link mode, defaulting to "scoped". */
+async function getAutoLinkMode(
+	ctx: MutationCtx | QueryCtx,
+	userId: Id<'users'>
+): Promise<AutoLinkMode> {
+	const settings = await ctx.db
+		.query('userSettings')
+		.withIndex('by_userId', (q) => q.eq('userId', userId))
+		.unique();
+	return settings?.autoLinkMode ?? 'scoped';
+}
+
 // ── Queries ────────────────────────────────────────────────────────
 
 /**
@@ -187,7 +203,23 @@ export const active = query({
 		const user = await getCurrentUser(ctx);
 		if (user === null) return null;
 
-		return await getActiveSession(ctx, user._id);
+		const session = await getActiveSession(ctx, user._id);
+		if (session === null) return null;
+
+		// Resolve tags for display
+		const tags = await Promise.all(
+			session.tagIds.map(async (tagId) => {
+				const tag = await ctx.db.get(tagId);
+				return tag
+					? { _id: tag._id, name: tag.name, color: tag.color, type: tag.type }
+					: null;
+			})
+		);
+
+		return {
+			...session,
+			tags: tags.filter((t) => t !== null)
+		};
 	}
 });
 
@@ -242,7 +274,8 @@ export const log = mutation({
 export const start = mutation({
 	args: {
 		description: v.optional(v.string()),
-		tags: v.array(v.string())
+		tags: v.array(v.string()),
+		startTime: v.optional(v.number())
 	},
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
@@ -258,29 +291,37 @@ export const start = mutation({
 			args.tags.map((name) => getOrCreateTag(ctx, name, userId))
 		);
 
-		// Auto-link active tasks (scoped by tag if session has tags)
-		const activeTasks = await ctx.db
-			.query('tasks')
-			.withIndex('by_status_userId', (q) =>
-				q.eq('status', 'active').eq('userId', userId)
-			)
-			.collect();
+		// Auto-link active tasks based on user's autoLinkMode setting
+		const autoLinkMode = await getAutoLinkMode(ctx, userId);
 
-		let taskIds: Id<'tasks'>[];
-		if (tagIds.length > 0) {
-			// Scoped: only tasks that share at least one tag with the session
-			taskIds = activeTasks
-				.filter((t) => t.tagIds.some((tid) => tagIds.includes(tid)))
-				.map((t) => t._id);
-		} else {
-			// Unscoped: all active tasks
-			taskIds = activeTasks.map((t) => t._id);
+		let taskIds: Id<'tasks'>[] = [];
+		if (autoLinkMode !== 'off') {
+			const activeTasks = await ctx.db
+				.query('tasks')
+				.withIndex('by_status_userId', (q) =>
+					q.eq('status', 'active').eq('userId', userId)
+				)
+				.collect();
+
+			if (autoLinkMode === 'all') {
+				// Link all active tasks regardless of tags
+				taskIds = activeTasks.map((t) => t._id);
+			} else {
+				// "scoped" and "startOnly" both use tag scoping at start time
+				if (tagIds.length > 0) {
+					taskIds = activeTasks
+						.filter((t) => t.tagIds.some((tid) => tagIds.includes(tid)))
+						.map((t) => t._id);
+				} else {
+					taskIds = activeTasks.map((t) => t._id);
+				}
+			}
 		}
 
 		const now = Date.now();
 
 		return await ctx.db.insert('sessions', {
-			startTime: now,
+			startTime: args.startTime ?? now,
 			description: args.description,
 			tagIds,
 			taskIds,
@@ -435,7 +476,7 @@ export async function getActiveSession(
 
 /**
  * Auto-link a task to the active session if it matches the session's
- * tag scope.
+ * tag scope and the user's autoLinkMode allows it.
  *
  * Called from tasks.updateStatus when a task moves to "active" or
  * "done" and there's a running timer.
@@ -446,18 +487,27 @@ export async function autoLinkTask(
 	taskId: Id<'tasks'>,
 	taskTagIds: Id<'tags'>[]
 ) {
+	// Check user's auto-link preference
+	const autoLinkMode = await getAutoLinkMode(ctx, userId);
+
+	// "off" and "startOnly" skip linking on status changes
+	if (autoLinkMode === 'off' || autoLinkMode === 'startOnly') return;
+
 	const session = await getActiveSession(ctx, userId);
 	if (session === null) return;
 
 	// Already linked?
 	if (session.taskIds.includes(taskId)) return;
 
-	// Tag scope check: if session has tags, task must share at least one
-	if (
-		session.tagIds.length > 0 &&
-		!taskTagIds.some((tid) => session.tagIds.includes(tid))
-	) {
-		return;
+	// "all" mode skips tag scope check
+	if (autoLinkMode === 'scoped') {
+		// Tag scope check: if session has tags, task must share at least one
+		if (
+			session.tagIds.length > 0 &&
+			!taskTagIds.some((tid) => session.tagIds.includes(tid))
+		) {
+			return;
+		}
 	}
 
 	await ctx.db.patch(session._id, {

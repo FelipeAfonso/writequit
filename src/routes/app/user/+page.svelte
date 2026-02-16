@@ -58,6 +58,7 @@
 	// ── Settings state ─────────────────────────────────────────────
 	type StatusFilter = 'lastUsed' | 'all' | 'inbox' | 'active' | 'done';
 	type TagFilter = 'lastUsed' | 'all';
+	type AutoLinkMode = 'all' | 'scoped' | 'startOnly' | 'off';
 
 	let settingsSaving = $state(false);
 
@@ -87,6 +88,10 @@
 		await updateSetting({ defaultTagFilter: value });
 	}
 
+	async function setAutoLinkMode(value: AutoLinkMode) {
+		await updateSetting({ autoLinkMode: value });
+	}
+
 	const statusOptions: { value: StatusFilter; label: string }[] = [
 		{ value: 'lastUsed', label: 'last used' },
 		{ value: 'all', label: 'all' },
@@ -98,6 +103,29 @@
 	const tagOptions: { value: TagFilter; label: string }[] = [
 		{ value: 'lastUsed', label: 'last used' },
 		{ value: 'all', label: 'all' }
+	];
+
+	const autoLinkOptions: {
+		value: AutoLinkMode;
+		label: string;
+		desc: string;
+	}[] = [
+		{
+			value: 'all',
+			label: 'all active',
+			desc: 'link all active tasks, ignore tags'
+		},
+		{
+			value: 'scoped',
+			label: 'tag-scoped',
+			desc: 'link tasks sharing session tags'
+		},
+		{
+			value: 'startOnly',
+			label: 'start only',
+			desc: 'link at timer start, not on status changes'
+		},
+		{ value: 'off', label: 'off', desc: 'never auto-link' }
 	];
 
 	// ── Timezone state ──────────────────────────────────────────────
@@ -356,6 +384,39 @@
 						</button>
 					{/each}
 				</div>
+			</div>
+
+			<!-- Auto-link sessions -->
+			<div class="flex flex-col gap-2">
+				<div class="flex flex-col gap-0.5">
+					<span class="font-mono text-sm text-fg-dark">auto-link sessions</span>
+					<span class="font-mono text-xs text-fg-muted">
+						how tasks are automatically linked to time sessions
+					</span>
+				</div>
+				<div class="flex flex-wrap gap-1.5">
+					{#each autoLinkOptions as opt (opt.value)}
+						<button
+							type="button"
+							class="cursor-pointer border px-2 py-1 font-mono text-xs transition-colors"
+							class:border-primary={userSettings.data.autoLinkMode ===
+								opt.value}
+							class:text-primary={userSettings.data.autoLinkMode === opt.value}
+							class:bg-surface-2={userSettings.data.autoLinkMode === opt.value}
+							class:border-border={userSettings.data.autoLinkMode !== opt.value}
+							class:text-fg-muted={userSettings.data.autoLinkMode !== opt.value}
+							onclick={() => setAutoLinkMode(opt.value)}
+							title={opt.desc}
+						>
+							{opt.label}
+						</button>
+					{/each}
+				</div>
+				<span class="font-mono text-xs text-fg-muted">
+					{autoLinkOptions.find(
+						(o) => o.value === userSettings.data.autoLinkMode
+					)?.desc ?? ''}
+				</span>
 			</div>
 		{/if}
 	</section>

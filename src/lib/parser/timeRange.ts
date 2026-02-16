@@ -4,11 +4,20 @@
  * Syntax:
  *   :log [date] HH:MM-HH:MM [+tags...] ["description"]
  *
+ * Supports both 24-hour and 12-hour (am/pm) time formats:
+ *   14:00-18:00      24-hour
+ *   2:00pm-6:00pm    12-hour with minutes
+ *   2pm-6pm          12-hour without minutes (defaults to :00)
+ *   12am-1am         midnight to 1am
+ *   12pm-1pm         noon to 1pm
+ *
  * Examples:
  *   :log 14:00-18:00 +projx "Killed the beast"
  *   :log yesterday 09:00-17:00 +backend
  *   :log 2026-02-03 14:00-18:00 +projx "Worked on API"
  *   :log 10:00-12:30
+ *   :log 2pm-6pm +frontend "built the UI"
+ *   :log yesterday 9:30am-5:00pm +backend
  *
  * Reuses the existing date parsers from dueDate.ts and the tag
  * extractor from tags.ts.
@@ -133,15 +142,19 @@ function extractDescription(input: string): {
 }
 
 /**
- * Check if a token looks like a time range: HH:MM-HH:MM.
+ * Check if a token looks like a time range: HH:MM-HH:MM or with am/pm.
  *
  * Quick structural check — doesn't validate the actual values.
+ * Supports: 14:00-18:00, 2:00pm-6:00pm, 2pm-6pm, 12am-1am
  */
 function isTimeRange(token: string): boolean {
-	// Minimum: H:MM-H:MM (9 chars), maximum: HH:MM-HH:MM (11 chars)
-	if (token.length < 9 || token.length > 11) return false;
+	// Minimum: Ham-Ham (7 chars), maximum: HH:MMam-HH:MMam (15 chars)
+	if (token.length < 7 || token.length > 15) return false;
 
-	const dash = token.indexOf('-');
+	// Find the dash separating start-end. Skip leading digits/colon/am/pm
+	// to avoid matching the minus sign inside a negative number.
+	// The dash must sit between two time-like segments.
+	const dash = findTimeRangeDash(token);
 	if (dash === -1) return false;
 
 	const left = token.slice(0, dash);
@@ -151,30 +164,90 @@ function isTimeRange(token: string): boolean {
 }
 
 /**
- * Check if a string looks like a time: H:MM or HH:MM.
+ * Find the dash that separates two times in a range token.
+ *
+ * Skips past the first time segment (digits, colon, am/pm) to
+ * find the separating `-`.
+ */
+function findTimeRangeDash(token: string): number {
+	const lower = token.toLowerCase();
+	let i = 0;
+
+	// Skip digits (hours)
+	while (i < lower.length && isDigit(lower[i])) i++;
+
+	// Optionally skip :MM
+	if (i < lower.length && lower[i] === ':') {
+		i++; // skip ':'
+		while (i < lower.length && isDigit(lower[i])) i++;
+	}
+
+	// Optionally skip am/pm suffix
+	if (
+		i + 1 < lower.length &&
+		(lower[i] === 'a' || lower[i] === 'p') &&
+		lower[i + 1] === 'm'
+	) {
+		i += 2;
+	}
+
+	// Now we should be at the dash
+	if (i < lower.length && lower[i] === '-') return i;
+
+	return -1;
+}
+
+/**
+ * Check if a string looks like a time value.
+ *
+ * Supported formats (case-insensitive):
+ *   H:MM, HH:MM          24-hour (4-5 chars)
+ *   Ham, Hpm, HHam, HHpm 12-hour no minutes (3-4 chars)
+ *   H:MMam, HH:MMam      12-hour with minutes (6-7 chars)
  */
 function looksLikeTime(s: string): boolean {
-	if (s.length < 4 || s.length > 5) return false;
-	const colon = s.indexOf(':');
-	if (colon < 1 || colon > 2) return false;
+	if (s.length < 3 || s.length > 7) return false;
+	const lower = s.toLowerCase();
 
-	for (let i = 0; i < s.length; i++) {
+	// Check for am/pm suffix
+	const hasMeridiem = lower.endsWith('am') || lower.endsWith('pm');
+	const core = hasMeridiem ? lower.slice(0, -2) : lower;
+
+	// Core must be: H, HH, H:MM, or HH:MM
+	if (core.length < 1 || core.length > 5) return false;
+
+	const colon = core.indexOf(':');
+	if (colon === -1) {
+		// No colon: must be just digits (H or HH), and must have am/pm
+		if (!hasMeridiem) return false;
+		for (let i = 0; i < core.length; i++) {
+			if (!isDigit(core[i])) return false;
+		}
+		return core.length >= 1 && core.length <= 2;
+	}
+
+	// Has colon: H:MM or HH:MM
+	if (colon < 1 || colon > 2) return false;
+	if (core.length - colon - 1 !== 2) return false;
+
+	for (let i = 0; i < core.length; i++) {
 		if (i === colon) continue;
-		if (!isDigit(s[i])) return false;
+		if (!isDigit(core[i])) return false;
 	}
 	return true;
 }
 
 /**
- * Parse a time range token like "14:00-18:00" into start/end
- * minutes since midnight.
+ * Parse a time range token like "14:00-18:00" or "2pm-6pm" into
+ * start/end minutes since midnight.
  *
- * Returns null if the times are invalid (hours > 23, minutes > 59).
+ * Returns null if the times are invalid.
  */
 function parseTimeRange(
 	token: string
 ): { startMinutes: number; endMinutes: number } | null {
-	const dash = token.indexOf('-');
+	const dash = findTimeRangeDash(token);
+	if (dash === -1) return null;
 	const startStr = token.slice(0, dash);
 	const endStr = token.slice(dash + 1);
 
@@ -187,17 +260,127 @@ function parseTimeRange(
 }
 
 /**
- * Parse "HH:MM" or "H:MM" into minutes since midnight.
+ * Parse a time string into minutes since midnight.
  *
- * Returns null if hours > 23 or minutes > 59.
+ * Supports:
+ *   "HH:MM", "H:MM"           24-hour format
+ *   "Ham", "Hpm", "HHam"      12-hour without minutes (defaults to :00)
+ *   "H:MMam", "HH:MMpm"       12-hour with minutes
+ *
+ * Returns null if the time is invalid.
  */
 function parseTimeToMinutes(time: string): number | null {
-	const colon = time.indexOf(':');
-	const hours = parseInt(time.slice(0, colon), 10);
-	const minutes = parseInt(time.slice(colon + 1), 10);
+	const lower = time.toLowerCase();
 
-	if (hours < 0 || hours > 23) return null;
+	// Detect am/pm
+	const isPM = lower.endsWith('pm');
+	const isAM = lower.endsWith('am');
+	const hasMeridiem = isPM || isAM;
+	const core = hasMeridiem ? lower.slice(0, -2) : lower;
+
+	const colon = core.indexOf(':');
+	let hours: number;
+	let minutes: number;
+
+	if (colon === -1) {
+		// No colon: bare hour like "2pm" or "12am"
+		if (!hasMeridiem) return null;
+		hours = parseInt(core, 10);
+		minutes = 0;
+	} else {
+		hours = parseInt(core.slice(0, colon), 10);
+		minutes = parseInt(core.slice(colon + 1), 10);
+	}
+
+	if (isNaN(hours) || isNaN(minutes)) return null;
 	if (minutes < 0 || minutes > 59) return null;
 
+	if (hasMeridiem) {
+		// 12-hour: hours must be 1-12
+		if (hours < 1 || hours > 12) return null;
+		if (isPM && hours !== 12) hours += 12;
+		if (isAM && hours === 12) hours = 0;
+	} else {
+		// 24-hour: hours must be 0-23
+		if (hours < 0 || hours > 23) return null;
+	}
+
 	return hours * 60 + minutes;
+}
+
+// ── Offset parser ─────────────────────────────────────────────────
+
+/**
+ * Parse a duration offset string into milliseconds.
+ *
+ * Supports:
+ *   -30m       → 30 minutes in ms
+ *   -1h        → 1 hour in ms
+ *   -2h30m     → 2 hours 30 minutes in ms
+ *   -45m       → 45 minutes in ms
+ *
+ * The leading `-` is optional (both `-30m` and `30m` work).
+ * Returns null if the format is invalid.
+ */
+export function parseOffset(value: string): number | null {
+	let s = value.trim().toLowerCase();
+	// Strip optional leading minus
+	if (s.startsWith('-')) s = s.slice(1);
+	if (s.length === 0) return null;
+
+	let totalMs = 0;
+	let matched = false;
+
+	// Match hours
+	const hMatch = s.match(/^(\d+)h/);
+	if (hMatch) {
+		totalMs += parseInt(hMatch[1], 10) * 60 * 60_000;
+		s = s.slice(hMatch[0].length);
+		matched = true;
+	}
+
+	// Match minutes
+	const mMatch = s.match(/^(\d+)m/);
+	if (mMatch) {
+		totalMs += parseInt(mMatch[1], 10) * 60_000;
+		s = s.slice(mMatch[0].length);
+		matched = true;
+	}
+
+	// Must have matched something and consumed everything
+	if (!matched || s.length > 0) return null;
+
+	return totalMs;
+}
+
+/**
+ * Extract `-o` or `--offset` flag and its value from an args string.
+ *
+ * Returns the offset in ms and the remaining args string (with the
+ * flag and value removed).
+ *
+ * Returns `{ offsetMs: 0, remaining: args }` if no offset flag found.
+ * Returns `null` if the flag is present but the value is missing/invalid.
+ */
+export function extractOffset(args: string): {
+	offsetMs: number;
+	remaining: string;
+} | null {
+	const tokens = args.split(/\s+/);
+	const flagIdx = tokens.findIndex((t) => t === '-o' || t === '--offset');
+
+	if (flagIdx === -1) return { offsetMs: 0, remaining: args };
+
+	const valueToken = tokens[flagIdx + 1];
+	if (!valueToken) return null;
+
+	const ms = parseOffset(valueToken);
+	if (ms === null) return null;
+
+	// Remove the flag and its value from tokens
+	const remaining = [...tokens.slice(0, flagIdx), ...tokens.slice(flagIdx + 2)]
+		.join(' ')
+		.trim();
+
+	return { offsetMs: ms, remaining };
 }

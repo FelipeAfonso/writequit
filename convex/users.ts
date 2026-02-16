@@ -15,7 +15,8 @@ const SETTINGS_DEFAULTS = {
 	defaultCurrency: undefined as string | undefined,
 	defaultPaymentTerms: undefined as string | undefined,
 	defaultInvoiceTheme: undefined as 'dark' | 'light' | undefined,
-	tutorialCompleted: false
+	tutorialCompleted: false,
+	autoLinkMode: 'scoped' as 'all' | 'scoped' | 'startOnly' | 'off'
 };
 
 // ── Auth helpers ───────────────────────────────────────────────────
@@ -94,7 +95,8 @@ export const getSettings = query({
 			defaultCurrency: row.defaultCurrency,
 			defaultPaymentTerms: row.defaultPaymentTerms,
 			defaultInvoiceTheme: row.defaultInvoiceTheme,
-			tutorialCompleted: row.tutorialCompleted ?? false
+			tutorialCompleted: row.tutorialCompleted ?? false,
+			autoLinkMode: row.autoLinkMode ?? SETTINGS_DEFAULTS.autoLinkMode
 		};
 	}
 });
@@ -196,7 +198,15 @@ export const updateSettings = mutation({
 		defaultInvoiceTheme: v.optional(
 			v.union(v.literal('dark'), v.literal('light'))
 		),
-		tutorialCompleted: v.optional(v.boolean())
+		tutorialCompleted: v.optional(v.boolean()),
+		autoLinkMode: v.optional(
+			v.union(
+				v.literal('all'),
+				v.literal('scoped'),
+				v.literal('startOnly'),
+				v.literal('off')
+			)
+		)
 	},
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
@@ -226,6 +236,7 @@ export const updateSettings = mutation({
 			patch.defaultInvoiceTheme = args.defaultInvoiceTheme;
 		if (args.tutorialCompleted !== undefined)
 			patch.tutorialCompleted = args.tutorialCompleted;
+		if (args.autoLinkMode !== undefined) patch.autoLinkMode = args.autoLinkMode;
 
 		if (existing) {
 			await ctx.db.patch(existing._id, patch);
@@ -243,7 +254,8 @@ export const updateSettings = mutation({
 				defaultCurrency: args.defaultCurrency,
 				defaultPaymentTerms: args.defaultPaymentTerms,
 				defaultInvoiceTheme: args.defaultInvoiceTheme,
-				tutorialCompleted: args.tutorialCompleted
+				tutorialCompleted: args.tutorialCompleted,
+				autoLinkMode: args.autoLinkMode
 			});
 		}
 	}
