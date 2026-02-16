@@ -187,7 +187,23 @@ export const active = query({
 		const user = await getCurrentUser(ctx);
 		if (user === null) return null;
 
-		return await getActiveSession(ctx, user._id);
+		const session = await getActiveSession(ctx, user._id);
+		if (session === null) return null;
+
+		// Resolve tags for display
+		const tags = await Promise.all(
+			session.tagIds.map(async (tagId) => {
+				const tag = await ctx.db.get(tagId);
+				return tag
+					? { _id: tag._id, name: tag.name, color: tag.color, type: tag.type }
+					: null;
+			})
+		);
+
+		return {
+			...session,
+			tags: tags.filter((t) => t !== null)
+		};
 	}
 });
 
@@ -242,7 +258,8 @@ export const log = mutation({
 export const start = mutation({
 	args: {
 		description: v.optional(v.string()),
-		tags: v.array(v.string())
+		tags: v.array(v.string()),
+		startTime: v.optional(v.number())
 	},
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
@@ -280,7 +297,7 @@ export const start = mutation({
 		const now = Date.now();
 
 		return await ctx.db.insert('sessions', {
-			startTime: now,
+			startTime: args.startTime ?? now,
 			description: args.description,
 			tagIds,
 			taskIds,

@@ -159,10 +159,15 @@
 					tags: args.tags
 				});
 			},
-			startTimer: async (args: { description?: string; tags: string[] }) => {
+			startTimer: async (args: {
+				description?: string;
+				tags: string[];
+				startTime?: number;
+			}) => {
 				await client.mutation(api.sessions.start, {
 					description: args.description,
-					tags: args.tags
+					tags: args.tags,
+					startTime: args.startTime
 				});
 			},
 			stopTimer: async () => {
@@ -799,6 +804,93 @@
 										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
 									>
 										:log
+									</kbd>
+								</div>
+							</div>
+						</div>
+						<div>
+							<h3 class="mb-2 font-mono text-xs font-bold text-fg-muted">
+								session list
+							</h3>
+							<div class="flex flex-col gap-1.5">
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										focus start
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										s
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">move down</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										j / ↓
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">move up</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										k / ↑
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">date range</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										h l / ← →
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										open session
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										Enter
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										first / last
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										gg / G
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">toggle tag</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										t 1-9
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">clear tags</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										t 0
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										delete session
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										dd
 									</kbd>
 								</div>
 							</div>
