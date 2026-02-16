@@ -7,7 +7,7 @@
  */
 
 import { goto } from '$app/navigation';
-import { parseTimeLog } from '$lib/parser/timeRange';
+import { parseTimeLog, extractOffset } from '$lib/parser/timeRange';
 import { extractTags } from '$lib/parser/tags';
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -36,6 +36,7 @@ export interface CommandContext {
 	startTimer?: (args: {
 		description?: string;
 		tags: string[];
+		startTime?: number;
 	}) => Promise<void>;
 	/** Stop the running timer. */
 	stopTimer?: () => Promise<void>;
@@ -237,15 +238,26 @@ export const commands: Command[] = [
 		aliases: ['start'],
 		description: 'start a timer',
 		args: 'optional',
-		argsPlaceholder: '[+tag] ["desc"]',
+		argsPlaceholder: '[-o <offset>] [+tag] ["desc"]',
 		async execute(args, ctx) {
 			if (!ctx.startTimer) return 'timer not available';
 
-			const tags = extractTags(args);
-			const description = extractQuotedString(args);
+			// Parse optional offset flag: -o/--offset <duration>
+			const offset = extractOffset(args);
+			if (offset === null) {
+				return 'invalid offset — use e.g. -o -30m, -o -1h, -o -2h30m';
+			}
+			const cleanArgs = offset.remaining;
+
+			const tags = extractTags(cleanArgs);
+			const description = extractQuotedString(cleanArgs);
+
+			// Compute start time (offset goes back in time)
+			const startTime =
+				offset.offsetMs > 0 ? Date.now() - offset.offsetMs : undefined;
 
 			try {
-				await ctx.startTimer({ description, tags });
+				await ctx.startTimer({ description, tags, startTime });
 			} catch (err) {
 				return err instanceof Error ? err.message : 'failed to start timer';
 			}
