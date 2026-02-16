@@ -36,9 +36,13 @@
 	let isAdminUser = $derived(adminQuery.data === true);
 
 	// ── Timezone ────────────────────────────────────────────────────
-	const userSettings = useQuery(api.users.getSettings, {}, () => ({
-		initialData: data.preloaded?.settings
-	}));
+	const userSettings = useQuery(
+		api.users.getSettings,
+		() => (auth.isAuthenticated ? {} : 'skip'),
+		() => ({
+			initialData: data.preloaded?.settings
+		})
+	);
 	const browserTz = detectTimezone();
 
 	// Use server-stored timezone if available, otherwise fall back to browser.
@@ -105,14 +109,12 @@
 	let showTutorial = $state(false);
 
 	// Auto-show tutorial for new users who haven't completed it.
-	// The local guard prevents re-triggering within the same mount;
-	// after completeTutorial persists the flag, subsequent mounts read
-	// tutorialCompleted === true from the DB and never enter the branch.
+	// The query is skipped until auth resolves, so userSettings.data
+	// is only populated with real user data — never unauthenticated defaults.
 	let tutorialAutoShown = false;
 	$effect(() => {
 		if (
 			!tutorialAutoShown &&
-			auth.isAuthenticated &&
 			userSettings.data &&
 			!userSettings.data.tutorialCompleted
 		) {
