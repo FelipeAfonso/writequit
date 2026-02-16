@@ -237,14 +237,21 @@
 			}
 		});
 
-		// Seed empty editor with '# ' on focus so the user starts with a title
+		// Seed empty editor with '# ' on focus so the user starts with a title.
+		// Deferred via requestAnimationFrame so the browser (and vim) finish
+		// processing the click/focus event before we mutate the document;
+		// otherwise the inserted text ends up selected / in visual mode.
 		const seedOnFocus = EditorView.domEventHandlers({
 			focusin(_, v) {
 				if (v.state.doc.length === 0) {
-					const insert = '# ';
-					v.dispatch({
-						changes: { from: 0, insert },
-						selection: { anchor: insert.length }
+					requestAnimationFrame(() => {
+						if (v.state.doc.length === 0) {
+							const insert = '# ';
+							v.dispatch({
+								changes: { from: 0, insert },
+								selection: { anchor: insert.length }
+							});
+						}
 					});
 				}
 			}
