@@ -3,6 +3,8 @@ import { v } from 'convex/values';
 import type { MutationCtx, QueryCtx } from './_generated/server';
 import type { Id } from './_generated/dataModel';
 import { getCurrentUser, getCurrentUserOrThrow } from './users.js';
+import { parseTask } from '../src/lib/parser/index.js';
+import { isTagChar, isWhitespace, toLower } from '../src/lib/parser/scanner.js';
 
 // ── Queries ────────────────────────────────────────────────────────
 
@@ -84,21 +86,107 @@ export const update = mutation({
 	}
 });
 
-/** Delete a tag. Does NOT remove tag references from tasks. */
+/** Delete a tag and remove its `+tag` tokens from affected task content. */
 export const remove = mutation({
 	args: { id: v.id('tags') },
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
+		const userId = user._id;
 
 		const tag = await ctx.db.get(args.id);
-		if (tag === null || tag.userId !== user._id)
-			throw new Error('Tag not found');
+		if (tag === null || tag.userId !== userId) throw new Error('Tag not found');
+
+		const tz = await getUserTimezone(ctx, userId);
+		const tasks = await ctx.db
+			.query('tasks')
+			.withIndex('by_userId', (q) => q.eq('userId', userId))
+			.collect();
+		const affected = tasks.filter((task) => task.tagIds.includes(args.id));
+
+		for (const task of affected) {
+			const rawContent = removeTagToken(task.rawContent, tag.name);
+			const parsed = parseTask(rawContent, tz);
+			const tagIds = await Promise.all(
+				parsed.tags.map((name) => getOrCreateTag(ctx, name, userId))
+			);
+
+			await ctx.db.patch(task._id, {
+				rawContent,
+				title: parsed.title,
+				dueDate: parsed.dueDate ?? undefined,
+				tagIds,
+				updatedAt: Date.now()
+			});
+		}
 
 		await ctx.db.delete(args.id);
 	}
 });
 
 // ── Internal helpers ───────────────────────────────────────────────
+
+/** Look up the user's timezone from settings, defaulting to UTC. */
+async function getUserTimezone(
+	ctx: MutationCtx,
+	userId: Id<'users'>
+): Promise<string> {
+	const settings = await ctx.db
+		.query('userSettings')
+		.withIndex('by_userId', (q) => q.eq('userId', userId))
+		.unique();
+	return settings?.timezone ?? 'UTC';
+}
+
+/** Remove only the specified `+tag` token from markdown content. */
+function removeTagToken(markdown: string, targetTag: string): string {
+	const normalizedTarget = toLower(targetTag);
+	const result: string[] = [];
+	let i = 0;
+
+	while (i < markdown.length) {
+		const atBoundary = i === 0 || isWhitespace(markdown[i - 1]);
+		if (atBoundary && markdown[i] === '+') {
+			const nameStart = i + 1;
+			let nameEnd = nameStart;
+			while (nameEnd < markdown.length && isTagChar(markdown[nameEnd])) {
+				nameEnd++;
+			}
+
+			if (nameEnd > nameStart) {
+				const name = toLower(markdown.slice(nameStart, nameEnd));
+				if (name === normalizedTarget) {
+					if (nameEnd < markdown.length && markdown[nameEnd] === ' ') {
+						nameEnd++;
+					}
+					i = nameEnd;
+					continue;
+				}
+			}
+		}
+
+		result.push(markdown[i]);
+		i++;
+	}
+
+	return cleanupWhitespace(result.join(''));
+}
+
+/** Collapse space artifacts and trim trailing whitespace per line. */
+function cleanupWhitespace(text: string): string {
+	const lines = text.split('\n');
+	return lines
+		.map((line) => trimEnd(line.replace(/ {2,}/g, ' ')))
+		.join('\n')
+		.trim();
+}
+
+function trimEnd(s: string): string {
+	let end = s.length;
+	while (end > 0 && (s[end - 1] === ' ' || s[end - 1] === '\t')) {
+		end--;
+	}
+	return s.slice(0, end);
+}
 
 /**
  * Find an existing tag by name for a user, or create it.
