@@ -147,7 +147,7 @@ export const cleanupTagDeleteBatch = internalMutation({
 				await ctx.db.patch(task._id, {
 					rawContent,
 					title: parsed.title,
-					dueDate: parsed.dueDate ?? undefined,
+					dueDate: parsed.dueDate ?? task.dueDate,
 					tagIds,
 					updatedAt: now
 				});
