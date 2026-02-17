@@ -1,10 +1,13 @@
-import { query, mutation } from './_generated/server';
+import { query, mutation, internalMutation } from './_generated/server';
 import { v } from 'convex/values';
 import type { MutationCtx, QueryCtx } from './_generated/server';
 import type { Id } from './_generated/dataModel';
 import { getCurrentUser, getCurrentUserOrThrow } from './users.js';
 import { parseTask } from '../src/lib/parser/index.js';
 import { isTagChar, isWhitespace, toLower } from '../src/lib/parser/scanner.js';
+import { internal } from './_generated/api.js';
+
+const TAG_DELETE_BATCH_SIZE = 50;
 
 // ── Queries ────────────────────────────────────────────────────────
 
@@ -86,7 +89,7 @@ export const update = mutation({
 	}
 });
 
-/** Delete a tag and remove its `+tag` tokens from affected task content. */
+/** Delete a tag and asynchronously clean up references in tasks/sessions. */
 export const remove = mutation({
 	args: { id: v.id('tags') },
 	handler: async (ctx, args) => {
@@ -97,43 +100,97 @@ export const remove = mutation({
 		if (tag === null || tag.userId !== userId) throw new Error('Tag not found');
 
 		const tz = await getUserTimezone(ctx, userId);
-		const tasks = await ctx.db
-			.query('tasks')
-			.withIndex('by_userId', (q) => q.eq('userId', userId))
-			.collect();
-		const affected = tasks.filter((task) => task.tagIds.includes(args.id));
-
-		for (const task of affected) {
-			const rawContent = removeTagToken(task.rawContent, tag.name);
-			const parsed = parseTask(rawContent, tz);
-			const tagIds = await Promise.all(
-				parsed.tags.map((name) => getOrCreateTag(ctx, name, userId))
-			);
-
-			await ctx.db.patch(task._id, {
-				rawContent,
-				title: parsed.title,
-				dueDate: parsed.dueDate ?? undefined,
-				tagIds,
-				updatedAt: Date.now()
-			});
-		}
-
-		const sessions = await ctx.db
-			.query('sessions')
-			.withIndex('by_userId', (q) => q.eq('userId', userId))
-			.collect();
-		const affectedSessions = sessions.filter((session) =>
-			session.tagIds.includes(args.id)
-		);
-		for (const session of affectedSessions) {
-			await ctx.db.patch(session._id, {
-				tagIds: session.tagIds.filter((tagId) => tagId !== args.id),
-				updatedAt: Date.now()
-			});
-		}
+		await ctx.scheduler.runAfter(0, internal.tags.cleanupTagDeleteBatch, {
+			userId,
+			tagId: args.id,
+			tagName: tag.name,
+			tz,
+			phase: 'tasks'
+		});
 
 		await ctx.db.delete(args.id);
+	}
+});
+
+/** Internal batched worker for tag deletion cleanup. */
+export const cleanupTagDeleteBatch = internalMutation({
+	args: {
+		userId: v.id('users'),
+		tagId: v.id('tags'),
+		tagName: v.string(),
+		tz: v.string(),
+		phase: v.union(v.literal('tasks'), v.literal('sessions')),
+		cursor: v.optional(v.string())
+	},
+	handler: async (ctx, args) => {
+		const now = Date.now();
+
+		if (args.phase === 'tasks') {
+			const page = await ctx.db
+				.query('tasks')
+				.withIndex('by_userId', (q) => q.eq('userId', args.userId))
+				.paginate({
+					numItems: TAG_DELETE_BATCH_SIZE,
+					cursor: args.cursor ?? null
+				});
+
+			for (const task of page.page) {
+				if (!task.tagIds.includes(args.tagId)) continue;
+
+				const rawContent = removeTagToken(task.rawContent, args.tagName);
+				const parseAnchor = task.updatedAt ?? task.createdAt ?? now;
+				const parsed = parseTask(rawContent, args.tz, parseAnchor);
+				const tagIds = await Promise.all(
+					parsed.tags.map((name) => getOrCreateTag(ctx, name, args.userId))
+				);
+
+				await ctx.db.patch(task._id, {
+					rawContent,
+					title: parsed.title,
+					dueDate: parsed.dueDate ?? undefined,
+					tagIds,
+					updatedAt: now
+				});
+			}
+
+			if (!page.isDone) {
+				await ctx.scheduler.runAfter(0, internal.tags.cleanupTagDeleteBatch, {
+					...args,
+					cursor: page.continueCursor
+				});
+				return;
+			}
+
+			await ctx.scheduler.runAfter(0, internal.tags.cleanupTagDeleteBatch, {
+				...args,
+				phase: 'sessions',
+				cursor: undefined
+			});
+			return;
+		}
+
+		const page = await ctx.db
+			.query('sessions')
+			.withIndex('by_userId', (q) => q.eq('userId', args.userId))
+			.paginate({
+				numItems: TAG_DELETE_BATCH_SIZE,
+				cursor: args.cursor ?? null
+			});
+
+		for (const session of page.page) {
+			if (!session.tagIds.includes(args.tagId)) continue;
+			await ctx.db.patch(session._id, {
+				tagIds: session.tagIds.filter((tagId) => tagId !== args.tagId),
+				updatedAt: now
+			});
+		}
+
+		if (!page.isDone) {
+			await ctx.scheduler.runAfter(0, internal.tags.cleanupTagDeleteBatch, {
+				...args,
+				cursor: page.continueCursor
+			});
+		}
 	}
 });
 
