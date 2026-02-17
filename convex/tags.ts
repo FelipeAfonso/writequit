@@ -1,8 +1,13 @@
-import { query, mutation } from './_generated/server';
+import { query, mutation, internalMutation } from './_generated/server';
 import { v } from 'convex/values';
 import type { MutationCtx, QueryCtx } from './_generated/server';
 import type { Id } from './_generated/dataModel';
 import { getCurrentUser, getCurrentUserOrThrow } from './users.js';
+import { parseTask } from '../src/lib/parser/index.js';
+import { isTagChar, isWhitespace, toLower } from '../src/lib/parser/scanner.js';
+import { internal } from './_generated/api.js';
+
+const TAG_DELETE_BATCH_SIZE = 50;
 
 // ── Queries ────────────────────────────────────────────────────────
 
@@ -84,21 +89,160 @@ export const update = mutation({
 	}
 });
 
-/** Delete a tag. Does NOT remove tag references from tasks. */
+/** Delete a tag and asynchronously clean up references in tasks/sessions. */
 export const remove = mutation({
 	args: { id: v.id('tags') },
 	handler: async (ctx, args) => {
 		const user = await getCurrentUserOrThrow(ctx);
+		const userId = user._id;
 
 		const tag = await ctx.db.get(args.id);
-		if (tag === null || tag.userId !== user._id)
-			throw new Error('Tag not found');
+		if (tag === null || tag.userId !== userId) throw new Error('Tag not found');
+
+		const tz = await getUserTimezone(ctx, userId);
+		await ctx.scheduler.runAfter(0, internal.tags.cleanupTagDeleteBatch, {
+			userId,
+			tagId: args.id,
+			tagName: tag.name,
+			tz,
+			phase: 'tasks'
+		});
 
 		await ctx.db.delete(args.id);
 	}
 });
 
+/** Internal batched worker for tag deletion cleanup. */
+export const cleanupTagDeleteBatch = internalMutation({
+	args: {
+		userId: v.id('users'),
+		tagId: v.id('tags'),
+		tagName: v.string(),
+		tz: v.string(),
+		phase: v.union(v.literal('tasks'), v.literal('sessions')),
+		cursor: v.optional(v.string())
+	},
+	handler: async (ctx, args) => {
+		const now = Date.now();
+
+		if (args.phase === 'tasks') {
+			const page = await ctx.db
+				.query('tasks')
+				.withIndex('by_userId', (q) => q.eq('userId', args.userId))
+				.paginate({
+					numItems: TAG_DELETE_BATCH_SIZE,
+					cursor: args.cursor ?? null
+				});
+
+			for (const task of page.page) {
+				if (!task.tagIds.includes(args.tagId)) continue;
+
+				const rawContent = removeTagToken(task.rawContent, args.tagName);
+				const parseAnchor = task.updatedAt ?? task.createdAt ?? now;
+				const parsed = parseTask(rawContent, args.tz, parseAnchor);
+				const tagIds = await Promise.all(
+					parsed.tags.map((name) => getOrCreateTag(ctx, name, args.userId))
+				);
+
+				await ctx.db.patch(task._id, {
+					rawContent,
+					title: parsed.title,
+					dueDate: parsed.dueDate ?? task.dueDate,
+					tagIds,
+					updatedAt: now
+				});
+			}
+
+			if (!page.isDone) {
+				await ctx.scheduler.runAfter(0, internal.tags.cleanupTagDeleteBatch, {
+					...args,
+					cursor: page.continueCursor
+				});
+				return;
+			}
+
+			await ctx.scheduler.runAfter(0, internal.tags.cleanupTagDeleteBatch, {
+				...args,
+				phase: 'sessions',
+				cursor: undefined
+			});
+			return;
+		}
+
+		const page = await ctx.db
+			.query('sessions')
+			.withIndex('by_userId', (q) => q.eq('userId', args.userId))
+			.paginate({
+				numItems: TAG_DELETE_BATCH_SIZE,
+				cursor: args.cursor ?? null
+			});
+
+		for (const session of page.page) {
+			if (!session.tagIds.includes(args.tagId)) continue;
+			await ctx.db.patch(session._id, {
+				tagIds: session.tagIds.filter((tagId) => tagId !== args.tagId),
+				updatedAt: now
+			});
+		}
+
+		if (!page.isDone) {
+			await ctx.scheduler.runAfter(0, internal.tags.cleanupTagDeleteBatch, {
+				...args,
+				cursor: page.continueCursor
+			});
+		}
+	}
+});
+
 // ── Internal helpers ───────────────────────────────────────────────
+
+/** Look up the user's timezone from settings, defaulting to UTC. */
+async function getUserTimezone(
+	ctx: MutationCtx,
+	userId: Id<'users'>
+): Promise<string> {
+	const settings = await ctx.db
+		.query('userSettings')
+		.withIndex('by_userId', (q) => q.eq('userId', userId))
+		.unique();
+	return settings?.timezone ?? 'UTC';
+}
+
+/** Remove only the specified `+tag` token from markdown content. */
+function removeTagToken(markdown: string, targetTag: string): string {
+	const normalizedTarget = toLower(targetTag);
+	const result: string[] = [];
+	let removed = false;
+	let i = 0;
+
+	while (i < markdown.length) {
+		const atBoundary = i === 0 || isWhitespace(markdown[i - 1]);
+		if (atBoundary && markdown[i] === '+') {
+			const nameStart = i + 1;
+			let nameEnd = nameStart;
+			while (nameEnd < markdown.length && isTagChar(markdown[nameEnd])) {
+				nameEnd++;
+			}
+
+			if (nameEnd > nameStart) {
+				const name = toLower(markdown.slice(nameStart, nameEnd));
+				if (name === normalizedTarget) {
+					removed = true;
+					if (nameEnd < markdown.length && markdown[nameEnd] === ' ') {
+						nameEnd++;
+					}
+					i = nameEnd;
+					continue;
+				}
+			}
+		}
+
+		result.push(markdown[i]);
+		i++;
+	}
+
+	return removed ? result.join('') : markdown;
+}
 
 /**
  * Find an existing tag by name for a user, or create it.
