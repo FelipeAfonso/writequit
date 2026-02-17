@@ -119,6 +119,20 @@ export const remove = mutation({
 			});
 		}
 
+		const sessions = await ctx.db
+			.query('sessions')
+			.withIndex('by_userId', (q) => q.eq('userId', userId))
+			.collect();
+		const affectedSessions = sessions.filter((session) =>
+			session.tagIds.includes(args.id)
+		);
+		for (const session of affectedSessions) {
+			await ctx.db.patch(session._id, {
+				tagIds: session.tagIds.filter((tagId) => tagId !== args.id),
+				updatedAt: Date.now()
+			});
+		}
+
 		await ctx.db.delete(args.id);
 	}
 });
@@ -141,6 +155,7 @@ async function getUserTimezone(
 function removeTagToken(markdown: string, targetTag: string): string {
 	const normalizedTarget = toLower(targetTag);
 	const result: string[] = [];
+	let removed = false;
 	let i = 0;
 
 	while (i < markdown.length) {
@@ -155,6 +170,7 @@ function removeTagToken(markdown: string, targetTag: string): string {
 			if (nameEnd > nameStart) {
 				const name = toLower(markdown.slice(nameStart, nameEnd));
 				if (name === normalizedTarget) {
+					removed = true;
 					if (nameEnd < markdown.length && markdown[nameEnd] === ' ') {
 						nameEnd++;
 					}
@@ -168,24 +184,7 @@ function removeTagToken(markdown: string, targetTag: string): string {
 		i++;
 	}
 
-	return cleanupWhitespace(result.join(''));
-}
-
-/** Collapse space artifacts and trim trailing whitespace per line. */
-function cleanupWhitespace(text: string): string {
-	const lines = text.split('\n');
-	return lines
-		.map((line) => trimEnd(line.replace(/ {2,}/g, ' ')))
-		.join('\n')
-		.trim();
-}
-
-function trimEnd(s: string): string {
-	let end = s.length;
-	while (end > 0 && (s[end - 1] === ' ' || s[end - 1] === '\t')) {
-		end--;
-	}
-	return s.slice(0, end);
+	return removed ? result.join('') : markdown;
 }
 
 /**
