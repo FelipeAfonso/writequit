@@ -6,7 +6,14 @@ bun.lock
 bun.lockb
 
 # Convex generated
-convex/_generated/
+apps/web/convex/_generated/
+
+# Build output
+**/dist/
+**/.svelte-kit/
 
 # Miscellaneous
-/static/
+**/static/
+
+# Tauri
+apps/desktop/src-tauri/target/

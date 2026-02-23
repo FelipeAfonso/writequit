@@ -1,0 +1,159 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+
+/* Fonts — Iosevka for code/mono, Commit Mono for UI */
+@import '@fontsource/iosevka/400.css';
+@import '@fontsource/iosevka/400-italic.css';
+@import '@fontsource/iosevka/500.css';
+@import '@fontsource/iosevka/600.css';
+@import '@fontsource/iosevka/700.css';
+@import '@fontsource/commit-mono/400.css';
+@import '@fontsource/commit-mono/400-italic.css';
+@import '@fontsource/commit-mono/500.css';
+@import '@fontsource/commit-mono/700.css';
+
+/*
+ * Tokyo Night color scheme
+ * Reference: https://github.com/enkia/tokyo-night-vscode-theme
+ */
+@theme {
+	/* Font families */
+	--font-mono:
+		'Iosevka', ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo,
+		Consolas, 'DejaVu Sans Mono', monospace;
+	--font-ui: 'Commit Mono', 'Iosevka', ui-monospace, monospace;
+	--font-sans: var(--font-ui);
+
+	/* ── Base backgrounds ── */
+	--color-bg: #1a1b26;
+	--color-bg-dark: #16161e;
+	--color-bg-highlight: #292e42;
+	--color-bg-float: #16161e;
+
+	/* ── Surfaces / UI panels ── */
+	--color-surface-0: #1a1b26;
+	--color-surface-1: #1f2335;
+	--color-surface-2: #292e42;
+	--color-surface-3: #3b4261;
+
+	/* ── Foreground / text ── */
+	--color-fg: #c0caf5;
+	--color-fg-dark: #a9b1d6;
+	--color-fg-gutter: #3b4261;
+	--color-fg-muted: #565f89;
+
+	/* ── Borders ── */
+	--color-border: #292e42;
+	--color-border-highlight: #3b4261;
+
+	/* ── Accent colors (Tokyo Night palette) ── */
+	--color-blue: #7aa2f7;
+	--color-cyan: #7dcfff;
+	--color-magenta: #bb9af7;
+	--color-purple: #9d7cd8;
+	--color-orange: #ff9e64;
+	--color-yellow: #e0af68;
+	--color-green: #9ece6a;
+	--color-teal: #73daca;
+	--color-red: #f7768e;
+	--color-red-dark: #db4b4b;
+
+	/* ── Semantic aliases ── */
+	--color-primary: #7aa2f7;
+	--color-secondary: #bb9af7;
+	--color-accent: #7dcfff;
+	--color-success: #9ece6a;
+	--color-warning: #e0af68;
+	--color-error: #f7768e;
+	--color-info: #7dcfff;
+
+	/* ── Terminal colors (for terminal-like UI) ── */
+	--color-terminal-black: #414868;
+	--color-terminal-red: #f7768e;
+	--color-terminal-green: #9ece6a;
+	--color-terminal-yellow: #e0af68;
+	--color-terminal-blue: #7aa2f7;
+	--color-terminal-magenta: #bb9af7;
+	--color-terminal-cyan: #7dcfff;
+	--color-terminal-white: #c0caf5;
+
+	/* ── Selection ── */
+	--color-selection: #283457;
+}
+
+/*
+ * Global base styles — dark mode only
+ */
+html {
+	font-size: 20px;
+	color-scheme: dark;
+}
+
+body {
+	background-color: var(--color-bg);
+	color: var(--color-fg);
+	font-family: var(--font-ui);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+/* Selection styling */
+::selection {
+	background-color: var(--color-selection);
+	color: var(--color-fg);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+	width: 8px;
+	height: 8px;
+}
+
+::-webkit-scrollbar-track {
+	background: var(--color-bg-dark);
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--color-surface-3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--color-fg-muted);
+}
+
+/* Environment badge pulse */
+@keyframes env-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.4;
+	}
+}
+
+.animate-env-pulse {
+	animation: env-pulse 3s ease-in-out infinite;
+}
+
+/* Blinking cursor */
+@keyframes blink {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0;
+	}
+}
+
+.animate-blink {
+	animation: blink 1.2s step-end infinite;
+}
+
+/* Focus ring */
+:focus-visible {
+	outline: 1px solid var(--color-primary);
+	outline-offset: 2px;
+}

@@ -1,0 +1,17 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"paths": {
+			"$lib": ["./src/lib"],
+			"$lib/*": ["./src/lib/*"]
+		},
+		"rootDirs": [".", "./.svelte-kit/types"]
+	},
+	"include": [
+		"src/**/*.ts",
+		"src/**/*.svelte",
+		"src/**/*.svelte.ts",
+		".svelte-kit/types/**/*.ts"
+	],
+	"exclude": ["dist", "node_modules"]
+}

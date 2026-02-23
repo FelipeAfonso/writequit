@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="48"
+   height="48"
+   viewBox="0 0 48 48"
+   version="1.1"
+   id="svg1"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview1"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:document-units="px">
+    <inkscape:page
+       x="0"
+       y="0"
+       width="48"
+       height="48"
+       id="page2"
+       margin="0"
+       bleed="0" />
+  </sodipodi:namedview>
+  <defs
+     id="defs1" />
+  <g
+     inkscape:label="Layer 1"
+     inkscape:groupmode="layer"
+     id="layer1">
+    <rect
+       style="fill:#1a1b26;fill-opacity:1;stroke-width:0.998459"
+       id="rect1"
+       width="48"
+       height="48"
+       x="0"
+       y="0"
+       rx="6"
+       ry="6" />
+    <g
+       id="g1"
+       transform="matrix(12.145458,0,0,12.145458,-216.12923,-328.80875)">
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;line-height:0;font-family:'IosevkaTerm Nerd Font';-inkscape-font-specification:'IosevkaTerm Nerd Font';letter-spacing:-0.298979px;writing-mode:lr-tb;direction:ltr;fill:#000000;stroke-width:0.264583"
+         x="18.659052"
+         y="29.545504"
+         id="text1"
+         inkscape:export-filename="favicon.svg"
+         inkscape:export-xdpi="96"
+         inkscape:export-ydpi="96"><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:0;font-family:'IosevkaTerm Nerd Font';-inkscape-font-specification:'IosevkaTerm Nerd Font';letter-spacing:-0.298979px;fill:#9ece6a;fill-opacity:1;stroke-width:0.264583"
+           x="18.659052"
+           y="29.545504"
+           id="tspan2">wq</tspan></text>
+      <text
+         xml:space="preserve"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;line-height:0;font-family:'IosevkaTerm Nerd Font';-inkscape-font-specification:'IosevkaTerm Nerd Font';letter-spacing:-0.298979px;writing-mode:lr-tb;direction:ltr;fill:#000000;stroke-width:0.264583"
+         x="17.664249"
+         y="29.545504"
+         id="text1-2"><tspan
+           sodipodi:role="line"
+           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:0;font-family:'IosevkaTerm Nerd Font';-inkscape-font-specification:'IosevkaTerm Nerd Font';letter-spacing:-0.298979px;fill:#9ece6a;fill-opacity:1;stroke-width:0.264583"
+           x="17.664249"
+           y="29.545504"
+           id="tspan2-6">:</tspan></text>
+    </g>
+  </g>
+</svg>

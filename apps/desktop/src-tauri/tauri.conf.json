@@ -1,0 +1,29 @@
+{
+	"productName": "writequit",
+	"version": "0.0.1",
+	"identifier": "com.writequit.app",
+	"build": {
+		"frontendDist": "../build",
+		"devUrl": "http://localhost:1338",
+		"beforeDevCommand": "bun run dev",
+		"beforeBuildCommand": "bun run build"
+	},
+	"app": {
+		"windows": [
+			{
+				"title": ":wq",
+				"width": 1200,
+				"height": 800,
+				"minWidth": 600,
+				"minHeight": 400,
+				"decorations": true
+			}
+		],
+		"security": {
+			"csp": null
+		}
+	},
+	"plugins": {
+		"fs": {}
+	}
+}
