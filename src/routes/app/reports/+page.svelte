@@ -217,6 +217,22 @@
 	let invNotes = $state('');
 	let invTheme = $state<InvoiceTheme>('dark');
 
+	// Custom (non-session) line items
+	interface CustomLineItem {
+		label: string;
+		quantity: number;
+		unitPrice: number;
+	}
+	let customLineItems = $state<CustomLineItem[]>([]);
+
+	function addCustomLineItem() {
+		customLineItems.push({ label: '', quantity: 1, unitPrice: 0 });
+	}
+
+	function removeCustomLineItem(index: number) {
+		customLineItems.splice(index, 1);
+	}
+
 	// Pre-fill invoice number from next suggested (once)
 	$effect(() => {
 		if (nextNumber.data && !invNumberPrefilled) {
@@ -288,8 +304,30 @@
 		return items;
 	});
 
+	// Merge session + custom items for submission
+	let allLineItems = $derived.by(() => {
+		const items: InvoiceLineItem[] = computedLineItems.map((item) => ({
+			label: item.label,
+			hours: item.hours,
+			amount: item.amount
+		}));
+
+		for (const ci of customLineItems) {
+			if (!ci.label.trim() || ci.unitPrice <= 0) continue;
+			const qty = ci.quantity || 1;
+			items.push({
+				label: ci.label.trim(),
+				quantity: qty,
+				unitPrice: ci.unitPrice,
+				amount: Math.round(qty * ci.unitPrice * 100) / 100
+			});
+		}
+
+		return items;
+	});
+
 	let invoiceSubtotal = $derived(
-		computedLineItems.reduce((acc, item) => acc + item.amount, 0)
+		allLineItems.reduce((acc, item) => acc + item.amount, 0)
 	);
 
 	async function handleCreateInvoice() {
@@ -304,12 +342,8 @@
 			invoiceError = 'client name is required';
 			return;
 		}
-		if (invHourlyRate <= 0) {
-			invoiceError = 'hourly rate must be greater than 0';
-			return;
-		}
-		if (computedLineItems.length === 0) {
-			invoiceError = 'no billable sessions in this period';
+		if (allLineItems.length === 0) {
+			invoiceError = 'no line items – add sessions or custom items';
 			return;
 		}
 		if (!queryArgs) {
@@ -341,7 +375,7 @@
 				clientAddress: invClientAddress.trim() || undefined,
 				hourlyRate: invHourlyRate,
 				currency: invCurrency,
-				lineItems: computedLineItems,
+				lineItems: allLineItems,
 				subtotal: invoiceSubtotal,
 				total: invoiceSubtotal,
 				paymentTerms: invPaymentTerms.trim() || undefined,
@@ -391,9 +425,10 @@
 			invoiceSuccess = `invoice created: ${created?.invoiceNumber ?? 'success'}`;
 			showInvoiceForm = false;
 
-			// Reset invoice number for next time
+			// Reset form state for next time
 			invNumber = '';
 			invNumberPrefilled = false;
+			customLineItems = [];
 		} catch (err) {
 			invoiceError =
 				err instanceof Error ? err.message : 'failed to create invoice';
@@ -417,7 +452,13 @@
 		clientAddress?: string;
 		hourlyRate: number;
 		currency: string;
-		lineItems: { label: string; hours: number; amount: number }[];
+		lineItems: {
+			label: string;
+			hours?: number;
+			quantity?: number;
+			unitPrice?: number;
+			amount: number;
+		}[];
 		subtotal: number;
 		total: number;
 		paymentTerms?: string;
@@ -1116,59 +1157,129 @@
 				</div>
 
 				<!-- Line items preview -->
-				{#if computedLineItems.length > 0}
+				<div class="flex flex-col gap-4">
+					<!-- Session-based items -->
+					{#if computedLineItems.length > 0}
+						<div class="flex flex-col gap-2">
+							<span class="font-mono text-xs text-fg-muted">
+								session items (auto-grouped by project tag)
+							</span>
+							<div class="border border-border">
+								<!-- Header -->
+								<div
+									class="flex items-center gap-2 border-b border-border bg-surface-2 px-3 py-1.5 font-mono text-xs text-fg-muted"
+								>
+									<span class="flex-1">project</span>
+									<span class="w-16 text-right">hours</span>
+									<span class="w-20 text-right">amount</span>
+								</div>
+								<!-- Rows -->
+								{#each computedLineItems as item (item.label)}
+									<div
+										class="flex items-center gap-2 border-b border-border px-3 py-1.5 font-mono text-sm last:border-b-0"
+									>
+										<span class="flex-1 text-fg">{item.label}</span>
+										<span class="w-16 text-right text-fg-muted">
+											{(item.hours ?? 0).toFixed(1)}
+										</span>
+										<span class="w-20 text-right text-green">
+											{item.amount.toFixed(2)}
+										</span>
+									</div>
+								{/each}
+							</div>
+						</div>
+					{:else if invHourlyRate > 0}
+						<p class="font-mono text-xs text-fg-muted">
+							no completed sessions in this period
+						</p>
+					{/if}
+
+					<!-- Custom line items -->
 					<div class="flex flex-col gap-2">
 						<span class="font-mono text-xs text-fg-muted">
-							line items (auto-grouped by project tag)
+							custom items (subscriptions, hosting, products, etc.)
 						</span>
-						<div class="border border-border">
-							<!-- Header -->
-							<div
-								class="flex items-center gap-2 border-b border-border bg-surface-2 px-3 py-1.5 font-mono text-xs text-fg-muted"
-							>
-								<span class="flex-1">project</span>
-								<span class="w-16 text-right">hours</span>
-								<span class="w-20 text-right">amount</span>
-							</div>
-							<!-- Rows -->
-							{#each computedLineItems as item (item.label)}
+
+						{#if customLineItems.length > 0}
+							<div class="border border-border">
+								<!-- Header -->
 								<div
-									class="flex items-center gap-2 border-b border-border px-3 py-1.5 font-mono text-sm last:border-b-0"
+									class="flex items-center gap-2 border-b border-border bg-surface-2 px-3 py-1.5 font-mono text-xs text-fg-muted"
 								>
-									<span class="flex-1 text-fg">{item.label}</span>
-									<span class="w-16 text-right text-fg-muted">
-										{item.hours.toFixed(1)}
-									</span>
-									<span class="w-20 text-right text-green">
-										{item.amount.toFixed(2)}
-									</span>
+									<span class="flex-1">description</span>
+									<span class="w-14 text-right">qty</span>
+									<span class="w-20 text-right">unit price</span>
+									<span class="w-20 text-right">amount</span>
+									<span class="w-8"></span>
 								</div>
-							{/each}
-							<!-- Total -->
+								<!-- Editable rows -->
+								{#each customLineItems as item, i (i)}
+									{@const lineAmount =
+										Math.round((item.quantity || 1) * item.unitPrice * 100) /
+										100}
+									<div
+										class="flex items-center gap-2 border-b border-border px-3 py-1.5 font-mono text-sm last:border-b-0"
+									>
+										<input
+											type="text"
+											bind:value={item.label}
+											placeholder="hosting, subscription..."
+											class="flex-1 border-none bg-transparent p-0 font-mono text-sm text-fg placeholder:text-fg-muted/50 focus:ring-0"
+										/>
+										<input
+											type="number"
+											bind:value={item.quantity}
+											min="1"
+											step="1"
+											class="w-14 border-none bg-transparent p-0 text-right font-mono text-sm text-fg-muted focus:ring-0"
+										/>
+										<input
+											type="number"
+											bind:value={item.unitPrice}
+											min="0"
+											step="0.01"
+											class="w-20 border-none bg-transparent p-0 text-right font-mono text-sm text-fg-muted focus:ring-0"
+										/>
+										<span class="w-20 text-right text-green">
+											{lineAmount.toFixed(2)}
+										</span>
+										<button
+											type="button"
+											class="w-8 text-center font-mono text-fg-muted transition-colors hover:text-red"
+											onclick={() => removeCustomLineItem(i)}
+											title="remove item"
+										>
+											×
+										</button>
+									</div>
+								{/each}
+							</div>
+						{/if}
+
+						<button
+							type="button"
+							class="self-start border border-dashed border-border px-3 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
+							onclick={addCustomLineItem}
+						>
+							:add item
+						</button>
+					</div>
+
+					<!-- Combined total -->
+					{#if allLineItems.length > 0}
+						<div class="border border-border-highlight">
 							<div
-								class="flex items-center gap-2 border-t border-border-highlight bg-surface-2 px-3 py-1.5 font-mono text-sm font-bold"
+								class="flex items-center gap-2 bg-surface-2 px-3 py-1.5 font-mono text-sm font-bold"
 							>
 								<span class="flex-1 text-fg-dark">total</span>
-								<span class="w-16 text-right text-fg-muted">
-									{computedLineItems
-										.reduce((acc, i) => acc + i.hours, 0)
-										.toFixed(1)}
-								</span>
 								<span class="w-20 text-right text-green">
 									{invoiceSubtotal.toFixed(2)}
 								</span>
 							</div>
 						</div>
-					</div>
-				{:else if invHourlyRate > 0}
-					<p class="font-mono text-xs text-fg-muted">
-						no completed sessions in this period
-					</p>
-				{:else}
-					<p class="font-mono text-xs text-fg-muted">
-						enter an hourly rate to see line items
-					</p>
-				{/if}
+					{/if}
+				</div>
 
 				<!-- Notes -->
 				<div class="flex flex-col gap-1">

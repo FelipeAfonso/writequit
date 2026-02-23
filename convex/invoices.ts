@@ -69,7 +69,9 @@ export const get = query({
 
 const lineItemValidator = v.object({
 	label: v.string(),
-	hours: v.number(),
+	hours: v.optional(v.number()),
+	quantity: v.optional(v.number()),
+	unitPrice: v.optional(v.number()),
 	amount: v.number()
 });
 

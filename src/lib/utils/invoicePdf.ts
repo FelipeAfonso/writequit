@@ -11,7 +11,13 @@ import { jsPDF } from 'jspdf';
 
 export interface InvoiceLineItem {
 	label: string;
-	hours: number;
+	/** Hours worked – present for session-based items. */
+	hours?: number;
+	/** Quantity – present for custom items (e.g. 3 months). */
+	quantity?: number;
+	/** Unit price – present for custom items. */
+	unitPrice?: number;
+	/** Line total. */
 	amount: number;
 }
 
@@ -202,10 +208,10 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
 	doc.setTextColor(...c.muted);
 	doc.text('DESCRIPTION', MARGIN + 2, y);
 
-	const colHours = MARGIN + CONTENT_WIDTH - 70;
+	const colQty = MARGIN + CONTENT_WIDTH - 70;
 	const colRate = MARGIN + CONTENT_WIDTH - 45;
 
-	doc.text('HOURS', colHours, y);
+	doc.text('QTY', colQty, y);
 	doc.text('RATE', colRate, y);
 	rightAlignText(doc, 'AMOUNT', y);
 	y += LINE_HEIGHT + 2;
@@ -214,6 +220,7 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
 	doc.setFontSize(8);
 	for (let i = 0; i < data.lineItems.length; i++) {
 		const item = data.lineItems[i];
+		const isCustom = item.quantity != null;
 
 		// Alternating row bg
 		if (i % 2 === 0) {
@@ -223,7 +230,7 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
 
 		doc.setTextColor(...c.fg);
 		// Truncate long labels
-		const maxLabelW = colHours - MARGIN - 6;
+		const maxLabelW = colQty - MARGIN - 6;
 		let label = item.label;
 		while (doc.getTextWidth(label) > maxLabelW && label.length > 3) {
 			label = label.slice(0, -4) + '...';
@@ -231,8 +238,17 @@ export function generateInvoicePdf(data: InvoiceData): jsPDF {
 		doc.text(label, MARGIN + 2, y);
 
 		doc.setTextColor(...c.muted);
-		doc.text(item.hours.toFixed(1), colHours, y);
-		doc.text(formatCurrency(data.hourlyRate, data.currency), colRate, y);
+		if (isCustom) {
+			// Custom item: show quantity × unit price
+			const qty = item.quantity ?? 1;
+			const rate = item.unitPrice ?? 0;
+			doc.text(qty.toString(), colQty, y);
+			doc.text(formatCurrency(rate, data.currency), colRate, y);
+		} else {
+			// Session item: show hours × hourly rate
+			doc.text((item.hours ?? 0).toFixed(1), colQty, y);
+			doc.text(formatCurrency(data.hourlyRate, data.currency), colRate, y);
+		}
 
 		doc.setTextColor(...c.green);
 		rightAlignText(doc, formatCurrency(item.amount, data.currency), y);

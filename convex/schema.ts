@@ -138,11 +138,17 @@ export default defineSchema({
 		hourlyRate: v.number(),
 		/** Currency code, e.g. "USD". */
 		currency: v.string(),
-		/** Line items: each has a label, hours, and amount. */
+		/** Line items: session-based (hours) or custom (quantity × unitPrice). */
 		lineItems: v.array(
 			v.object({
 				label: v.string(),
-				hours: v.number(),
+				/** Hours worked – present for session-based items. */
+				hours: v.optional(v.number()),
+				/** Quantity – present for custom items (e.g. 3 months). */
+				quantity: v.optional(v.number()),
+				/** Unit price – present for custom items (e.g. $15/mo). */
+				unitPrice: v.optional(v.number()),
+				/** Line total (hours × rate, or quantity × unitPrice). */
 				amount: v.number()
 			})
 		),
