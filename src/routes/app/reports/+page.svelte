@@ -636,8 +636,17 @@
 			<div
 				class="flex items-center justify-between border-b border-border pb-2"
 			>
-				<h2 class="font-mono text-sm font-bold text-fg-dark">
+				<h2
+					class="flex items-baseline gap-2 font-mono text-sm font-bold text-fg-dark"
+				>
 					-- sessions in range
+					{#if totalSessions > 0}
+						<span class="text-xs font-normal text-fg-muted">
+							({totalSessions} &middot;
+							<span class="text-green">{formatDuration(totalMs)}</span>
+							)
+						</span>
+					{/if}
 				</h2>
 				<div class="flex items-center gap-2">
 					<div class="flex items-center">
