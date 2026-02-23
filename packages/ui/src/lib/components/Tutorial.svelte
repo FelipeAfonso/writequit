@@ -145,7 +145,8 @@
 >
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
-		class="mx-4 flex w-full max-w-lg flex-col border border-border-highlight bg-surface-1 shadow-2xl"
+		class="mx-4 flex w-full flex-col border border-border-highlight bg-surface-1 shadow-2xl"
+		style="max-width: 32rem;"
 		onmousedown={(e) => e.stopPropagation()}
 	>
 		<!-- Header -->

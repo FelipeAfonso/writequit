@@ -11,6 +11,7 @@
 	} from '@writequit/ui';
 	import StatusLine from '@writequit/ui/components/StatusLine.svelte';
 	import Tutorial from '@writequit/ui/components/Tutorial.svelte';
+	import { getCurrentWindow } from '@tauri-apps/api/window';
 
 	let { children } = $props();
 
@@ -94,6 +95,19 @@
 		shortcut: string;
 	}
 
+	// ── Window controls (Tauri) ────────────────────────────────────
+	const appWindow = getCurrentWindow();
+
+	async function minimizeWindow() {
+		await appWindow.minimize();
+	}
+	async function toggleMaximize() {
+		await appWindow.toggleMaximize();
+	}
+	async function closeWindow() {
+		await appWindow.close();
+	}
+
 	const nav: NavItem[] = [
 		{ href: '/app', label: 'tasks', icon: '#', shortcut: 'g t' },
 		{ href: '/app/sessions', label: 'sessions', icon: '~', shortcut: 'g s' },
@@ -175,9 +189,10 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="flex h-screen flex-col">
-	<!-- Top bar -->
+<div class="fixed inset-0 flex flex-col overflow-hidden">
+	<!-- Top bar (draggable for window movement) -->
 	<header
+		data-tauri-drag-region
 		class="flex shrink-0 items-center justify-between border-b border-border px-4 py-2"
 	>
 		<div class="flex items-center gap-2">
@@ -231,14 +246,39 @@
 			</a>
 		</div>
 
-		<!-- Mobile hamburger -->
-		<button
-			onclick={() => (sidebarOpen = !sidebarOpen)}
-			class="cursor-pointer border border-transparent px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border hover:text-fg-dark md:hidden"
-			aria-label="Toggle menu"
-		>
-			{sidebarOpen ? '[x]' : '[=]'}
-		</button>
+		<!-- Window controls (no OS title bar) -->
+		<div class="flex items-center gap-1">
+			<!-- Mobile hamburger -->
+			<button
+				onclick={() => (sidebarOpen = !sidebarOpen)}
+				class="cursor-pointer border border-transparent px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border hover:text-fg-dark md:hidden"
+				aria-label="Toggle menu"
+			>
+				{sidebarOpen ? '[x]' : '[=]'}
+			</button>
+
+			<button
+				onclick={minimizeWindow}
+				class="cursor-pointer px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:text-fg-dark"
+				aria-label="Minimize"
+			>
+				_
+			</button>
+			<button
+				onclick={toggleMaximize}
+				class="cursor-pointer px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:text-fg-dark"
+				aria-label="Maximize"
+			>
+				[]
+			</button>
+			<button
+				onclick={closeWindow}
+				class="cursor-pointer px-2 py-1 font-mono text-xs text-red/70 transition-colors hover:text-red"
+				aria-label="Close"
+			>
+				x
+			</button>
+		</div>
 	</header>
 
 	<!-- Mobile sidebar overlay -->
@@ -355,7 +395,7 @@
 	{/if}
 
 	<!-- Main content -->
-	<main class="flex-1 overflow-y-auto">
+	<main class="min-h-0 flex-1 overflow-y-auto">
 		{@render children()}
 	</main>
 
