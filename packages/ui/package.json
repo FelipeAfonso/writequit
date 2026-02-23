@@ -11,15 +11,60 @@
 			"default": "./dist/index.js"
 		},
 		"./styles": "./src/lib/styles/theme.css",
-		"./components/*.svelte": {
-			"types": "./dist/components/*.svelte.d.ts",
-			"svelte": "./dist/components/*.svelte",
-			"default": "./dist/components/*.svelte"
+		"./components/StatusLine.svelte": {
+			"types": "./dist/components/StatusLine.svelte.d.ts",
+			"svelte": "./dist/components/StatusLine.svelte",
+			"default": "./dist/components/StatusLine.svelte"
 		},
-		"./components/*/*.svelte": {
-			"types": "./dist/components/*/*.svelte.d.ts",
-			"svelte": "./dist/components/*/*.svelte",
-			"default": "./dist/components/*/*.svelte"
+		"./components/Tutorial.svelte": {
+			"types": "./dist/components/Tutorial.svelte.d.ts",
+			"svelte": "./dist/components/Tutorial.svelte",
+			"default": "./dist/components/Tutorial.svelte"
+		},
+		"./components/sessions/SessionCard.svelte": {
+			"types": "./dist/components/sessions/SessionCard.svelte.d.ts",
+			"svelte": "./dist/components/sessions/SessionCard.svelte",
+			"default": "./dist/components/sessions/SessionCard.svelte"
+		},
+		"./components/tags/TagBadge.svelte": {
+			"types": "./dist/components/tags/TagBadge.svelte.d.ts",
+			"svelte": "./dist/components/tags/TagBadge.svelte",
+			"default": "./dist/components/tags/TagBadge.svelte"
+		},
+		"./components/tags/TagFilter.svelte": {
+			"types": "./dist/components/tags/TagFilter.svelte.d.ts",
+			"svelte": "./dist/components/tags/TagFilter.svelte",
+			"default": "./dist/components/tags/TagFilter.svelte"
+		},
+		"./components/tasks/TaskCard.svelte": {
+			"types": "./dist/components/tasks/TaskCard.svelte.d.ts",
+			"svelte": "./dist/components/tasks/TaskCard.svelte",
+			"default": "./dist/components/tasks/TaskCard.svelte"
+		},
+		"./components/tasks/TaskEditor.svelte": {
+			"types": "./dist/components/tasks/TaskEditor.svelte.d.ts",
+			"svelte": "./dist/components/tasks/TaskEditor.svelte",
+			"default": "./dist/components/tasks/TaskEditor.svelte"
+		},
+		"./components/tasks/TaskList.svelte": {
+			"types": "./dist/components/tasks/TaskList.svelte.d.ts",
+			"svelte": "./dist/components/tasks/TaskList.svelte",
+			"default": "./dist/components/tasks/TaskList.svelte"
+		},
+		"./components/tasks/TaskStatusBadge.svelte": {
+			"types": "./dist/components/tasks/TaskStatusBadge.svelte.d.ts",
+			"svelte": "./dist/components/tasks/TaskStatusBadge.svelte",
+			"default": "./dist/components/tasks/TaskStatusBadge.svelte"
+		},
+		"./components/ui/ConfirmDialog.svelte": {
+			"types": "./dist/components/ui/ConfirmDialog.svelte.d.ts",
+			"svelte": "./dist/components/ui/ConfirmDialog.svelte",
+			"default": "./dist/components/ui/ConfirmDialog.svelte"
+		},
+		"./components/ui/Markdown.svelte": {
+			"types": "./dist/components/ui/Markdown.svelte.d.ts",
+			"svelte": "./dist/components/ui/Markdown.svelte",
+			"default": "./dist/components/ui/Markdown.svelte"
 		}
 	},
 	"files": [
