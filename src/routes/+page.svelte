@@ -33,7 +33,8 @@
 			'@type': 'Offer',
 			price: '0',
 			priceCurrency: 'USD',
-			description: 'Free during beta'
+			description: 'Free during beta',
+			availability: 'https://schema.org/InStock'
 		},
 		featureList: [
 			'Vim-native keyboard navigation',
@@ -42,7 +43,37 @@
 			'Invoice generation with PDF export',
 			'Inline tag system',
 			'Project and client reports'
-		]
+		],
+		screenshot: 'https://writequit.dev/screenshot.png',
+		author: {
+			'@type': 'Organization',
+			name: 'writequit',
+			url: 'https://writequit.dev'
+		},
+		datePublished: '2025-01-01',
+		softwareVersion: 'beta',
+		applicationSubCategory: 'Project Management'
+	});
+
+	const websiteSchema = JSON.stringify({
+		'@context': 'https://schema.org',
+		'@type': 'WebSite',
+		name: 'writequit',
+		alternateName: ':wq',
+		url: 'https://writequit.dev',
+		description:
+			'Task manager, time tracker, and invoice generator for freelance developers.',
+		publisher: {
+			'@type': 'Organization',
+			name: 'writequit',
+			url: 'https://writequit.dev',
+			logo: {
+				'@type': 'ImageObject',
+				url: 'https://writequit.dev/favicon-192x192.png',
+				width: 192,
+				height: 192
+			}
+		}
 	});
 
 	const faqSchema = JSON.stringify({
@@ -86,10 +117,69 @@
 				name: 'How does invoicing work in writequit?',
 				acceptedAnswer: {
 					'@type': 'Answer',
-					text: 'Select time sessions, set your hourly rate, and run :invoice. writequit generates a PDF invoice that downloads directly to your machine. No third-party integrations or payment processors required.'
+					text: 'Select time sessions, set your hourly rate, and run :invoice. writequit generates a PDF invoice that downloads directly to your machine. No third-party payment processors or integrations required.'
+				}
+			},
+			{
+				'@type': 'Question',
+				name: 'What is the difference between writequit and Jira or Asana?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'Jira and Asana are team project management tools built for managers. writequit is built for individual freelance developers who need a single interface for tasks, time tracking, and invoicing. There are no boards, sprints, or team features. You type commands, track time, and generate invoices from one keyboard-driven UI.'
+				}
+			},
+			{
+				'@type': 'Question',
+				name: 'Can I use writequit on my phone?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'writequit is a web application that works in any modern browser, including mobile browsers. The interface is responsive, but the keyboard-driven workflow is designed for desktop use. You can view tasks and track time on mobile, but the full vim keybinding experience works best with a physical keyboard.'
+				}
+			},
+			{
+				'@type': 'Question',
+				name: 'How do I tag tasks in writequit?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'Tags are inline, typed directly into your task text. Use +tagname to add a tag (like +frontend or +urgent) and @clientname to assign a client. There are no dropdowns or separate tag management screens. Tags are parsed automatically and can be used to filter your task list instantly.'
 				}
 			}
 		]
+	});
+
+	const howToSchema = JSON.stringify({
+		'@context': 'https://schema.org',
+		'@type': 'HowTo',
+		name: 'How to track time and generate invoices with writequit',
+		description:
+			'A step-by-step guide to tracking billable hours and generating PDF invoices using writequit, the terminal-style task manager for freelance developers.',
+		step: [
+			{
+				'@type': 'HowToStep',
+				position: 1,
+				name: 'Create a task',
+				text: 'Open writequit and type your task description in the editor. Add inline tags like +frontend or @clientname to categorize it.'
+			},
+			{
+				'@type': 'HowToStep',
+				position: 2,
+				name: 'Start tracking time',
+				text: 'Run the :track command to start a time session linked to your current task. The timer runs in the background while you work.'
+			},
+			{
+				'@type': 'HowToStep',
+				position: 3,
+				name: 'Stop the timer',
+				text: 'Run :stop when you finish working. The session is saved with start time, end time, and duration.'
+			},
+			{
+				'@type': 'HowToStep',
+				position: 4,
+				name: 'Generate an invoice',
+				text: 'Select the time sessions you want to bill, set your hourly rate, and run :invoice. A PDF invoice downloads to your machine.'
+			}
+		],
+		totalTime: 'PT5M'
 	});
 
 	let typedLines = $state<string[]>([]);
@@ -221,20 +311,21 @@
 
 <svelte:head>
 	<title>
-		writequit — task manager, time tracker & invoicing for freelance developers
+		writequit | Task Manager, Time Tracker & Invoicing for Freelance Devs
 	</title>
 	<meta
 		name="description"
-		content="writequit is a task manager, time tracker, and invoice generator built for freelance developers. Vim keybindings, markdown tasks, terminal UI. Manage work, not a workspace."
+		content="writequit is a task manager, time tracker, and invoice generator for freelance developers. Vim keybindings, markdown tasks, terminal UI. Track time, bill clients, ship work."
 	/>
 	<link rel="canonical" href="https://writequit.dev/" />
 
 	<!-- Open Graph -->
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="https://writequit.dev/" />
+	<meta property="og:locale" content="en_US" />
 	<meta
 		property="og:title"
-		content="writequit — tasks, time tracking & invoices for dev freelancers"
+		content="writequit | Tasks, Time Tracking & Invoices for Dev Freelancers"
 	/>
 	<meta
 		property="og:description"
@@ -245,24 +336,35 @@
 	<meta property="og:image:width" content="1200" />
 	<meta property="og:image:height" content="630" />
 	<meta property="og:image:type" content="image/webp" />
+	<meta
+		property="og:image:alt"
+		content="writequit — terminal-style task manager with vim keybindings for freelance developers"
+	/>
 
 	<!-- Twitter Card -->
 	<meta name="twitter:card" content="summary_large_image" />
 	<meta
 		name="twitter:title"
-		content="writequit — tasks, time tracking & invoices for dev freelancers"
+		content="writequit | Tasks, Time Tracking & Invoices for Dev Freelancers"
 	/>
 	<meta
 		name="twitter:description"
 		content="Vim keybindings. Markdown tasks. Terminal aesthetics. A task manager, time tracker, and invoice generator that gets out of your way."
 	/>
 	<meta name="twitter:image" content="https://writequit.dev/ogbanner.webp" />
+	<meta
+		name="twitter:image:alt"
+		content="writequit — terminal-style task manager with vim keybindings for freelance developers"
+	/>
 
 	<!-- Additional SEO -->
-	<meta name="robots" content="index, follow" />
+	<meta
+		name="robots"
+		content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+	/>
 	<meta
 		name="keywords"
-		content="freelance task manager, time tracker for developers, developer invoice tool, vim task manager, terminal task manager, freelance time tracking, developer productivity"
+		content="freelance task manager, time tracker for developers, developer invoice tool, vim task manager, terminal task manager, freelance time tracking, developer productivity, freelance invoicing software, markdown task manager, keyboard-driven project management"
 	/>
 
 	<!-- JSON-LD: SoftwareApplication -->
@@ -273,11 +375,27 @@
 		'</scr' +
 		'ipt>'}
 
+	<!-- JSON-LD: WebSite + Organization -->
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+	{@html '<scr' +
+		'ipt type="application/ld+json">' +
+		websiteSchema +
+		'</scr' +
+		'ipt>'}
+
 	<!-- JSON-LD: FAQPage -->
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 	{@html '<scr' +
 		'ipt type="application/ld+json">' +
 		faqSchema +
+		'</scr' +
+		'ipt>'}
+
+	<!-- JSON-LD: HowTo -->
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
+	{@html '<scr' +
+		'ipt type="application/ld+json">' +
+		howToSchema +
 		'</scr' +
 		'ipt>'}
 
@@ -338,7 +456,7 @@
 				class="animate-fade-in flex items-center justify-between border-b border-primary/10 px-8 py-4"
 				style="animation-delay: 0.1s;"
 			>
-				<div class="flex items-center gap-2">
+				<a href="/" class="flex items-center gap-2" aria-label="writequit home">
 					<span class="text-base font-bold -tracking-wide text-primary">
 						:wq
 					</span>
@@ -354,427 +472,553 @@
 							{envBadge}
 						</span>
 					{/if}
-				</div>
-				<div class="flex items-center gap-2 text-[0.55rem]">
-					{#if data.isLoggedIn}
-						<a
-							href="/app"
-							class="border border-primary/30 px-2.5 py-1 text-primary transition-all duration-150 hover:border-primary hover:bg-primary/10"
-						>
-							:login
-						</a>
-					{:else}
-						<button
-							onclick={() => signIn()}
-							class="cursor-pointer border border-primary/30 px-2.5 py-1 text-primary transition-all duration-150 hover:border-primary hover:bg-primary/10"
-						>
-							:login
-						</button>
-					{/if}
-				</div>
+				</a>
+				<nav aria-label="Primary navigation">
+					<div class="flex items-center gap-2 text-[0.55rem]">
+						{#if data.isLoggedIn}
+							<a
+								href="/app"
+								class="border border-primary/30 px-2.5 py-1 text-primary transition-all duration-150 hover:border-primary hover:bg-primary/10"
+							>
+								:login
+							</a>
+						{:else}
+							<button
+								onclick={() => signIn()}
+								class="cursor-pointer border border-primary/30 px-2.5 py-1 text-primary transition-all duration-150 hover:border-primary hover:bg-primary/10"
+							>
+								:login
+							</button>
+						{/if}
+					</div>
+				</nav>
 			</header>
 
-			<!-- Hero -->
-			<section
-				class="animate-fade-in relative mx-auto max-w-208 px-8 pt-20 pb-16"
-				style="animation-delay: 0.3s;"
-			>
-				<div class="hero-glow"></div>
-				<div
-					class="mb-6 inline-flex items-center gap-2 text-[0.55rem] tracking-[0.2em] text-[#6e7a96] uppercase"
+			<main>
+				<!-- Hero -->
+				<section
+					class="animate-fade-in relative mx-auto max-w-208 px-8 pt-20 pb-16"
+					style="animation-delay: 0.3s;"
 				>
-					<span class="label-dot size-1.5 rounded-full bg-green"></span>
-					for developers who'd rather ship than organize
-				</div>
-				<div class="mb-4 flex items-baseline gap-2.5">
-					<span class="hero-name-wq font-bold text-primary">:writequit</span>
-				</div>
-				<h1 class="hero-title mb-6 leading-[1.1] font-bold">
-					<span class="block text-[#cdd6f4]">
-						manage work, <br />
-						not a workspace.
-					</span>
-					<span class="block text-primary">tasks. time. invoices.</span>
-				</h1>
-				<p class="mb-8 max-w-152 text-[0.75rem] leading-[1.8] text-[#6e7a96]">
-					vim keybindings. markdown tasks. terminal aesthetics. a tool, not a
-					lifestyle.
-				</p>
-				<div class="flex items-center gap-6 max-sm:flex-col max-sm:items-start">
-					{#if data.isLoggedIn}
-						<a href="/app" class="btn-primary">
-							<span class="opacity-60">&gt;</span>
-							get started
-						</a>
-					{:else}
-						<button onclick={() => signIn()} class="btn-primary">
-							<span class="opacity-60">&gt;</span>
-							get started
-						</button>
-						<span class="text-[0.5rem] text-fg-muted">
-							free during beta &middot; no credit card
+					<div class="hero-glow"></div>
+					<div
+						class="mb-6 inline-flex items-center gap-2 text-[0.55rem] tracking-[0.2em] text-[#6e7a96] uppercase"
+					>
+						<span class="label-dot size-1.5 rounded-full bg-green"></span>
+						for developers who'd rather ship than organize
+					</div>
+					<div class="mb-4 flex items-baseline gap-2.5">
+						<span class="hero-name-wq font-bold text-primary">:writequit</span>
+					</div>
+					<h1 class="hero-title mb-6 leading-[1.1] font-bold">
+						<span class="block text-[#cdd6f4]">
+							manage work, <br />
+							not a workspace.
 						</span>
-					{/if}
-				</div>
-			</section>
-
-			<!-- Feature grid -->
-			<section
-				class="animate-fade-in mx-auto max-w-5xl px-8 py-12 max-sm:px-5"
-				style="animation-delay: 0.5s;"
-			>
-				<h2 class="sr-only">Features</h2>
-				<div
-					class="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-px border border-primary/8 bg-primary/8"
-				>
-					<div class="feature-card">
-						<div class="mb-3 text-[0.8rem] font-semibold text-primary">
-							[&gt;]
-						</div>
-						<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
-							Vim-native workflow
-						</h3>
-						<p class="feature-desc">
-							<code>j/k</code>
-							to navigate.
-							<code>:</code>
-							for commands.
-							<code>:wq</code>
-							when you're done. nothing new to learn.
-						</p>
-					</div>
-					<div class="feature-card">
-						<div class="mb-3 text-[0.8rem] font-semibold text-primary">[~]</div>
-						<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
-							Time tracking
-						</h3>
-						<p class="feature-desc">
-							<code>:track</code>
-							to start.
-							<code>:stop</code>
-							to stop. hours logged, clients billed.
-						</p>
-					</div>
-					<div class="feature-card">
-						<div class="mb-3 text-[0.8rem] font-semibold text-primary">[$]</div>
-						<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
-							Invoice generation
-						</h3>
-						<p class="feature-desc">
-							select sessions, set rate, <code>:invoice</code>
-							. PDF in your downloads. done.
-						</p>
-					</div>
-					<div class="feature-card">
-						<div class="mb-3 text-[0.8rem] font-semibold text-primary">[+]</div>
-						<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
-							Tag everything
-						</h3>
-						<p class="feature-desc">
-							inline tags in task text: <code>+frontend</code>
-							<code>+urgent</code>
-							<code>+client-name</code>
-							. filter instantly. no dropdowns.
-						</p>
-					</div>
-					<div class="feature-card">
-						<div class="mb-3 text-[0.8rem] font-semibold text-primary">[*]</div>
-						<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
-							Markdown tasks
-						</h3>
-						<p class="feature-desc">
-							full markdown with syntax highlighting. no rich text editors. just
-							text that renders.
-						</p>
-					</div>
-					<div class="feature-card">
-						<div class="mb-3 text-[0.8rem] font-semibold text-primary">[%]</div>
-						<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
-							Reports that matter
-						</h3>
-						<p class="feature-desc">
-							breakdowns by project, tag, or client. export to PDF. that's it.
-						</p>
-					</div>
-				</div>
-			</section>
-
-			<!-- Terminal demo -->
-			<section
-				class="animate-fade-in mx-auto max-w-3xl px-8 py-12 max-sm:px-5"
-				style="animation-delay: 0.7s;"
-			>
-				<div class="terminal-window">
-					<div class="terminal-inner">
-						<!-- Title bar -->
-						<div
-							class="flex items-center justify-between border-b border-border px-3 py-1.5"
-						>
-							<span class="font-mono text-[0.5rem] text-fg-muted">
-								:wq - tasks
-							</span>
-						</div>
-
-						<!-- Demo content matching real app -->
-						<div
-							class="flex flex-col gap-3 bg-bg p-4 font-mono"
-							style="font-size: 0.6rem;"
-						>
-							<!-- Page header -->
-							<div class="flex items-baseline gap-2">
-								<span class="font-bold text-fg">
-									<span class="text-fg-muted">#</span>
-									tasks
-								</span>
-								<span class="text-fg-muted">5 tasks</span>
-							</div>
-
-							<!-- Editor area -->
-							<div class="border border-border bg-bg-dark px-2 py-1.5">
-								<span class="text-fg-muted">
-									Build landing page +frontend @acme due:friday
-									<span
-										class="cursor-inline text-primary"
-										class:blink={showCursor}
-									>
-										█
-									</span>
-								</span>
-							</div>
-
-							<!-- Filter row -->
-							<div class="flex items-center gap-1">
-								<span
-									class="border border-primary bg-surface-2 px-1.5 py-0.5 text-primary"
-								>
-									[~] all
-								</span>
-								<span class="border border-border px-1.5 py-0.5 text-fg-muted">
-									[&gt;] inbox
-								</span>
-								<span class="border border-border px-1.5 py-0.5 text-fg-muted">
-									[*] active
-								</span>
-								<span class="border border-border px-1.5 py-0.5 text-fg-muted">
-									[x] done
-								</span>
-							</div>
-
-							<!-- Task cards -->
-							<div class="flex flex-col gap-1">
-								<!-- Done task -->
-								<div
-									class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
-								>
-									<span class="text-green">[x]</span>
-									<span class="flex-1 text-fg-muted line-through">
-										Set up CI/CD pipeline
-									</span>
-									<span
-										class="border border-border-highlight bg-surface-2 px-1 text-teal"
-									>
-										+devops
-									</span>
-								</div>
-								<!-- Done task -->
-								<div
-									class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
-								>
-									<span class="text-green">[x]</span>
-									<span class="flex-1 text-fg-muted line-through">
-										Fix auth token refresh bug
-									</span>
-									<span
-										class="border border-border-highlight bg-surface-2 px-1 text-teal"
-									>
-										+backend
-									</span>
-								</div>
-								<!-- Active/selected task -->
-								<div
-									class="flex items-start gap-2 border border-primary bg-surface-1 px-2 py-1.5"
-								>
-									<span class="text-blue">[*]</span>
-									<span class="flex-1 text-fg">Build landing page</span>
-									<span
-										class="border border-border-highlight bg-surface-2 px-1 text-teal"
-									>
-										+frontend
-									</span>
-									<span class="text-warning">due:fri</span>
-								</div>
-								<!-- Inbox task -->
-								<div
-									class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
-								>
-									<span class="text-fg-muted">[&nbsp;]</span>
-									<span class="flex-1 text-fg">Write API documentation</span>
-									<span
-										class="border border-border-highlight bg-surface-2 px-1 text-teal"
-									>
-										+docs
-									</span>
-								</div>
-								<!-- Inbox task -->
-								<div
-									class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
-								>
-									<span class="text-fg-muted">[&nbsp;]</span>
-									<span class="flex-1 text-fg">
-										Invoice Acme Corp - December
-									</span>
-									<span
-										class="border border-border-highlight bg-surface-2 px-1 text-orange"
-									>
-										@acme
-									</span>
-								</div>
-							</div>
-
-							<!-- Status bar -->
-							<div
-								class="flex items-center justify-between border-t border-border pt-2"
-							>
-								<span class="font-bold text-green">-- NORMAL --</span>
-								<span class="text-fg-muted">3/5</span>
-							</div>
-						</div>
-						<div class="crt-overlay"></div>
-					</div>
-				</div>
-			</section>
-
-			<!-- What is writequit — AEO definition block -->
-			<section
-				class="animate-fade-in mx-auto max-w-3xl px-8 py-12 max-sm:px-5"
-				style="animation-delay: 0.85s;"
-			>
-				<h2
-					class="mb-4 text-[0.75rem] font-semibold tracking-wide text-[#cdd6f4]"
-				>
-					What is writequit?
-				</h2>
-				<p class="mb-3 text-[0.6rem] leading-[1.9] text-[#6e7a96]">
-					writequit is a task manager, time tracker, and invoice generator built
-					for freelance developers. It combines vim-style keybindings with a
-					terminal-inspired interface so you can manage projects, log hours, and
-					bill clients without context-switching away from how you already work.
-				</p>
-				<p class="text-[0.6rem] leading-[1.9] text-[#6e7a96]">
-					Tasks use markdown. Navigation uses <code class="faq-code">j/k</code>
-					. Commands start with
-					<code class="faq-code">:</code>
-					— the same muscle memory you use in your editor. Time tracking, tagging,
-					and invoicing are all built in, not bolted on.
-				</p>
-			</section>
-
-			<!-- FAQ — AEO-optimized -->
-			<section
-				class="animate-fade-in mx-auto max-w-3xl px-8 py-12 max-sm:px-5"
-				style="animation-delay: 0.9s;"
-			>
-				<h2
-					class="mb-6 text-[0.75rem] font-semibold tracking-wide text-[#cdd6f4]"
-				>
-					Frequently asked questions
-				</h2>
-				<div class="flex flex-col gap-5">
-					<div>
-						<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
-							How does time tracking work?
-						</h3>
-						<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
-							Type <code class="faq-code">:track</code>
-							to start a session and
-							<code class="faq-code">:stop</code>
-							to end it. Sessions link to tasks and projects automatically. When you
-							need to bill, select the sessions and generate a PDF invoice from your
-							tracked hours.
-						</p>
-					</div>
-					<div>
-						<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
-							Do I need to know vim?
-						</h3>
-						<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
-							No. writequit borrows familiar vim patterns like
-							<code class="faq-code">j/k</code>
-							navigation and colon commands, but everything works with a mouse too.
-							The keybindings are a power-user shortcut, not a requirement.
-						</p>
-					</div>
-					<div>
-						<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
-							Is writequit free?
-						</h3>
-						<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
-							writequit is free during the beta. No credit card required. Future
-							pricing has not been announced yet.
-						</p>
-					</div>
-					<div>
-						<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
-							How does invoicing work?
-						</h3>
-						<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
-							Select time sessions, set your rate, and run
-							<code class="faq-code">:invoice</code>
-							. A PDF downloads directly to your machine. No third-party payment processors
-							or integrations needed.
-						</p>
-					</div>
-					<div>
-						<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
-							What makes writequit different from other task managers?
-						</h3>
-						<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
-							Most project tools are built for managers, not makers. writequit
-							is built for developers who want to track tasks, log time, and
-							send invoices from one keyboard-driven interface — no Kanban
-							boards, no Gantt charts, no sprint ceremonies.
-						</p>
-					</div>
-				</div>
-			</section>
-
-			<!-- CTA -->
-			<section
-				class="animate-fade-in px-8 py-16 max-sm:px-5"
-				style="animation-delay: 0.95s;"
-			>
-				<div class="mx-auto max-w-3xl text-center">
-					<p class="mb-6 text-[0.8rem] text-[#6e7a96]">
-						<span class="text-primary">&gt;</span>
-						spend less time managing. more time building.
+						<span class="block text-primary">tasks. time. invoices.</span>
+					</h1>
+					<p class="mb-8 max-w-152 text-[0.75rem] leading-[1.8] text-[#6e7a96]">
+						vim keybindings. markdown tasks. terminal aesthetics. a tool, not a
+						lifestyle.
 					</p>
-					{#if data.isLoggedIn}
-						<a href="/app" class="btn-primary btn-primary-large">
-							<span class="opacity-60">&gt;</span>
-							start shipping
-						</a>
-					{:else}
-						<button
-							onclick={() => signIn()}
-							class="btn-primary btn-primary-large"
+					<div
+						class="flex items-center gap-6 max-sm:flex-col max-sm:items-start"
+					>
+						{#if data.isLoggedIn}
+							<a href="/app" class="btn-primary">
+								<span class="opacity-60">&gt;</span>
+								get started
+							</a>
+						{:else}
+							<button onclick={() => signIn()} class="btn-primary">
+								<span class="opacity-60">&gt;</span>
+								get started
+							</button>
+							<span class="text-[0.5rem] text-fg-muted">
+								free during beta &middot; no credit card
+							</span>
+						{/if}
+					</div>
+				</section>
+
+				<!-- Feature grid -->
+				<section
+					class="animate-fade-in mx-auto max-w-5xl px-8 py-12 max-sm:px-5"
+					style="animation-delay: 0.5s;"
+					aria-label="Features"
+				>
+					<h2
+						class="mb-6 text-[0.6rem] tracking-[0.15em] text-[#6e7a96] uppercase"
+					>
+						everything you need, nothing you don't
+					</h2>
+					<div
+						class="grid grid-cols-[repeat(auto-fit,minmax(16rem,1fr))] gap-px border border-primary/8 bg-primary/8"
+					>
+						<div class="feature-card">
+							<div class="mb-3 text-[0.8rem] font-semibold text-primary">
+								[&gt;]
+							</div>
+							<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
+								Vim-native workflow
+							</h3>
+							<p class="feature-desc">
+								<code>j/k</code>
+								to navigate.
+								<code>:</code>
+								for commands.
+								<code>:wq</code>
+								when you're done. nothing new to learn.
+							</p>
+						</div>
+						<div class="feature-card">
+							<div class="mb-3 text-[0.8rem] font-semibold text-primary">
+								[~]
+							</div>
+							<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
+								Time tracking
+							</h3>
+							<p class="feature-desc">
+								<code>:track</code>
+								to start.
+								<code>:stop</code>
+								to stop. hours logged, clients billed.
+							</p>
+						</div>
+						<div class="feature-card">
+							<div class="mb-3 text-[0.8rem] font-semibold text-primary">
+								[$]
+							</div>
+							<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
+								Invoice generation
+							</h3>
+							<p class="feature-desc">
+								select sessions, set rate, <code>:invoice</code>
+								. PDF in your downloads. done.
+							</p>
+						</div>
+						<div class="feature-card">
+							<div class="mb-3 text-[0.8rem] font-semibold text-primary">
+								[+]
+							</div>
+							<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
+								Tag everything
+							</h3>
+							<p class="feature-desc">
+								inline tags in task text: <code>+frontend</code>
+								<code>+urgent</code>
+								<code>+client-name</code>
+								. filter instantly. no dropdowns.
+							</p>
+						</div>
+						<div class="feature-card">
+							<div class="mb-3 text-[0.8rem] font-semibold text-primary">
+								[*]
+							</div>
+							<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
+								Markdown tasks
+							</h3>
+							<p class="feature-desc">
+								full markdown with syntax highlighting. no rich text editors.
+								just text that renders.
+							</p>
+						</div>
+						<div class="feature-card">
+							<div class="mb-3 text-[0.8rem] font-semibold text-primary">
+								[%]
+							</div>
+							<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
+								Reports that matter
+							</h3>
+							<p class="feature-desc">
+								breakdowns by project, tag, or client. export to PDF. that's it.
+							</p>
+						</div>
+					</div>
+				</section>
+
+				<!-- Terminal demo -->
+				<section
+					class="animate-fade-in mx-auto max-w-3xl px-8 py-12 max-sm:px-5"
+					style="animation-delay: 0.7s;"
+					aria-label="Live demo preview"
+				>
+					<h2
+						class="mb-6 text-[0.6rem] tracking-[0.15em] text-[#6e7a96] uppercase"
+					>
+						see it in action
+					</h2>
+					<div
+						class="terminal-window"
+						role="img"
+						aria-label="Screenshot of writequit task list interface showing vim-style navigation, inline tags, and task status filters"
+					>
+						<div class="terminal-inner">
+							<!-- Title bar -->
+							<div
+								class="flex items-center justify-between border-b border-border px-3 py-1.5"
+							>
+								<span class="font-mono text-[0.5rem] text-fg-muted">
+									:wq - tasks
+								</span>
+							</div>
+
+							<!-- Demo content matching real app -->
+							<div
+								class="flex flex-col gap-3 bg-bg p-4 font-mono"
+								style="font-size: 0.6rem;"
+							>
+								<!-- Page header -->
+								<div class="flex items-baseline gap-2">
+									<span class="font-bold text-fg">
+										<span class="text-fg-muted">#</span>
+										tasks
+									</span>
+									<span class="text-fg-muted">5 tasks</span>
+								</div>
+
+								<!-- Editor area -->
+								<div class="border border-border bg-bg-dark px-2 py-1.5">
+									<span class="text-fg-muted">
+										Build landing page +frontend @acme due:friday
+										<span
+											class="cursor-inline text-primary"
+											class:blink={showCursor}
+										>
+											█
+										</span>
+									</span>
+								</div>
+
+								<!-- Filter row -->
+								<div class="flex items-center gap-1">
+									<span
+										class="border border-primary bg-surface-2 px-1.5 py-0.5 text-primary"
+									>
+										[~] all
+									</span>
+									<span
+										class="border border-border px-1.5 py-0.5 text-fg-muted"
+									>
+										[&gt;] inbox
+									</span>
+									<span
+										class="border border-border px-1.5 py-0.5 text-fg-muted"
+									>
+										[*] active
+									</span>
+									<span
+										class="border border-border px-1.5 py-0.5 text-fg-muted"
+									>
+										[x] done
+									</span>
+								</div>
+
+								<!-- Task cards -->
+								<div class="flex flex-col gap-1">
+									<!-- Done task -->
+									<div
+										class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
+									>
+										<span class="text-green">[x]</span>
+										<span class="flex-1 text-fg-muted line-through">
+											Set up CI/CD pipeline
+										</span>
+										<span
+											class="border border-border-highlight bg-surface-2 px-1 text-teal"
+										>
+											+devops
+										</span>
+									</div>
+									<!-- Done task -->
+									<div
+										class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
+									>
+										<span class="text-green">[x]</span>
+										<span class="flex-1 text-fg-muted line-through">
+											Fix auth token refresh bug
+										</span>
+										<span
+											class="border border-border-highlight bg-surface-2 px-1 text-teal"
+										>
+											+backend
+										</span>
+									</div>
+									<!-- Active/selected task -->
+									<div
+										class="flex items-start gap-2 border border-primary bg-surface-1 px-2 py-1.5"
+									>
+										<span class="text-blue">[*]</span>
+										<span class="flex-1 text-fg">Build landing page</span>
+										<span
+											class="border border-border-highlight bg-surface-2 px-1 text-teal"
+										>
+											+frontend
+										</span>
+										<span class="text-warning">due:fri</span>
+									</div>
+									<!-- Inbox task -->
+									<div
+										class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
+									>
+										<span class="text-fg-muted">[&nbsp;]</span>
+										<span class="flex-1 text-fg">Write API documentation</span>
+										<span
+											class="border border-border-highlight bg-surface-2 px-1 text-teal"
+										>
+											+docs
+										</span>
+									</div>
+									<!-- Inbox task -->
+									<div
+										class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
+									>
+										<span class="text-fg-muted">[&nbsp;]</span>
+										<span class="flex-1 text-fg">
+											Invoice Acme Corp - December
+										</span>
+										<span
+											class="border border-border-highlight bg-surface-2 px-1 text-orange"
+										>
+											@acme
+										</span>
+									</div>
+								</div>
+
+								<!-- Status bar -->
+								<div
+									class="flex items-center justify-between border-t border-border pt-2"
+								>
+									<span class="font-bold text-green">-- NORMAL --</span>
+									<span class="text-fg-muted">3/5</span>
+								</div>
+							</div>
+							<div class="crt-overlay"></div>
+						</div>
+					</div>
+				</section>
+
+				<!-- What is writequit — AEO definition block -->
+				<section
+					class="animate-fade-in mx-auto max-w-3xl px-8 py-12 max-sm:px-5"
+					style="animation-delay: 0.85s;"
+				>
+					<article>
+						<h2
+							class="mb-4 text-[0.75rem] font-semibold tracking-wide text-[#cdd6f4]"
 						>
-							<span class="opacity-60">&gt;</span>
-							start shipping
-						</button>
-						<!-- else content here -->
-					{/if}
-				</div>
-			</section>
+							What is writequit?
+						</h2>
+						<p class="mb-3 text-[0.6rem] leading-[1.9] text-[#6e7a96]">
+							<strong class="text-[#8c93a8]">writequit</strong>
+							is a task manager, time tracker, and invoice generator built for freelance
+							developers. It combines vim-style keybindings with a terminal-inspired
+							interface so you can manage projects, log hours, and bill clients without
+							context-switching away from how you already work.
+						</p>
+						<p class="mb-3 text-[0.6rem] leading-[1.9] text-[#6e7a96]">
+							Tasks use markdown. Navigation uses
+							<code class="faq-code">j/k</code>
+							. Commands start with
+							<code class="faq-code">:</code>
+							, the same muscle memory you use in your editor. Time tracking, tagging,
+							and invoicing are all built in, not bolted on.
+						</p>
+
+						<h3
+							class="mt-6 mb-3 text-[0.65rem] font-semibold tracking-wide text-[#cdd6f4]"
+						>
+							Who is writequit for?
+						</h3>
+						<p class="mb-3 text-[0.6rem] leading-[1.9] text-[#6e7a96]">
+							writequit is for freelance developers, independent contractors,
+							and solo consultants who bill clients by the hour. If you spend
+							your day in a terminal or code editor and want task management
+							that matches that workflow, writequit replaces the scattered
+							combination of Todoist, Toggl, and spreadsheet invoices with one
+							tool.
+						</p>
+
+						<h3
+							class="mt-6 mb-3 text-[0.65rem] font-semibold tracking-wide text-[#cdd6f4]"
+						>
+							How does writequit work?
+						</h3>
+						<p class="text-[0.6rem] leading-[1.9] text-[#6e7a96]">
+							You create tasks with inline tags (like
+							<code class="faq-code">+frontend</code>
+							or
+							<code class="faq-code">@acme</code>
+							), track time with the
+							<code class="faq-code">:track</code>
+							and
+							<code class="faq-code">:stop</code>
+							commands, and generate PDF invoices from your logged hours with
+							<code class="faq-code">:invoice</code>
+							. Everything is navigable with
+							<code class="faq-code">j/k</code>
+							keys, filterable by tag or project, and exportable as a PDF report.
+						</p>
+					</article>
+				</section>
+
+				<!-- FAQ — AEO-optimized -->
+				<section
+					class="animate-fade-in mx-auto max-w-3xl px-8 py-12 max-sm:px-5"
+					style="animation-delay: 0.9s;"
+				>
+					<h2
+						class="mb-6 text-[0.75rem] font-semibold tracking-wide text-[#cdd6f4]"
+					>
+						Frequently asked questions
+					</h2>
+					<div class="flex flex-col gap-5">
+						<div>
+							<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
+								How does time tracking work?
+							</h3>
+							<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
+								Type <code class="faq-code">:track</code>
+								to start a session and
+								<code class="faq-code">:stop</code>
+								to end it. Sessions link to tasks and projects automatically. When
+								you need to bill, select the sessions and generate a PDF invoice from
+								your tracked hours.
+							</p>
+						</div>
+						<div>
+							<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
+								Do I need to know vim?
+							</h3>
+							<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
+								No. writequit borrows familiar vim patterns like
+								<code class="faq-code">j/k</code>
+								navigation and colon commands, but everything works with a mouse too.
+								The keybindings are a power-user shortcut, not a requirement.
+							</p>
+						</div>
+						<div>
+							<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
+								Is writequit free?
+							</h3>
+							<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
+								writequit is free during the beta. No credit card required.
+								Future pricing has not been announced yet.
+							</p>
+						</div>
+						<div>
+							<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
+								How does invoicing work?
+							</h3>
+							<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
+								Select time sessions, set your rate, and run
+								<code class="faq-code">:invoice</code>
+								. A PDF downloads directly to your machine. No third-party payment
+								processors or integrations needed.
+							</p>
+						</div>
+						<div>
+							<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
+								What makes writequit different from other task managers?
+							</h3>
+							<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
+								Most project tools are built for managers, not makers. writequit
+								is built for developers who want to track tasks, log time, and
+								send invoices from one keyboard-driven interface. No Kanban
+								boards, no Gantt charts, no sprint ceremonies.
+							</p>
+						</div>
+						<div>
+							<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
+								How is writequit different from Jira or Asana?
+							</h3>
+							<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
+								Jira and Asana are team project management tools built for
+								managers. writequit is built for individual freelance developers
+								who need a single interface for tasks, time tracking, and
+								invoicing. There are no boards, sprints, or team features. You
+								type commands, track time, and generate invoices from one
+								keyboard-driven UI.
+							</p>
+						</div>
+						<div>
+							<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
+								Can I use writequit on mobile?
+							</h3>
+							<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
+								writequit works in any modern browser, including mobile. The
+								interface is responsive, but the keyboard-driven workflow is
+								designed for desktop use. You can view tasks and track time on
+								your phone, but vim keybindings work best with a physical
+								keyboard.
+							</p>
+						</div>
+						<div>
+							<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
+								How do I tag tasks in writequit?
+							</h3>
+							<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
+								Tags are inline, typed directly into your task text. Use
+								<code class="faq-code">+tagname</code>
+								to add a tag (like
+								<code class="faq-code">+frontend</code>
+								or
+								<code class="faq-code">+urgent</code>
+								) and
+								<code class="faq-code">@clientname</code>
+								to assign a client. There are no dropdowns or separate tag screens.
+								Tags are parsed automatically and can be used to filter your task
+								list.
+							</p>
+						</div>
+					</div>
+				</section>
+
+				<!-- CTA -->
+				<section
+					class="animate-fade-in px-8 py-16 max-sm:px-5"
+					style="animation-delay: 0.95s;"
+				>
+					<div class="mx-auto max-w-3xl text-center">
+						<p class="mb-6 text-[0.8rem] text-[#6e7a96]">
+							<span class="text-primary">&gt;</span>
+							spend less time managing. more time building.
+						</p>
+						{#if data.isLoggedIn}
+							<a href="/app" class="btn-primary btn-primary-large">
+								<span class="opacity-60">&gt;</span>
+								start shipping
+							</a>
+						{:else}
+							<button
+								onclick={() => signIn()}
+								class="btn-primary btn-primary-large"
+							>
+								<span class="opacity-60">&gt;</span>
+								start shipping
+							</button>
+							<!-- else content here -->
+						{/if}
+					</div>
+				</section>
+			</main>
 
 			<!-- Footer -->
 			<footer
-				class="flex items-center justify-center gap-3 border-t border-primary/6 px-8 py-6 text-[0.5rem] text-surface-3"
+				class="border-t border-primary/6 px-8 py-6 text-[0.5rem] text-surface-3"
 			>
-				<span class="font-semibold text-fg-muted">:wq</span>
-				<span class="text-primary/15">&middot;</span>
-				<span>write. quit. ship.</span>
-				<span class="text-primary/15">&middot;</span>
-				<span>a tool, not a lifestyle</span>
+				<div class="mx-auto flex max-w-3xl flex-col items-center gap-3">
+					<div class="flex items-center gap-3">
+						<span class="font-semibold text-fg-muted">:wq</span>
+						<span class="text-primary/15">&middot;</span>
+						<span>write. quit. ship.</span>
+						<span class="text-primary/15">&middot;</span>
+						<span>a tool, not a lifestyle</span>
+					</div>
+					<div class="flex items-center gap-3 text-[#4a5068]">
+						<span>&copy; {new Date().getFullYear()} writequit</span>
+					</div>
+				</div>
 			</footer>
 		</div>
 	{/if}
@@ -1096,18 +1340,5 @@
 		background: rgba(247, 118, 142, 0.08);
 		padding: 0.05rem 0.25rem;
 		font-size: inherit;
-	}
-
-	/* --- Screen-reader only (visually hidden h2) --- */
-	.sr-only {
-		position: absolute;
-		width: 1px;
-		height: 1px;
-		padding: 0;
-		margin: -1px;
-		overflow: hidden;
-		clip: rect(0, 0, 0, 0);
-		white-space: nowrap;
-		border-width: 0;
 	}
 </style>

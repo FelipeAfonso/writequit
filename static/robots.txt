@@ -6,5 +6,30 @@ Disallow: /app/
 Disallow: /api/
 Disallow: /auth/
 
+# Allow AI crawlers to index public content for AEO
+User-agent: GPTBot
+Allow: /
+Disallow: /app/
+Disallow: /api/
+Disallow: /auth/
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /app/
+Disallow: /api/
+Disallow: /auth/
+
+User-agent: CCBot
+Allow: /
+Disallow: /app/
+Disallow: /api/
+Disallow: /auth/
+
+User-agent: anthropic-ai
+Allow: /
+Disallow: /app/
+Disallow: /api/
+Disallow: /auth/
+
 # Sitemap
 Sitemap: https://writequit.dev/sitemap.xml
