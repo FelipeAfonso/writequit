@@ -6,7 +6,8 @@ const staticPages = [
 	{
 		url: '/',
 		changefreq: 'weekly',
-		priority: '1.0'
+		priority: '1.0',
+		lastmod: '2026-03-09'
 	}
 ];
 
@@ -17,6 +18,7 @@ ${staticPages
 	.map(
 		(page) => `  <url>
     <loc>${SITE_URL}${page.url}</loc>
+    <lastmod>${page.lastmod}</lastmod>
     <changefreq>${page.changefreq}</changefreq>
     <priority>${page.priority}</priority>
   </url>`
