@@ -186,5 +186,50 @@ export default defineSchema({
 		updatedAt: v.number()
 	})
 		.index('by_userId', ['userId'])
-		.index('by_userId_startTime', ['userId', 'startTime'])
+		.index('by_userId_startTime', ['userId', 'startTime']),
+
+	// ── Boards (shared task views for external contributors) ───────
+
+	boards: defineTable({
+		/** Human-readable board name, e.g. "Sprint 12 Tasks". */
+		name: v.string(),
+		/** SHA-256 hash of the access password (hex-encoded, with salt prefix). */
+		passwordHash: v.string(),
+		/** Unique URL slug for the public URL, e.g. "a7x9k2m3". */
+		slug: v.string(),
+		/** Filter criteria that define which tasks appear on this board. */
+		filter: v.object({
+			statusFilter: v.optional(
+				v.union(
+					v.literal('all'),
+					v.literal('inbox'),
+					v.literal('active'),
+					v.literal('done')
+				)
+			),
+			tagIds: v.optional(v.array(v.id('tags')))
+		}),
+		/** Whether the board is currently active/shared. */
+		isActive: v.boolean(),
+		/** Owner — references the users table. */
+		userId: v.id('users'),
+		createdAt: v.number(),
+		updatedAt: v.number()
+	})
+		.index('by_slug', ['slug'])
+		.index('by_userId', ['userId']),
+
+	boardComments: defineTable({
+		/** The board this comment belongs to. */
+		boardId: v.id('boards'),
+		/** The task this comment is about. */
+		taskId: v.id('tasks'),
+		/** Display name of the anonymous commenter. */
+		authorName: v.string(),
+		/** Comment content (plain text or markdown). */
+		content: v.string(),
+		createdAt: v.number()
+	})
+		.index('by_boardId_taskId', ['boardId', 'taskId'])
+		.index('by_boardId', ['boardId'])
 });
