@@ -89,7 +89,8 @@
 		{ href: '/app', label: 'tasks', icon: '#', shortcut: 'g t' },
 		{ href: '/app/sessions', label: 'sessions', icon: '~', shortcut: 'g s' },
 		{ href: '/app/reports', label: 'reports', icon: '$', shortcut: 'g r' },
-		{ href: '/app/tags', label: 'tags', icon: '+', shortcut: 'g a' }
+		{ href: '/app/tags', label: 'tags', icon: '+', shortcut: 'g a' },
+		{ href: '/app/boards', label: 'boards', icon: '&', shortcut: 'g b' }
 	];
 
 	function isActive(href: string): boolean {
@@ -239,6 +240,7 @@
 				s: '/app/sessions',
 				r: '/app/reports',
 				a: '/app/tags',
+				b: '/app/boards',
 				u: '/app/user',
 				d: '/app/admin'
 			};
@@ -528,6 +530,16 @@
 										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
 									>
 										g a
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										go to boards
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										g b
 									</kbd>
 								</div>
 								<div class="flex items-center justify-between">
