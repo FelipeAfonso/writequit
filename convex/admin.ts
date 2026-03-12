@@ -358,6 +358,30 @@ export const seedData = mutation({
 	}
 });
 
+// ── Board expiry migration ─────────────────────────────────────────
+
+/**
+ * Remove the deprecated `expiresAt` field from all boards.
+ * Run via: bunx convex run admin:removeBoardExpiry
+ */
+export const removeBoardExpiry = internalMutation({
+	args: {},
+	handler: async (ctx) => {
+		const boards = await ctx.db.query('boards').collect();
+		let patched = 0;
+		for (const board of boards) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			if ('expiresAt' in (board as any)) {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
+				const { expiresAt: _, ...rest } = board as any;
+				await ctx.db.replace(board._id, rest);
+				patched++;
+			}
+		}
+		return { patched, total: boards.length };
+	}
+});
+
 // ── Data migration from prod snapshot ──────────────────────────────
 
 /**

@@ -199,6 +199,15 @@ export const commands: Command[] = [
 		}
 	},
 	{
+		name: 'boards',
+		aliases: ['boards', 'b'],
+		description: 'go to boards',
+		args: 'none',
+		execute() {
+			goto('/app/boards');
+		}
+	},
+	{
 		name: 'admin',
 		aliases: ['admin'],
 		description: 'go to admin panel',
