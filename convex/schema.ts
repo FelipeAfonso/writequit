@@ -208,6 +208,10 @@ export default defineSchema({
 					v.union(v.literal('inbox'), v.literal('active'), v.literal('done'))
 				)
 			),
+			/** @deprecated — old single-value field, kept temporarily for migration. */
+			statusFilter: v.optional(
+				v.union(v.literal('inbox'), v.literal('active'), v.literal('done'))
+			),
 			tagIds: v.optional(v.array(v.id('tags')))
 		}),
 		/** Whether the board is currently active/shared. */
