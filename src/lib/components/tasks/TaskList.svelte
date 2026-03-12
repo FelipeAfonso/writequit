@@ -18,6 +18,8 @@
 		dueDate?: number;
 		tagIds: string[];
 		createdAt: number;
+		boardCommentCount?: number;
+		boardCommentSeenCount?: number;
 	}
 
 	interface Props {
@@ -345,6 +347,8 @@
 				tags={resolveTags(task.tagIds)}
 				createdAt={task.createdAt}
 				selected={i === selectedIndex}
+				boardCommentCount={task.boardCommentCount}
+				boardCommentSeenCount={task.boardCommentSeenCount}
 				onclick={ontaskclick}
 				{onstatuschange}
 			/>

@@ -39,6 +39,22 @@
 
 	const allTags = useQuery(api.tags.list, {});
 
+	// Board comments for this task (across all boards)
+	const boardComments = useQuery(api.boards.getCommentsByTask, () => ({
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		taskId: taskId as any
+	}));
+
+	// Mark board comments as seen when they load
+	$effect(() => {
+		if (boardComments.data && boardComments.data.length > 0) {
+			client.mutation(api.boards.markTaskCommentsSeen, {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				taskId: taskId as any
+			});
+		}
+	});
+
 	// Check for ?edit=1 URL param to start in edit mode (e.g. from cc on task list)
 	let isEditing = $state(page.url.searchParams.get('edit') === '1');
 	let editor: TaskEditor | undefined = $state();
@@ -265,6 +281,35 @@
 			/>
 		{:else}
 			<Markdown content={task.data.rawContent} />
+		{/if}
+
+		<!-- Board comments -->
+		{#if boardComments.data && boardComments.data.length > 0}
+			<div class="flex flex-col gap-3 border-t border-border pt-4">
+				<h2 class="font-mono text-xs font-bold text-fg-muted">
+					board comments ({boardComments.data.length})
+				</h2>
+				<div class="flex flex-col gap-2">
+					{#each boardComments.data as comment (comment._id)}
+						<div
+							class="flex flex-col gap-0.5 border-l-2 border-border pl-3 font-mono"
+						>
+							<div class="flex items-baseline gap-2">
+								<span class="text-xs font-bold text-primary">
+									{comment.authorName}
+								</span>
+								<span class="text-[10px] text-fg-muted">
+									{comment.boardName}
+								</span>
+								<span class="text-[10px] text-fg-muted">
+									{formatDateTime(comment.createdAt, timezone)}
+								</span>
+							</div>
+							<p class="text-xs text-fg-dark">{comment.content}</p>
+						</div>
+					{/each}
+				</div>
+			</div>
 		{/if}
 	{/if}
 </div>

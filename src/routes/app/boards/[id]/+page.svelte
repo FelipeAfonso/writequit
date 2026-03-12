@@ -37,9 +37,7 @@
 	// ── Edit form state ────────────────────────────────────────────
 	let isEditing = $state(false);
 	let editName = $state('');
-	let editStatusFilter = $state<
-		'all' | 'inbox' | 'active' | 'done' | undefined
-	>(undefined);
+	let editStatusFilters = $state<string[]>([]);
 	let editTagIds = $state<string[]>([]);
 
 	// ── Share dialog ───────────────────────────────────────────────
@@ -52,7 +50,9 @@
 	function startEdit() {
 		if (!board.data) return;
 		editName = board.data.name;
-		editStatusFilter = board.data.filter.statusFilter;
+		editStatusFilters = board.data.filter.statusFilters
+			? [...board.data.filter.statusFilters]
+			: [];
 		editTagIds = board.data.filter.tagIds ? [...board.data.filter.tagIds] : [];
 		isEditing = true;
 	}
@@ -67,7 +67,11 @@
 				id: boardId,
 				name,
 				filter: {
-					statusFilter: editStatusFilter,
+					statusFilters:
+						editStatusFilters.length > 0
+							? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+								(editStatusFilters as any)
+							: undefined,
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					tagIds: editTagIds.length > 0 ? (editTagIds as any) : undefined
 				}
@@ -245,9 +249,9 @@
 			<!-- Filters -->
 			<div class="flex flex-wrap items-center gap-2">
 				<span class="text-xs text-fg-muted">filters:</span>
-				{#if board.data.filter.statusFilter}
+				{#if board.data.filter.statusFilters && board.data.filter.statusFilters.length > 0}
 					<span class="border border-border px-1.5 py-0.5 text-xs text-fg-dark">
-						status:{board.data.filter.statusFilter}
+						status:{board.data.filter.statusFilters.join(',')}
 					</span>
 				{:else}
 					<span class="text-xs text-fg-muted">no status filter</span>
@@ -340,20 +344,33 @@
 				</div>
 
 				<div class="flex flex-col gap-1">
-					<span class="font-mono text-xs text-fg-muted">status filter</span>
+					<span class="font-mono text-xs text-fg-muted">
+						status filter
+						{#if editStatusFilters.length === 0}
+							<span class="text-fg-muted opacity-60">(all)</span>
+						{/if}
+					</span>
 					<div class="flex gap-1">
-						{#each [undefined, 'all', 'inbox', 'active', 'done'] as status (status ?? 'none')}
+						{#each ['inbox', 'active', 'done'] as status (status)}
 							<button
 								type="button"
 								class="cursor-pointer border px-2 py-0.5 font-mono text-xs transition-colors"
-								class:border-primary={editStatusFilter === status}
-								class:text-primary={editStatusFilter === status}
-								class:border-border={editStatusFilter !== status}
-								class:text-fg-muted={editStatusFilter !== status}
-								onclick={() =>
-									(editStatusFilter = status as typeof editStatusFilter)}
+								class:border-primary={editStatusFilters.includes(status)}
+								class:text-primary={editStatusFilters.includes(status)}
+								class:border-border={!editStatusFilters.includes(status)}
+								class:text-fg-muted={!editStatusFilters.includes(status)}
+								onclick={() => {
+									const idx = editStatusFilters.indexOf(status);
+									if (idx === -1) {
+										editStatusFilters = [...editStatusFilters, status];
+									} else {
+										editStatusFilters = editStatusFilters.filter(
+											(s) => s !== status
+										);
+									}
+								}}
 							>
-								{status ?? 'none'}
+								{status}
 							</button>
 						{/each}
 					</div>

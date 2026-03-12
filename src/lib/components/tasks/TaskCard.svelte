@@ -23,6 +23,10 @@
 		createdAt: number;
 		/** Whether this card is keyboard-selected. */
 		selected?: boolean;
+		/** Total board comments on this task (denormalized counter). */
+		boardCommentCount?: number;
+		/** Last-seen comment count (for unseen badge). */
+		boardCommentSeenCount?: number;
 		/** Called when the task card is clicked (navigate to detail). */
 		onclick?: (id: string) => void;
 		/** Called when the status checkbox area is clicked. */
@@ -37,9 +41,16 @@
 		tags = [],
 		createdAt,
 		selected = false,
+		boardCommentCount = 0,
+		boardCommentSeenCount = 0,
 		onclick,
 		onstatuschange
 	}: Props = $props();
+
+	let hasUnseen = $derived(
+		boardCommentCount > 0 && boardCommentCount > boardCommentSeenCount
+	);
+	let unseenCount = $derived(boardCommentCount - boardCommentSeenCount);
 
 	const getTz = getContext<TimezoneGetter>(TIMEZONE_CTX);
 	let timezone = $derived(getTz());
@@ -97,8 +108,8 @@
 			</span>
 		</div>
 
-		<!-- Meta row: tags + due date -->
-		{#if tags.length > 0 || dueDate}
+		<!-- Meta row: tags + due date + comment badge -->
+		{#if tags.length > 0 || dueDate || boardCommentCount > 0}
 			<div class="flex flex-wrap items-center gap-2">
 				{#each tags as tag (tag._id)}
 					<TagBadge
@@ -116,6 +127,20 @@
 						class:text-red={isOverdue(dueDate)}
 					>
 						due:{formatShortDate(dueDate, timezone)}
+					</span>
+				{/if}
+
+				{#if boardCommentCount > 0}
+					<span
+						class="text-xs {hasUnseen
+							? 'font-bold text-cyan'
+							: 'text-fg-muted'}"
+					>
+						{#if hasUnseen}
+							[{unseenCount} new]
+						{:else}
+							[{boardCommentCount}]
+						{/if}
 					</span>
 				{/if}
 			</div>

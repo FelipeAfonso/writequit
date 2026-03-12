@@ -73,22 +73,18 @@ async function validateBoardAccess(
  * Returns tasks matching the board's status + tag filters.
  */
 async function fetchBoardTasks(ctx: QueryCtx, board: Doc<'boards'>) {
-	const { statusFilter, tagIds: filterTagIds } = board.filter;
+	const { statusFilters, tagIds: filterTagIds } = board.filter;
 
-	let tasksQuery;
-	if (statusFilter && statusFilter !== 'all') {
-		tasksQuery = ctx.db
-			.query('tasks')
-			.withIndex('by_status_userId', (q) =>
-				q.eq('status', statusFilter).eq('userId', board.userId)
-			);
-	} else {
-		tasksQuery = ctx.db
-			.query('tasks')
-			.withIndex('by_userId', (q) => q.eq('userId', board.userId));
+	// Fetch all user tasks, then filter by selected statuses
+	let tasks = await ctx.db
+		.query('tasks')
+		.withIndex('by_userId', (q) => q.eq('userId', board.userId))
+		.collect();
+
+	// Apply status filter (OR logic — task must match ANY selected status)
+	if (statusFilters && statusFilters.length > 0) {
+		tasks = tasks.filter((task) => statusFilters.includes(task.status));
 	}
-
-	let tasks = await tasksQuery.collect();
 
 	// Apply tag filter (AND logic — task must have ALL filter tags)
 	if (filterTagIds && filterTagIds.length > 0) {
@@ -128,8 +124,12 @@ function taskMatchesBoardFilter(
 	task: Doc<'tasks'>,
 	board: Doc<'boards'>
 ): boolean {
-	const { statusFilter, tagIds: filterTagIds } = board.filter;
-	if (statusFilter && statusFilter !== 'all' && task.status !== statusFilter) {
+	const { statusFilters, tagIds: filterTagIds } = board.filter;
+	if (
+		statusFilters &&
+		statusFilters.length > 0 &&
+		!statusFilters.includes(task.status)
+	) {
 		return false;
 	}
 	if (filterTagIds && filterTagIds.length > 0) {
@@ -265,6 +265,40 @@ export const getTaskComments = query({
 	}
 });
 
+/** Get all board comments for a specific task (across all boards), for the task detail page. */
+export const getCommentsByTask = query({
+	args: { taskId: v.id('tasks') },
+	handler: async (ctx, args) => {
+		const user = await getCurrentUser(ctx);
+		if (user === null) return [];
+
+		const task = await ctx.db.get(args.taskId);
+		if (task === null || task.userId !== user._id) return [];
+
+		const comments = await ctx.db
+			.query('boardComments')
+			.withIndex('by_taskId', (q) => q.eq('taskId', args.taskId))
+			.collect();
+
+		// Resolve board name for each comment
+		const commentsWithBoard = await Promise.all(
+			comments.map(async (comment) => {
+				const board = await ctx.db.get(comment.boardId);
+				return {
+					_id: comment._id,
+					boardName: board?.name ?? 'unknown board',
+					authorName: comment.authorName,
+					content: comment.content,
+					createdAt: comment.createdAt
+				};
+			})
+		);
+
+		// Sort chronologically (oldest first)
+		return commentsWithBoard.sort((a, b) => a.createdAt - b.createdAt);
+	}
+});
+
 // ── Authenticated mutations (owner) ────────────────────────────────
 
 /**
@@ -275,12 +309,9 @@ export const create = mutation({
 	args: {
 		name: v.string(),
 		filter: v.object({
-			statusFilter: v.optional(
-				v.union(
-					v.literal('all'),
-					v.literal('inbox'),
-					v.literal('active'),
-					v.literal('done')
+			statusFilters: v.optional(
+				v.array(
+					v.union(v.literal('inbox'), v.literal('active'), v.literal('done'))
 				)
 			),
 			tagIds: v.optional(v.array(v.id('tags')))
@@ -332,12 +363,9 @@ export const update = mutation({
 		name: v.optional(v.string()),
 		filter: v.optional(
 			v.object({
-				statusFilter: v.optional(
-					v.union(
-						v.literal('all'),
-						v.literal('inbox'),
-						v.literal('active'),
-						v.literal('done')
+				statusFilters: v.optional(
+					v.array(
+						v.union(v.literal('inbox'), v.literal('active'), v.literal('done'))
 					)
 				),
 				tagIds: v.optional(v.array(v.id('tags')))
@@ -415,16 +443,53 @@ export const remove = mutation({
 		if (board === null || board.userId !== user._id)
 			throw new Error('Board not found');
 
-		// Delete all comments for this board
+		// Delete all comments for this board and decrement task counters
 		const comments = await ctx.db
 			.query('boardComments')
 			.withIndex('by_boardId', (q) => q.eq('boardId', args.id))
 			.collect();
+
+		// Group comment counts by taskId for efficient patching
+		const taskCommentCounts = new Map<string, number>();
+		for (const comment of comments) {
+			taskCommentCounts.set(
+				comment.taskId,
+				(taskCommentCounts.get(comment.taskId) ?? 0) + 1
+			);
+		}
+
 		for (const comment of comments) {
 			await ctx.db.delete(comment._id);
 		}
 
+		// Decrement boardCommentCount on each affected task
+		for (const [taskId, count] of taskCommentCounts) {
+			const task = await ctx.db.get(taskId as Id<'tasks'>);
+			if (task) {
+				const newCount = Math.max(0, (task.boardCommentCount ?? 0) - count);
+				await ctx.db.patch(task._id, { boardCommentCount: newCount });
+			}
+		}
+
 		await ctx.db.delete(args.id);
+	}
+});
+
+/** Mark all board comments on a task as seen (resets the unseen badge). */
+export const markTaskCommentsSeen = mutation({
+	args: { taskId: v.id('tasks') },
+	handler: async (ctx, args) => {
+		const user = await getCurrentUserOrThrow(ctx);
+
+		const task = await ctx.db.get(args.taskId);
+		if (task === null || task.userId !== user._id) return;
+
+		const count = task.boardCommentCount ?? 0;
+		if (count > 0 && count !== (task.boardCommentSeenCount ?? 0)) {
+			await ctx.db.patch(args.taskId, {
+				boardCommentSeenCount: count
+			});
+		}
 	}
 });
 
@@ -446,7 +511,9 @@ export const publicGetBySlug = query({
 			.query('tags')
 			.withIndex('by_userId', (q) => q.eq('userId', board.userId))
 			.collect();
-		const priorityTags = allTags.filter((t) => t.type === 'priority');
+		const priorityTags = allTags
+			.filter((t) => t.type === 'priority')
+			.sort((a, b) => a.name.localeCompare(b.name));
 
 		return {
 			board: {
@@ -510,6 +577,11 @@ export const publicAddComment = mutation({
 			authorName,
 			content,
 			createdAt: Date.now()
+		});
+
+		// Increment the denormalized comment counter on the task
+		await ctx.db.patch(args.taskId, {
+			boardCommentCount: (task.boardCommentCount ?? 0) + 1
 		});
 	}
 });

@@ -21,9 +21,7 @@
 	// ── Create board form state ────────────────────────────────────
 	let showCreateForm = $state(false);
 	let newBoardName = $state('');
-	let newStatusFilter = $state<'all' | 'inbox' | 'active' | 'done' | undefined>(
-		undefined
-	);
+	let newStatusFilters = $state<string[]>([]);
 	let newTagIds = $state<string[]>([]);
 
 	// ── Selection & keyboard nav ───────────────────────────────────
@@ -64,7 +62,11 @@
 			const result = await client.mutation(api.boards.create, {
 				name,
 				filter: {
-					statusFilter: newStatusFilter,
+					statusFilters:
+						newStatusFilters.length > 0
+							? // eslint-disable-next-line @typescript-eslint/no-explicit-any
+								(newStatusFilters as any)
+							: undefined,
 					// eslint-disable-next-line @typescript-eslint/no-explicit-any
 					tagIds: newTagIds.length > 0 ? (newTagIds as any) : undefined
 				}
@@ -78,7 +80,7 @@
 
 			// Reset form
 			newBoardName = '';
-			newStatusFilter = undefined;
+			newStatusFilters = [];
 			newTagIds = [];
 			showCreateForm = false;
 		} catch (error) {
@@ -266,22 +268,35 @@
 				/>
 			</div>
 
-			<!-- Status filter -->
+			<!-- Status filter (multi-select) -->
 			<div class="flex flex-col gap-1">
-				<span class="font-mono text-xs text-fg-muted">status filter</span>
+				<span class="font-mono text-xs text-fg-muted">
+					status filter
+					{#if newStatusFilters.length === 0}
+						<span class="text-fg-muted opacity-60">(all)</span>
+					{/if}
+				</span>
 				<div class="flex gap-1">
-					{#each [undefined, 'all', 'inbox', 'active', 'done'] as status (status ?? 'none')}
+					{#each ['inbox', 'active', 'done'] as status (status)}
 						<button
 							type="button"
 							class="cursor-pointer border px-2 py-0.5 font-mono text-xs transition-colors"
-							class:border-primary={newStatusFilter === status}
-							class:text-primary={newStatusFilter === status}
-							class:border-border={newStatusFilter !== status}
-							class:text-fg-muted={newStatusFilter !== status}
-							onclick={() =>
-								(newStatusFilter = status as typeof newStatusFilter)}
+							class:border-primary={newStatusFilters.includes(status)}
+							class:text-primary={newStatusFilters.includes(status)}
+							class:border-border={!newStatusFilters.includes(status)}
+							class:text-fg-muted={!newStatusFilters.includes(status)}
+							onclick={() => {
+								const idx = newStatusFilters.indexOf(status);
+								if (idx === -1) {
+									newStatusFilters = [...newStatusFilters, status];
+								} else {
+									newStatusFilters = newStatusFilters.filter(
+										(s) => s !== status
+									);
+								}
+							}}
 						>
-							{status ?? 'none'}
+							{status}
 						</button>
 					{/each}
 				</div>
@@ -356,9 +371,9 @@
 
 						<!-- Filter info -->
 						<div class="flex flex-wrap items-center gap-2">
-							{#if board.filter.statusFilter}
+							{#if board.filter.statusFilters && board.filter.statusFilters.length > 0}
 								<span class="text-xs text-fg-muted">
-									status:{board.filter.statusFilter}
+									status:{board.filter.statusFilters.join(',')}
 								</span>
 							{/if}
 							{#if board.filterTags && board.filterTags.length > 0}
