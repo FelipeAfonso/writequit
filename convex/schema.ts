@@ -105,7 +105,11 @@ export default defineSchema({
 		createdAt: v.number(),
 		updatedAt: v.number(),
 		/** Set when status transitions to "done". */
-		completedAt: v.optional(v.number())
+		completedAt: v.optional(v.number()),
+		/** Total number of board comments on this task (denormalized counter). */
+		boardCommentCount: v.optional(v.number()),
+		/** Comment count the owner last saw (for unseen-comment badge). */
+		boardCommentSeenCount: v.optional(v.number())
 	})
 		.index('by_status', ['status'])
 		.index('by_userId', ['userId'])
@@ -199,12 +203,9 @@ export default defineSchema({
 		slug: v.string(),
 		/** Filter criteria that define which tasks appear on this board. */
 		filter: v.object({
-			statusFilter: v.optional(
-				v.union(
-					v.literal('all'),
-					v.literal('inbox'),
-					v.literal('active'),
-					v.literal('done')
+			statusFilters: v.optional(
+				v.array(
+					v.union(v.literal('inbox'), v.literal('active'), v.literal('done'))
 				)
 			),
 			tagIds: v.optional(v.array(v.id('tags')))
@@ -232,4 +233,5 @@ export default defineSchema({
 	})
 		.index('by_boardId_taskId', ['boardId', 'taskId'])
 		.index('by_boardId', ['boardId'])
+		.index('by_taskId', ['taskId'])
 });
