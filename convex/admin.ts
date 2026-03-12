@@ -382,6 +382,41 @@ export const removeBoardExpiry = internalMutation({
 	}
 });
 
+// ── Board statusFilter → statusFilters migration ──────────────────
+
+/**
+ * Migrate boards from old single `filter.statusFilter` (string) to new
+ * `filter.statusFilters` (string[]). Removes the old field after conversion.
+ *
+ * Run via: bunx convex run admin:migrateBoardStatusFilters
+ */
+export const migrateBoardStatusFilters = internalMutation({
+	args: {},
+	handler: async (ctx) => {
+		const boards = await ctx.db.query('boards').collect();
+		let patched = 0;
+		for (const board of boards) {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const filter = board.filter as any;
+			if (filter.statusFilter !== undefined) {
+				const oldValue: string = filter.statusFilter;
+				// Convert single string → array, merge with any existing statusFilters
+				const existing: string[] = filter.statusFilters ?? [];
+				const merged = Array.from(new Set([...existing, oldValue]));
+				await ctx.db.patch(board._id, {
+					filter: {
+						...filter,
+						statusFilters: merged,
+						statusFilter: undefined
+					}
+				});
+				patched++;
+			}
+		}
+		return { patched, total: boards.length };
+	}
+});
+
 // ── Data migration from prod snapshot ──────────────────────────────
 
 /**
