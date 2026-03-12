@@ -153,6 +153,17 @@
 		return map;
 	});
 
+	// Register page-specific command actions
+	$effect(() => {
+		commandPalette.registerActions({
+			navigateBack: () => goto('/app/boards')
+		});
+
+		return () => {
+			commandPalette.unregisterActions(['navigateBack']);
+		};
+	});
+
 	function handleKeydown(e: KeyboardEvent) {
 		if (isEditableTarget(e)) return;
 		if (commandPalette.isOpen) return;
