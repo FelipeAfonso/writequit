@@ -123,6 +123,38 @@ async function getUserTimezone(
 	return settings?.timezone ?? 'UTC';
 }
 
+/** Check that a task passes the board's filter criteria. */
+function taskMatchesBoardFilter(
+	task: Doc<'tasks'>,
+	board: Doc<'boards'>
+): boolean {
+	const { statusFilter, tagIds: filterTagIds } = board.filter;
+	if (statusFilter && statusFilter !== 'all' && task.status !== statusFilter) {
+		return false;
+	}
+	if (filterTagIds && filterTagIds.length > 0) {
+		if (!filterTagIds.every((tagId) => task.tagIds.includes(tagId))) {
+			return false;
+		}
+	}
+	return true;
+}
+
+/** Validate that all tag IDs belong to the given user. */
+async function validateTagOwnership(
+	ctx: QueryCtx | MutationCtx,
+	tagIds: Id<'tags'>[] | undefined,
+	userId: Id<'users'>
+) {
+	if (!tagIds || tagIds.length === 0) return;
+	for (const tagId of tagIds) {
+		const tag = await ctx.db.get(tagId);
+		if (!tag || tag.userId !== userId) {
+			throw new Error('Invalid tag in filter: tag not found or not owned');
+		}
+	}
+}
+
 // ── Authenticated queries (owner) ──────────────────────────────────
 
 /** List all boards for the current user. */
@@ -261,6 +293,8 @@ export const create = mutation({
 		const name = args.name.trim();
 		if (name.length === 0) throw new Error('Board name cannot be empty');
 
+		await validateTagOwnership(ctx, args.filter.tagIds, user._id);
+
 		// Generate unique slug
 		let slug: string;
 		let attempts = 0;
@@ -324,6 +358,7 @@ export const update = mutation({
 			patch.name = name;
 		}
 		if (args.filter !== undefined) {
+			await validateTagOwnership(ctx, args.filter.tagIds, user._id);
 			patch.filter = args.filter;
 		}
 
@@ -457,10 +492,12 @@ export const publicAddComment = mutation({
 	handler: async (ctx, args) => {
 		const board = await validateBoardAccess(ctx, args.slug, args.password);
 
-		// Verify the task exists and belongs to the board owner
+		// Verify the task exists, belongs to the board owner, and matches the filter
 		const task = await ctx.db.get(args.taskId);
 		if (task === null || task.userId !== board.userId)
 			throw new Error('Task not found');
+		if (!taskMatchesBoardFilter(task, board))
+			throw new Error('Task is not on this board');
 
 		const authorName = args.authorName.trim();
 		if (authorName.length === 0) throw new Error('Author name cannot be empty');
@@ -497,10 +534,12 @@ export const publicSetPriority = mutation({
 	handler: async (ctx, args) => {
 		const board = await validateBoardAccess(ctx, args.slug, args.password);
 
-		// Verify the task exists and belongs to the board owner
+		// Verify the task exists, belongs to the board owner, and matches the filter
 		const task = await ctx.db.get(args.taskId);
 		if (task === null || task.userId !== board.userId)
 			throw new Error('Task not found');
+		if (!taskMatchesBoardFilter(task, board))
+			throw new Error('Task is not on this board');
 
 		// Verify the new priority tag exists, belongs to the owner, and is a priority tag
 		const newTag = await ctx.db.get(args.priorityTagId);
@@ -511,25 +550,17 @@ export const publicSetPriority = mutation({
 		)
 			throw new Error('Invalid priority tag');
 
-		// If there's an old priority tag, verify it too
-		let oldTagName: string | null = null;
-		if (args.oldPriorityTagId) {
-			const oldTag = await ctx.db.get(args.oldPriorityTagId);
-			if (
-				oldTag !== null &&
-				oldTag.userId === board.userId &&
-				oldTag.type === 'priority'
-			) {
-				oldTagName = oldTag.name;
-			}
-		}
-
-		// Build new rawContent: remove old priority tag, add new one
+		// Compute existing priority tags from the task's actual tagIds (don't trust client)
 		let rawContent = task.rawContent;
-
-		if (oldTagName) {
-			// Remove the old +priority tag from the content
-			rawContent = removeTagFromContent(rawContent, oldTagName);
+		for (const existingTagId of task.tagIds) {
+			const existingTag = await ctx.db.get(existingTagId);
+			if (
+				existingTag !== null &&
+				existingTag.userId === board.userId &&
+				existingTag.type === 'priority'
+			) {
+				rawContent = removeTagFromContent(rawContent, existingTag.name);
+			}
 		}
 
 		// Add new priority tag if not already present

@@ -59,6 +59,7 @@
 	>();
 	let newComment = $state('');
 	let commentLoading = $state(false);
+	let isAddingComment = $state(false);
 
 	// ── Convex client for real-time subscriptions ──────────────────
 	let convexClient: ConvexClient | null = null;
@@ -248,7 +249,8 @@
 	}
 
 	async function addComment(taskId: string) {
-		if (!convexClient || !newComment.trim()) return;
+		if (!convexClient || !newComment.trim() || isAddingComment) return;
+		isAddingComment = true;
 		try {
 			await convexClient.mutation(api.boards.publicAddComment, {
 				slug,
@@ -263,6 +265,8 @@
 			await loadComments(taskId);
 		} catch (error) {
 			console.error('Failed to add comment:', error);
+		} finally {
+			isAddingComment = false;
 		}
 	}
 
@@ -450,13 +454,10 @@
 										{#each boardData.priorityTags as pTag (pTag._id)}
 											<button
 												type="button"
-												class="cursor-pointer border px-1.5 py-0.5 text-xs transition-colors"
-												class:border-red={currentPriority?._id === pTag._id}
-												class:text-red={currentPriority?._id === pTag._id}
-												class:bg-red={currentPriority?._id === pTag._id}
-												class:bg-opacity-10={currentPriority?._id === pTag._id}
-												class:border-border={currentPriority?._id !== pTag._id}
-												class:text-fg-muted={currentPriority?._id !== pTag._id}
+												class="cursor-pointer border px-1.5 py-0.5 text-xs transition-colors {currentPriority?._id ===
+												pTag._id
+													? 'border-red bg-red/10 text-red'
+													: 'border-border text-fg-muted'}"
 												onclick={() =>
 													setPriority(task._id, pTag._id, currentPriority?._id)}
 												title="Set priority: {pTag.name}"
@@ -524,10 +525,10 @@
 									/>
 									<button
 										type="submit"
-										disabled={!newComment.trim()}
+										disabled={!newComment.trim() || isAddingComment}
 										class="cursor-pointer border border-primary px-2 py-1 text-xs text-primary transition-colors hover:bg-primary hover:text-bg-dark disabled:cursor-not-allowed disabled:opacity-50"
 									>
-										send
+										{isAddingComment ? '...' : 'send'}
 									</button>
 								</form>
 							</div>
