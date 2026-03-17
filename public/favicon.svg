@@ -1,80 +1,74 @@
-<?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<!-- Created with Inkscape (http://www.inkscape.org/) -->
-
 <svg
    width="48"
    height="48"
    viewBox="0 0 48 48"
    version="1.1"
    id="svg1"
-   sodipodi:docname="favicon.svg"
-   inkscape:version="1.4.3 (0d15f75042, 2025-12-25)"
-   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns="http://www.w3.org/2000/svg"
    xmlns:svg="http://www.w3.org/2000/svg">
-  <sodipodi:namedview
-     id="namedview1"
-     pagecolor="#ffffff"
-     bordercolor="#000000"
-     borderopacity="0.25"
-     inkscape:showpageshadow="2"
-     inkscape:pageopacity="0.0"
-     inkscape:pagecheckerboard="0"
-     inkscape:deskcolor="#d1d1d1"
-     inkscape:document-units="px"
-     inkscape:zoom="10.104167"
-     inkscape:cx="24"
-     inkscape:cy="24"
-     inkscape:window-width="1768"
-     inkscape:window-height="1036"
-     inkscape:window-x="0"
-     inkscape:window-y="0"
-     inkscape:window-maximized="1"
-     inkscape:current-layer="layer1">
-    <inkscape:page
-       x="0"
-       y="0"
-       width="48"
-       height="48"
-       id="page2"
-       margin="0"
-       bleed="0" />
-  </sodipodi:namedview>
   <defs
      id="defs1" />
   <g
-     inkscape:label="Layer 1"
-     inkscape:groupmode="layer"
      id="layer1">
+    <rect
+       style="fill:#1a1b26;fill-opacity:1;stroke-width:0.998459"
+       id="rect1"
+       width="48"
+       height="48"
+       x="0"
+       y="0"
+       rx="6"
+       ry="6" />
     <g
-       id="g1"
-       transform="matrix(12.145458,0,0,12.145458,-216.12923,-328.80875)">
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;line-height:0;font-family:'IosevkaTerm Nerd Font';-inkscape-font-specification:'IosevkaTerm Nerd Font';letter-spacing:-0.298979px;writing-mode:lr-tb;direction:ltr;fill:#000000;stroke-width:0.264583"
-         x="18.659052"
-         y="29.545504"
+       id="g2"
+       transform="matrix(10.279441,0,0,10.279441,-182.56504,-274.41472)">
+      <path
+         style="font-size:3.175px;line-height:0;font-family:'IosevkaTerm Nerd Font';-inkscape-font-specification:'IosevkaTerm Nerd Font';letter-spacing:-0.298979px;fill:#9ece6a;stroke-width:0.264583"
+         d="m 19.684866,28.578653 q -0.04127,-0.130175 -0.07303,-0.254 -0.02858,-0.127 -0.04445,-0.19685 h -0.0127 q -0.0127,0.06985 -0.04127,0.19685 -0.02858,0.123825 -0.07302,0.257175 l -0.3048,0.955675 h -0.3175 l -0.466725,-1.7018 h 0.288925 l 0.23495,0.90805 q 0.03493,0.136525 0.06668,0.276225 0.03175,0.1397 0.04445,0.231775 h 0.0127 q 0.0127,-0.05398 0.02858,-0.13335 0.01905,-0.07938 0.04128,-0.1651 0.02222,-0.0889 0.04445,-0.15875 l 0.301625,-0.95885 h 0.3048 l 0.2921,0.95885 q 0.03493,0.10795 0.06668,0.23495 0.03493,0.127 0.04763,0.219075 h 0.0127 q 0.0095,-0.07937 0.04127,-0.219075 0.03493,-0.1397 0.07303,-0.28575 l 0.238125,-0.90805 h 0.28575 l -0.473075,1.7018 h -0.327025 z m 2.231493,0.99695 q 0,-0.05715 0.0032,-0.13335 0.0032,-0.0762 0.0127,-0.130175 h -0.01905 q -0.07303,0.10795 -0.2032,0.18415 -0.127,0.0762 -0.3302,0.0762 -0.307975,0 -0.50165,-0.219075 -0.1905,-0.22225 -0.1905,-0.6604 0,-0.43815 0.193675,-0.6604 0.19685,-0.225425 0.508,-0.225425 0.200025,0 0.327025,0.0762 0.127,0.0762 0.2032,0.187325 h 0.0127 l 0.04127,-0.231775 h 0.22225 v 2.4638 h -0.2794 z m -0.4826,-0.23495 q 0.263525,0 0.371475,-0.142875 0.111125,-0.14605 0.1143,-0.4445 v -0.05715 q 0,-0.32385 -0.10795,-0.48895 -0.10795,-0.168275 -0.384175,-0.168275 -0.2286,0 -0.339725,0.180975 -0.111125,0.1778 -0.111125,0.479425 0,0.301625 0.111125,0.473075 0.1143,0.168275 0.346075,0.168275 z"
          id="text1"
-         inkscape:export-filename="favicon.svg"
-         inkscape:export-xdpi="96"
-         inkscape:export-ydpi="96"><tspan
-           sodipodi:role="line"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:0;font-family:'IosevkaTerm Nerd Font';-inkscape-font-specification:'IosevkaTerm Nerd Font';letter-spacing:-0.298979px;fill:#9ece6a;fill-opacity:1;stroke-width:0.264583"
-           x="18.659052"
-           y="29.545504"
-           id="tspan2">wq</tspan></text>
-      <text
-         xml:space="preserve"
-         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:3.175px;line-height:0;font-family:'IosevkaTerm Nerd Font';-inkscape-font-specification:'IosevkaTerm Nerd Font';letter-spacing:-0.298979px;writing-mode:lr-tb;direction:ltr;fill:#000000;stroke-width:0.264583"
-         x="17.664249"
-         y="29.545504"
-         id="text1-2"><tspan
-           sodipodi:role="line"
-           style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;line-height:0;font-family:'IosevkaTerm Nerd Font';-inkscape-font-specification:'IosevkaTerm Nerd Font';letter-spacing:-0.298979px;fill:#9ece6a;fill-opacity:1;stroke-width:0.264583"
-           x="17.664249"
-           y="29.545504"
-           id="tspan2-6">:</tspan></text>
+         aria-label="wq" />
+      <path
+         style="font-size:3.175px;line-height:0;font-family:'IosevkaTerm Nerd Font';-inkscape-font-specification:'IosevkaTerm Nerd Font';letter-spacing:-0.298979px;fill:#9ece6a;stroke-width:0.264583"
+         d="m 17.892849,28.015154 q 0,-0.12065 0.05715,-0.168275 0.05715,-0.04763 0.136525,-0.04763 0.08255,0 0.1397,0.04763 0.06033,0.04763 0.06033,0.168275 0,0.1143 -0.06033,0.1651 -0.05715,0.0508 -0.1397,0.0508 -0.07938,0 -0.136525,-0.0508 -0.05715,-0.0508 -0.05715,-0.1651 z m 0,1.3589 q 0,-0.117475 0.05715,-0.1651 0.05715,-0.04763 0.136525,-0.04763 0.08255,0 0.1397,0.04763 0.06033,0.04763 0.06033,0.1651 0,0.1143 -0.06033,0.1651 -0.05715,0.0508 -0.1397,0.0508 -0.07938,0 -0.136525,-0.0508 -0.05715,-0.0508 -0.05715,-0.1651 z"
+         id="text1-2"
+         aria-label=":" />
+    </g>
+  </g>
+</svg>
+<svg
+   width="48"
+   height="48"
+   viewBox="0 0 48 48"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <g
+     id="layer1">
+    <rect
+       style="fill:#1a1b26;fill-opacity:1;stroke-width:0.998459"
+       id="rect1"
+       width="48"
+       height="48"
+       x="0"
+       y="0"
+       rx="6"
+       ry="6" />
+    <g
+       id="g2"
+       transform="matrix(10.279441,0,0,10.279441,-182.56504,-274.41472)">
+      <path
+         style="font-size:3.175px;line-height:0;font-family:'IosevkaTerm Nerd Font';-inkscape-font-specification:'IosevkaTerm Nerd Font';letter-spacing:-0.298979px;fill:#9ece6a;stroke-width:0.264583"
+         d="m 19.684866,28.578653 q -0.04127,-0.130175 -0.07303,-0.254 -0.02858,-0.127 -0.04445,-0.19685 h -0.0127 q -0.0127,0.06985 -0.04127,0.19685 -0.02858,0.123825 -0.07302,0.257175 l -0.3048,0.955675 h -0.3175 l -0.466725,-1.7018 h 0.288925 l 0.23495,0.90805 q 0.03493,0.136525 0.06668,0.276225 0.03175,0.1397 0.04445,0.231775 h 0.0127 q 0.0127,-0.05398 0.02858,-0.13335 0.01905,-0.07938 0.04128,-0.1651 0.02222,-0.0889 0.04445,-0.15875 l 0.301625,-0.95885 h 0.3048 l 0.2921,0.95885 q 0.03493,0.10795 0.06668,0.23495 0.03493,0.127 0.04763,0.219075 h 0.0127 q 0.0095,-0.07937 0.04127,-0.219075 0.03493,-0.1397 0.07303,-0.28575 l 0.238125,-0.90805 h 0.28575 l -0.473075,1.7018 h -0.327025 z m 2.231493,0.99695 q 0,-0.05715 0.0032,-0.13335 0.0032,-0.0762 0.0127,-0.130175 h -0.01905 q -0.07303,0.10795 -0.2032,0.18415 -0.127,0.0762 -0.3302,0.0762 -0.307975,0 -0.50165,-0.219075 -0.1905,-0.22225 -0.1905,-0.6604 0,-0.43815 0.193675,-0.6604 0.19685,-0.225425 0.508,-0.225425 0.200025,0 0.327025,0.0762 0.127,0.0762 0.2032,0.187325 h 0.0127 l 0.04127,-0.231775 h 0.22225 v 2.4638 h -0.2794 z m -0.4826,-0.23495 q 0.263525,0 0.371475,-0.142875 0.111125,-0.14605 0.1143,-0.4445 v -0.05715 q 0,-0.32385 -0.10795,-0.48895 -0.10795,-0.168275 -0.384175,-0.168275 -0.2286,0 -0.339725,0.180975 -0.111125,0.1778 -0.111125,0.479425 0,0.301625 0.111125,0.473075 0.1143,0.168275 0.346075,0.168275 z"
+         id="text1"
+         aria-label="wq" />
+      <path
+         style="font-size:3.175px;line-height:0;font-family:'IosevkaTerm Nerd Font';-inkscape-font-specification:'IosevkaTerm Nerd Font';letter-spacing:-0.298979px;fill:#9ece6a;stroke-width:0.264583"
+         d="m 17.892849,28.015154 q 0,-0.12065 0.05715,-0.168275 0.05715,-0.04763 0.136525,-0.04763 0.08255,0 0.1397,0.04763 0.06033,0.04763 0.06033,0.168275 0,0.1143 -0.06033,0.1651 -0.05715,0.0508 -0.1397,0.0508 -0.07938,0 -0.136525,-0.0508 -0.05715,-0.0508 -0.05715,-0.1651 z m 0,1.3589 q 0,-0.117475 0.05715,-0.1651 0.05715,-0.04763 0.136525,-0.04763 0.08255,0 0.1397,0.04763 0.06033,0.04763 0.06033,0.1651 0,0.1143 -0.06033,0.1651 -0.05715,0.0508 -0.1397,0.0508 -0.07938,0 -0.136525,-0.0508 -0.05715,-0.0508 -0.05715,-0.1651 z"
+         id="text1-2"
+         aria-label=":" />
     </g>
   </g>
 </svg>
