@@ -239,6 +239,41 @@ export default defineSchema({
 		.index('by_boardId', ['boardId'])
 		.index('by_taskId', ['taskId']),
 
+	// ── Notifications (inbox for board owner) ────────────────────────
+
+	notifications: defineTable({
+		/** The user who receives this notification (board owner). */
+		userId: v.id('users'),
+		/** What triggered this notification. */
+		type: v.union(
+			v.literal('comment'),
+			v.literal('chat'),
+			v.literal('priority_change')
+		),
+		/** The board this event happened on. */
+		boardId: v.id('boards'),
+		/** The task involved (for comment + priority_change). */
+		taskId: v.optional(v.id('tasks')),
+		/** Reference to the comment doc (for comment type). */
+		boardCommentId: v.optional(v.id('boardComments')),
+		/** Reference to the message doc (for chat type). */
+		boardMessageId: v.optional(v.id('boardMessages')),
+		/** Denormalized board name for display without joins. */
+		boardName: v.string(),
+		/** Denormalized task title for display without joins. */
+		taskTitle: v.optional(v.string()),
+		/** Who performed the action (collaborator display name). */
+		actorName: v.string(),
+		/** Human-readable summary, e.g. "Alice commented on 'Fix bug'". */
+		summary: v.string(),
+		/** Whether the owner has seen this notification. */
+		isRead: v.boolean(),
+		createdAt: v.number()
+	})
+		.index('by_userId_createdAt', ['userId', 'createdAt'])
+		.index('by_userId_isRead', ['userId', 'isRead'])
+		.index('by_boardId', ['boardId']),
+
 	// ── Board messages (board-level chat, not tied to any task) ────
 
 	boardMessages: defineTable({

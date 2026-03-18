@@ -290,7 +290,8 @@
 				priorityTagId: newPriorityTagId as any,
 				oldPriorityTagId: oldPriorityTagId
 					? (oldPriorityTagId as any)
-					: undefined
+					: undefined,
+				authorName: displayName || undefined
 			});
 			/* eslint-enable @typescript-eslint/no-explicit-any */
 		} catch (error) {

@@ -181,6 +181,15 @@ export const commands: Command[] = [
 		}
 	},
 	{
+		name: 'inbox',
+		aliases: ['inbox', 'i'],
+		description: 'go to inbox',
+		args: 'none',
+		execute() {
+			goto('/app/inbox');
+		}
+	},
+	{
 		name: 'sessions',
 		aliases: ['sessions', 'ss'],
 		description: 'go to sessions',

@@ -10,8 +10,10 @@
 
 import type * as admin from "../admin.js";
 import type * as boards from "../boards.js";
+import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as invoices from "../invoices.js";
+import type * as notifications from "../notifications.js";
 import type * as sessions from "../sessions.js";
 import type * as tags from "../tags.js";
 import type * as tasks from "../tasks.js";
@@ -26,8 +28,10 @@ import type {
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   boards: typeof boards;
+  crons: typeof crons;
   http: typeof http;
   invoices: typeof invoices;
+  notifications: typeof notifications;
   sessions: typeof sessions;
   tags: typeof tags;
   tasks: typeof tasks;
