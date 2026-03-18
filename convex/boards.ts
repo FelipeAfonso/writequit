@@ -5,6 +5,7 @@ import type { Id, Doc } from './_generated/dataModel';
 import { getCurrentUser, getCurrentUserOrThrow } from './users.js';
 import { parseTask } from '../src/lib/parser/index.js';
 import { getOrCreateTag } from './tags.js';
+import { getActiveSession } from './sessions.js';
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -70,7 +71,9 @@ async function validateBoardAccess(
 
 /**
  * Fetch filtered tasks for a board, resolving tags.
- * Returns tasks matching the board's status + tag filters.
+ * Returns tasks matching the board's status + tag filters,
+ * sorted by priority (highest first, unprioritized at bottom),
+ * with per-board comment counts.
  */
 async function fetchBoardTasks(ctx: QueryCtx, board: Doc<'boards'>) {
 	const { statusFilters, tagIds: filterTagIds } = board.filter;
@@ -93,16 +96,48 @@ async function fetchBoardTasks(ctx: QueryCtx, board: Doc<'boards'>) {
 		);
 	}
 
-	// Resolve tags for each task
+	// Resolve tags and count per-board comments for each task
 	const tasksWithTags = await Promise.all(
 		tasks.map(async (task) => {
 			const tags = await Promise.all(task.tagIds.map((id) => ctx.db.get(id)));
+			const resolvedTags = tags.filter((t) => t !== null);
+
+			// Count comments for this task on this specific board
+			const comments = await ctx.db
+				.query('boardComments')
+				.withIndex('by_boardId_taskId', (q) =>
+					q.eq('boardId', board._id).eq('taskId', task._id)
+				)
+				.collect();
+
 			return {
 				...task,
-				tags: tags.filter((t) => t !== null)
+				tags: resolvedTags,
+				commentCount: comments.length
 			};
 		})
 	);
+
+	// Sort by priority: tasks with priority tags first (ascending by tag name),
+	// then unprioritized tasks at the bottom. Tiebreaker: newest first.
+	tasksWithTags.sort((a, b) => {
+		const aPriority = a.tags.find((t) => t.type === 'priority');
+		const bPriority = b.tags.find((t) => t.type === 'priority');
+
+		// Both have priority tags — sort ascending by name (p0 < p1 < p2 etc.)
+		if (aPriority && bPriority) {
+			const cmp = aPriority.name.localeCompare(bPriority.name);
+			if (cmp !== 0) return cmp;
+			return b._creationTime - a._creationTime; // newest first
+		}
+
+		// Only one has priority — prioritized task comes first
+		if (aPriority && !bPriority) return -1;
+		if (!aPriority && bPriority) return 1;
+
+		// Neither has priority — newest first
+		return b._creationTime - a._creationTime;
+	});
 
 	return tasksWithTags;
 }
@@ -433,7 +468,7 @@ export const toggleActive = mutation({
 	}
 });
 
-/** Delete a board and all its comments. */
+/** Delete a board and all its comments and messages. */
 export const remove = mutation({
 	args: { id: v.id('boards') },
 	handler: async (ctx, args) => {
@@ -469,6 +504,15 @@ export const remove = mutation({
 				const newCount = Math.max(0, (task.boardCommentCount ?? 0) - count);
 				await ctx.db.patch(task._id, { boardCommentCount: newCount });
 			}
+		}
+
+		// Delete all chat messages for this board
+		const messages = await ctx.db
+			.query('boardMessages')
+			.withIndex('by_boardId', (q) => q.eq('boardId', args.id))
+			.collect();
+		for (const message of messages) {
+			await ctx.db.delete(message._id);
 		}
 
 		await ctx.db.delete(args.id);
@@ -756,3 +800,136 @@ function appendTag(markdown: string, tagName: string): string {
 	const rest = markdown.slice(newlineIdx);
 	return `${firstLine} +${tagName}${rest}`;
 }
+
+// ── Board chat messages (authenticated, owner) ────────────────────
+
+/** Get all chat messages for a board (owner view, real-time). */
+export const getMessages = query({
+	args: { boardId: v.id('boards') },
+	handler: async (ctx, args) => {
+		const user = await getCurrentUser(ctx);
+		if (user === null) return [];
+
+		const board = await ctx.db.get(args.boardId);
+		if (board === null || board.userId !== user._id) return [];
+
+		const messages = await ctx.db
+			.query('boardMessages')
+			.withIndex('by_boardId', (q) => q.eq('boardId', args.boardId))
+			.collect();
+
+		return messages.sort((a, b) => a.createdAt - b.createdAt);
+	}
+});
+
+/** Send a chat message as the board owner. */
+export const sendMessage = mutation({
+	args: {
+		boardId: v.id('boards'),
+		content: v.string()
+	},
+	handler: async (ctx, args) => {
+		const user = await getCurrentUserOrThrow(ctx);
+
+		const board = await ctx.db.get(args.boardId);
+		if (board === null || board.userId !== user._id)
+			throw new Error('Board not found');
+
+		const content = args.content.trim();
+		if (content.length === 0) throw new Error('Message cannot be empty');
+
+		await ctx.db.insert('boardMessages', {
+			boardId: args.boardId,
+			authorType: 'owner',
+			authorName: user.name ?? 'owner',
+			content,
+			createdAt: Date.now()
+		});
+	}
+});
+
+// ── Board chat messages (public, password-validated) ──────────────
+
+/** Get all chat messages for a public board (real-time subscription). */
+export const publicGetMessages = query({
+	args: {
+		slug: v.string(),
+		password: v.string()
+	},
+	handler: async (ctx, args) => {
+		const board = await validateBoardAccess(ctx, args.slug, args.password);
+
+		const messages = await ctx.db
+			.query('boardMessages')
+			.withIndex('by_boardId', (q) => q.eq('boardId', board._id))
+			.collect();
+
+		return messages.sort((a, b) => a.createdAt - b.createdAt);
+	}
+});
+
+/** Send a chat message as an external collaborator. */
+export const publicSendMessage = mutation({
+	args: {
+		slug: v.string(),
+		password: v.string(),
+		authorName: v.string(),
+		content: v.string()
+	},
+	handler: async (ctx, args) => {
+		const board = await validateBoardAccess(ctx, args.slug, args.password);
+
+		const authorName = args.authorName.trim();
+		if (authorName.length === 0) throw new Error('Author name cannot be empty');
+		const content = args.content.trim();
+		if (content.length === 0) throw new Error('Message cannot be empty');
+
+		await ctx.db.insert('boardMessages', {
+			boardId: board._id,
+			authorType: 'collaborator',
+			authorName,
+			content,
+			createdAt: Date.now()
+		});
+	}
+});
+
+// ── Active session indicator (public, password-validated) ─────────
+
+/**
+ * Check if the board owner has an active session whose tags overlap
+ * with the board's filter tags. Returns safe-to-expose session info
+ * or null if no matching active session.
+ */
+export const publicGetActiveSession = query({
+	args: {
+		slug: v.string(),
+		password: v.string()
+	},
+	handler: async (ctx, args) => {
+		const board = await validateBoardAccess(ctx, args.slug, args.password);
+
+		const session = await getActiveSession(ctx, board.userId);
+		if (session === null) return null;
+
+		// Check if the session shares at least one tag with the board's filter tags
+		const boardTagIds = board.filter.tagIds ?? [];
+		if (boardTagIds.length === 0) {
+			// Board has no tag filter — show any active session
+			return {
+				description: session.description ?? null,
+				startTime: session.startTime
+			};
+		}
+
+		const hasOverlap = session.tagIds.some((tagId) =>
+			boardTagIds.includes(tagId)
+		);
+		if (!hasOverlap) return null;
+
+		return {
+			description: session.description ?? null,
+			startTime: session.startTime
+		};
+	}
+});

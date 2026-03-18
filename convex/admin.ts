@@ -27,6 +27,7 @@ export const isAdmin = query({
 	args: {},
 	handler: async (ctx) => {
 		const user = await getCurrentUser(ctx);
+		console.log('user', user);
 		if (user === null) return false;
 
 		return user.role === 'admin';
