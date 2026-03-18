@@ -27,7 +27,9 @@
 	let taskId = $derived(page.params.id);
 
 	// Server-side user settings for vi mode
-	const userSettings = useQuery(api.users.getSettings, {});
+	const userSettings = useQuery(api.users.getSettings, {}, () => ({
+		initialData: data.preloaded?.settings
+	}));
 	let viMode = $derived(userSettings.data?.viMode ?? false);
 
 	const task = useQuery(
@@ -37,13 +39,17 @@
 		() => ({ initialData: data.preloaded?.task })
 	);
 
-	const allTags = useQuery(api.tags.list, {});
+	const allTags = useQuery(api.tags.list, {}, () => ({
+		initialData: data.preloaded?.tags
+	}));
 
 	// Board comments for this task (across all boards)
-	const boardComments = useQuery(api.boards.getCommentsByTask, () => ({
+	const boardComments = useQuery(
+		api.boards.getCommentsByTask,
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		taskId: taskId as any
-	}));
+		() => ({ taskId: taskId as any }),
+		() => ({ initialData: data.preloaded?.boardComments })
+	);
 
 	// Mark board comments as seen when they load
 	$effect(() => {

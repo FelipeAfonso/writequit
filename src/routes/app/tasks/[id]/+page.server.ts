@@ -7,12 +7,17 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 	if (!client) return { preloaded: {} };
 
 	try {
-		const task = await client.query(api.tasks.get, {
-			id: params.id as never
-		});
+		const [task, tags, settings, boardComments] = await Promise.all([
+			client.query(api.tasks.get, { id: params.id as never }),
+			client.query(api.tags.list),
+			client.query(api.users.getSettings),
+			client.query(api.boards.getCommentsByTask, {
+				taskId: params.id as never
+			})
+		]);
 
 		return {
-			preloaded: { task }
+			preloaded: { task, tags, settings, boardComments }
 		};
 	} catch {
 		return { preloaded: {} };
