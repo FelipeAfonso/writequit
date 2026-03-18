@@ -237,5 +237,19 @@ export default defineSchema({
 	})
 		.index('by_boardId_taskId', ['boardId', 'taskId'])
 		.index('by_boardId', ['boardId'])
-		.index('by_taskId', ['taskId'])
+		.index('by_taskId', ['taskId']),
+
+	// ── Board messages (board-level chat, not tied to any task) ────
+
+	boardMessages: defineTable({
+		/** The board this message belongs to. */
+		boardId: v.id('boards'),
+		/** Who sent this message: the board owner or an external collaborator. */
+		authorType: v.union(v.literal('collaborator'), v.literal('owner')),
+		/** Display name of the sender. */
+		authorName: v.string(),
+		/** Message content (plain text). */
+		content: v.string(),
+		createdAt: v.number()
+	}).index('by_boardId', ['boardId'])
 });

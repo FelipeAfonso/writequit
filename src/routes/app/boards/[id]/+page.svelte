@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { tick } from 'svelte';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import { isEditableTarget } from '$lib/utils/keys';
@@ -27,6 +28,9 @@
 	const comments = useQuery(api.boards.getComments, () => ({
 		boardId
 	}));
+	const chatMessages = useQuery(api.boards.getMessages, () => ({
+		boardId
+	}));
 
 	const allTags = useQuery(api.tags.list, {}, () => ({
 		initialData: data.preloaded?.tags
@@ -46,6 +50,23 @@
 
 	// ── Delete confirmation ────────────────────────────────────────
 	let showDeleteConfirm = $state(false);
+
+	// ── Chat state ─────────────────────────────────────────────────
+	let chatOpen = $state(true);
+	let newChatMessage = $state('');
+	let isSendingChat = $state(false);
+	let chatScrollEl: HTMLDivElement | undefined = $state();
+
+	// Auto-scroll chat when new messages arrive
+	$effect(() => {
+		if (chatMessages.data && chatScrollEl) {
+			tick().then(() => {
+				if (chatScrollEl) {
+					chatScrollEl.scrollTop = chatScrollEl.scrollHeight;
+				}
+			});
+		}
+	});
 
 	function startEdit() {
 		if (!board.data) return;
@@ -157,6 +178,29 @@
 		return map;
 	});
 
+	async function sendChatMessage() {
+		if (!newChatMessage.trim() || isSendingChat) return;
+		isSendingChat = true;
+		try {
+			await client.mutation(api.boards.sendMessage, {
+				boardId,
+				content: newChatMessage.trim()
+			});
+			newChatMessage = '';
+		} catch (error) {
+			console.error('Failed to send message:', error);
+		} finally {
+			isSendingChat = false;
+		}
+	}
+
+	function formatChatTime(ms: number): string {
+		return new Date(ms).toLocaleTimeString('en-US', {
+			hour: '2-digit',
+			minute: '2-digit'
+		});
+	}
+
 	// Register page-specific command actions
 	$effect(() => {
 		commandPalette.registerActions({
@@ -193,280 +237,386 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="mx-auto flex max-w-3xl flex-col gap-6 p-6">
-	<!-- Back link -->
-	<a
-		href="/app/boards"
-		class="inline-flex items-center gap-1 font-mono text-xs text-fg-muted transition-colors hover:text-fg-dark"
-	>
-		&lt;- boards
-	</a>
-
-	{#if board.isLoading}
-		<div class="py-8 text-center font-mono text-sm text-fg-muted">
-			loading...
-		</div>
-	{:else if !board.data}
-		<div class="py-8 text-center font-mono text-sm text-fg-muted">
-			board not found
-		</div>
-	{:else}
-		<!-- Board header -->
-		<div class="flex items-baseline justify-between">
-			<h1 class="font-mono text-lg font-bold text-fg">
-				<span class="text-fg-muted">&</span>
-				{board.data.name}
-			</h1>
-			<div class="flex items-center gap-2">
-				{#if !board.data.isActive}
-					<span
-						class="border border-red px-1.5 py-0.5 font-mono text-xs text-red"
-					>
-						inactive
-					</span>
-				{:else}
-					<span
-						class="border border-green px-1.5 py-0.5 font-mono text-xs text-green"
-					>
-						active
-					</span>
-				{/if}
-			</div>
-		</div>
-
-		<!-- Board info -->
-		<div
-			class="flex flex-col gap-3 border border-border bg-surface-0 p-4 font-mono"
-		>
-			<div class="flex items-center justify-between">
-				<span class="text-xs text-fg-muted">
-					{board.data.commentCount} comment{board.data.commentCount !== 1
-						? 's'
-						: ''}
-				</span>
-			</div>
-
-			<!-- Filters -->
-			<div class="flex flex-wrap items-center gap-2">
-				<span class="text-xs text-fg-muted">filters:</span>
-				{#if board.data.filter.statusFilters && board.data.filter.statusFilters.length > 0}
-					<span class="border border-border px-1.5 py-0.5 text-xs text-fg-dark">
-						status:{board.data.filter.statusFilters.join(',')}
-					</span>
-				{:else}
-					<span class="text-xs text-fg-muted">no status filter</span>
-				{/if}
-				{#if board.data.filterTags && board.data.filterTags.length > 0}
-					{#each board.data.filterTags as tag (tag._id)}
-						<TagBadge
-							name={tag.name}
-							color={tag.color}
-							type={tag.type}
-							showPrefix={true}
-						/>
-					{/each}
-				{/if}
-			</div>
-
-			<!-- Share URL -->
-			<div class="flex flex-col gap-1">
-				<span class="text-xs text-fg-muted">share url</span>
-				<div class="flex items-center gap-2">
-					<code
-						class="flex-1 border border-border bg-surface-2 px-2 py-1 text-xs text-green"
-					>
-						{getBoardUrl(board.data.slug)}
-					</code>
-					<button
-						type="button"
-						class="cursor-pointer border px-2 py-1 text-xs transition-colors {copiedField ===
-						'url'
-							? 'border-green text-green'
-							: 'border-border text-fg-muted hover:border-primary hover:text-primary'}"
-						onclick={() =>
-							copyToClipboard(getBoardUrl(board.data?.slug ?? ''), 'url')}
-					>
-						{copiedField === 'url' ? 'copied!' : 'copy'}
-					</button>
-				</div>
-			</div>
-
-			<!-- Actions -->
-			<div class="flex flex-wrap gap-2">
-				<button
-					type="button"
-					class="cursor-pointer border border-border px-2 py-1 text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
-					onclick={startEdit}
-				>
-					edit
-				</button>
-				<button
-					type="button"
-					class="cursor-pointer border border-border px-2 py-1 text-xs text-fg-muted transition-colors hover:border-warning hover:text-warning"
-					onclick={handleRegenerate}
-				>
-					new password
-				</button>
-				<button
-					type="button"
-					class="cursor-pointer border border-border px-2 py-1 text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
-					onclick={handleToggleActive}
-				>
-					{board.data.isActive ? 'deactivate' : 'activate'}
-				</button>
-				<button
-					type="button"
-					class="cursor-pointer border border-border px-2 py-1 text-xs text-fg-muted transition-colors hover:border-red hover:text-red"
-					onclick={() => (showDeleteConfirm = true)}
-				>
-					delete
-				</button>
-			</div>
-		</div>
-
-		<!-- Edit form overlay -->
-		{#if isEditing}
-			<div
-				class="flex flex-col gap-4 border border-border-highlight bg-surface-1 p-4"
+<div class="flex h-full">
+	<!-- Main content -->
+	<div class="flex-1 overflow-y-auto p-6">
+		<div class="mx-auto flex max-w-3xl flex-col gap-6">
+			<!-- Back link -->
+			<a
+				href="/app/boards"
+				class="inline-flex items-center gap-1 font-mono text-xs text-fg-muted transition-colors hover:text-fg-dark"
 			>
-				<h2 class="font-mono text-sm font-bold text-fg">edit board</h2>
+				&lt;- boards
+			</a>
 
-				<div class="flex flex-col gap-1">
-					<label for="edit-name" class="font-mono text-xs text-fg-muted">
-						name
-					</label>
-					<input
-						id="edit-name"
-						type="text"
-						bind:value={editName}
-						class="border border-border bg-bg px-3 py-1.5 font-mono text-sm text-fg outline-none focus:border-primary"
-					/>
+			{#if board.isLoading}
+				<div class="py-8 text-center font-mono text-sm text-fg-muted">
+					loading...
 				</div>
-
-				<div class="flex flex-col gap-1">
-					<span class="font-mono text-xs text-fg-muted">
-						status filter
-						{#if editStatusFilters.length === 0}
-							<span class="text-fg-muted opacity-60">(all)</span>
-						{/if}
-					</span>
-					<div class="flex gap-1">
-						{#each ['inbox', 'active', 'done'] as status (status)}
-							<button
-								type="button"
-								class="cursor-pointer border px-2 py-0.5 font-mono text-xs transition-colors"
-								class:border-primary={editStatusFilters.includes(status)}
-								class:text-primary={editStatusFilters.includes(status)}
-								class:border-border={!editStatusFilters.includes(status)}
-								class:text-fg-muted={!editStatusFilters.includes(status)}
-								onclick={() => {
-									const idx = editStatusFilters.indexOf(status);
-									if (idx === -1) {
-										editStatusFilters = [...editStatusFilters, status];
-									} else {
-										editStatusFilters = editStatusFilters.filter(
-											(s) => s !== status
-										);
-									}
-								}}
+			{:else if !board.data}
+				<div class="py-8 text-center font-mono text-sm text-fg-muted">
+					board not found
+				</div>
+			{:else}
+				<!-- Board header -->
+				<div class="flex items-baseline justify-between">
+					<h1 class="font-mono text-lg font-bold text-fg">
+						<span class="text-fg-muted">&</span>
+						{board.data.name}
+					</h1>
+					<div class="flex items-center gap-2">
+						{#if !board.data.isActive}
+							<span
+								class="border border-red px-1.5 py-0.5 font-mono text-xs text-red"
 							>
-								{status}
-							</button>
-						{/each}
+								inactive
+							</span>
+						{:else}
+							<span
+								class="border border-green px-1.5 py-0.5 font-mono text-xs text-green"
+							>
+								active
+							</span>
+						{/if}
 					</div>
 				</div>
 
-				{#if sorted.length > 0}
-					<div class="flex flex-col gap-1">
-						<span class="font-mono text-xs text-fg-muted">tag filter</span>
-						<div class="flex flex-wrap gap-1">
-							{#each sorted as tag (tag._id)}
+				<!-- Board info -->
+				<div
+					class="flex flex-col gap-3 border border-border bg-surface-0 p-4 font-mono"
+				>
+					<div class="flex items-center justify-between">
+						<span class="text-xs text-fg-muted">
+							{board.data.commentCount} comment{board.data.commentCount !== 1
+								? 's'
+								: ''}
+						</span>
+					</div>
+
+					<!-- Filters -->
+					<div class="flex flex-wrap items-center gap-2">
+						<span class="text-xs text-fg-muted">filters:</span>
+						{#if board.data.filter.statusFilters && board.data.filter.statusFilters.length > 0}
+							<span
+								class="border border-border px-1.5 py-0.5 text-xs text-fg-dark"
+							>
+								status:{board.data.filter.statusFilters.join(',')}
+							</span>
+						{:else}
+							<span class="text-xs text-fg-muted">no status filter</span>
+						{/if}
+						{#if board.data.filterTags && board.data.filterTags.length > 0}
+							{#each board.data.filterTags as tag (tag._id)}
 								<TagBadge
 									name={tag.name}
 									color={tag.color}
 									type={tag.type}
-									active={editTagIds.includes(tag._id)}
-									onclick={() => toggleEditTag(tag._id)}
+									showPrefix={true}
 								/>
 							{/each}
+						{/if}
+					</div>
+
+					<!-- Share URL -->
+					<div class="flex flex-col gap-1">
+						<span class="text-xs text-fg-muted">share url</span>
+						<div class="flex items-center gap-2">
+							<code
+								class="flex-1 border border-border bg-surface-2 px-2 py-1 text-xs text-green"
+							>
+								{getBoardUrl(board.data.slug)}
+							</code>
+							<button
+								type="button"
+								class="cursor-pointer border px-2 py-1 text-xs transition-colors {copiedField ===
+								'url'
+									? 'border-green text-green'
+									: 'border-border text-fg-muted hover:border-primary hover:text-primary'}"
+								onclick={() =>
+									copyToClipboard(getBoardUrl(board.data?.slug ?? ''), 'url')}
+							>
+								{copiedField === 'url' ? 'copied!' : 'copy'}
+							</button>
+						</div>
+					</div>
+
+					<!-- Actions -->
+					<div class="flex flex-wrap gap-2">
+						<button
+							type="button"
+							class="cursor-pointer border border-border px-2 py-1 text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
+							onclick={startEdit}
+						>
+							edit
+						</button>
+						<button
+							type="button"
+							class="cursor-pointer border border-border px-2 py-1 text-xs text-fg-muted transition-colors hover:border-warning hover:text-warning"
+							onclick={handleRegenerate}
+						>
+							new password
+						</button>
+						<button
+							type="button"
+							class="cursor-pointer border border-border px-2 py-1 text-xs text-fg-muted transition-colors hover:border-primary hover:text-primary"
+							onclick={handleToggleActive}
+						>
+							{board.data.isActive ? 'deactivate' : 'activate'}
+						</button>
+						<button
+							type="button"
+							class="cursor-pointer border border-border px-2 py-1 text-xs text-fg-muted transition-colors hover:border-red hover:text-red"
+							onclick={() => (showDeleteConfirm = true)}
+						>
+							delete
+						</button>
+					</div>
+				</div>
+
+				<!-- Edit form overlay -->
+				{#if isEditing}
+					<div
+						class="flex flex-col gap-4 border border-border-highlight bg-surface-1 p-4"
+					>
+						<h2 class="font-mono text-sm font-bold text-fg">edit board</h2>
+
+						<div class="flex flex-col gap-1">
+							<label for="edit-name" class="font-mono text-xs text-fg-muted">
+								name
+							</label>
+							<input
+								id="edit-name"
+								type="text"
+								bind:value={editName}
+								class="border border-border bg-bg px-3 py-1.5 font-mono text-sm text-fg outline-none focus:border-primary"
+							/>
+						</div>
+
+						<div class="flex flex-col gap-1">
+							<span class="font-mono text-xs text-fg-muted">
+								status filter
+								{#if editStatusFilters.length === 0}
+									<span class="text-fg-muted opacity-60">(all)</span>
+								{/if}
+							</span>
+							<div class="flex gap-1">
+								{#each ['inbox', 'active', 'done'] as status (status)}
+									<button
+										type="button"
+										class="cursor-pointer border px-2 py-0.5 font-mono text-xs transition-colors"
+										class:border-primary={editStatusFilters.includes(status)}
+										class:text-primary={editStatusFilters.includes(status)}
+										class:border-border={!editStatusFilters.includes(status)}
+										class:text-fg-muted={!editStatusFilters.includes(status)}
+										onclick={() => {
+											const idx = editStatusFilters.indexOf(status);
+											if (idx === -1) {
+												editStatusFilters = [...editStatusFilters, status];
+											} else {
+												editStatusFilters = editStatusFilters.filter(
+													(s) => s !== status
+												);
+											}
+										}}
+									>
+										{status}
+									</button>
+								{/each}
+							</div>
+						</div>
+
+						{#if sorted.length > 0}
+							<div class="flex flex-col gap-1">
+								<span class="font-mono text-xs text-fg-muted">tag filter</span>
+								<div class="flex flex-wrap gap-1">
+									{#each sorted as tag (tag._id)}
+										<TagBadge
+											name={tag.name}
+											color={tag.color}
+											type={tag.type}
+											active={editTagIds.includes(tag._id)}
+											onclick={() => toggleEditTag(tag._id)}
+										/>
+									{/each}
+								</div>
+							</div>
+						{/if}
+
+						<div class="flex gap-2">
+							<button
+								type="button"
+								class="cursor-pointer border border-green px-3 py-1 font-mono text-xs text-green transition-colors hover:bg-green hover:text-bg-dark"
+								onclick={saveEdit}
+							>
+								:w save
+							</button>
+							<button
+								type="button"
+								class="cursor-pointer border border-border px-3 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border-highlight hover:text-fg-dark"
+								onclick={() => (isEditing = false)}
+							>
+								cancel
+							</button>
 						</div>
 					</div>
 				{/if}
 
-				<div class="flex gap-2">
-					<button
-						type="button"
-						class="cursor-pointer border border-green px-3 py-1 font-mono text-xs text-green transition-colors hover:bg-green hover:text-bg-dark"
-						onclick={saveEdit}
-					>
-						:w save
-					</button>
-					<button
-						type="button"
-						class="cursor-pointer border border-border px-3 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border-highlight hover:text-fg-dark"
-						onclick={() => (isEditing = false)}
-					>
-						cancel
-					</button>
-				</div>
-			</div>
-		{/if}
+				<!-- Tasks preview -->
+				<div class="flex flex-col gap-2">
+					<h2 class="font-mono text-sm font-bold text-fg-muted">
+						tasks ({tasks.data?.length ?? 0})
+					</h2>
 
-		<!-- Tasks preview -->
-		<div class="flex flex-col gap-2">
-			<h2 class="font-mono text-sm font-bold text-fg-muted">
-				tasks ({tasks.data?.length ?? 0})
-			</h2>
-
-			{#if tasks.isLoading}
-				<div class="py-4 text-center font-mono text-xs text-fg-muted">
-					loading...
-				</div>
-			{:else if tasks.data && tasks.data.length === 0}
-				<div class="py-4 text-center font-mono text-xs text-fg-muted">
-					no tasks match this board's filters
-				</div>
-			{:else if tasks.data}
-				<div class="flex flex-col gap-px">
-					{#each tasks.data as task (task._id)}
-						{@const taskComments = commentsByTask.get(task._id)}
-						<div
-							class="flex items-start gap-3 border border-border bg-surface-0 px-3 py-2 font-mono"
-						>
-							<TaskStatusBadge status={task.status} />
-							<div class="flex min-w-0 flex-1 flex-col gap-1">
-								<span class="truncate text-sm text-fg">{task.title}</span>
-								{#if task.tags && task.tags.length > 0}
-									<div class="flex flex-wrap gap-1">
-										{#each task.tags as tag (tag._id)}
-											<TagBadge
-												name={tag.name}
-												color={tag.color}
-												type={tag.type}
-												showPrefix={true}
-											/>
-										{/each}
-									</div>
-								{/if}
-								{#if taskComments && taskComments.length > 0}
-									<div
-										class="mt-1 flex flex-col gap-1 border-l-2 border-border pl-2"
-									>
-										{#each taskComments as comment (comment._id)}
-											<div class="text-xs">
-												<span class="text-primary">{comment.authorName}:</span>
-												<span class="text-fg-dark">{comment.content}</span>
-											</div>
-										{/each}
-									</div>
-								{/if}
-							</div>
+					{#if tasks.isLoading}
+						<div class="py-4 text-center font-mono text-xs text-fg-muted">
+							loading...
 						</div>
-					{/each}
+					{:else if tasks.data && tasks.data.length === 0}
+						<div class="py-4 text-center font-mono text-xs text-fg-muted">
+							no tasks match this board's filters
+						</div>
+					{:else if tasks.data}
+						<div class="flex flex-col gap-px">
+							{#each tasks.data as task (task._id)}
+								{@const taskComments = commentsByTask.get(task._id)}
+								<div
+									class="flex items-start gap-3 border border-border bg-surface-0 px-3 py-2 font-mono"
+								>
+									<TaskStatusBadge status={task.status} />
+									<div class="flex min-w-0 flex-1 flex-col gap-1">
+										<div class="flex items-baseline gap-2">
+											<span class="truncate text-sm text-fg">
+												{task.title}
+											</span>
+											{#if task.commentCount > 0}
+												<span class="text-xs text-cyan">
+													[{task.commentCount}]
+												</span>
+											{/if}
+										</div>
+										{#if task.tags && task.tags.length > 0}
+											<div class="flex flex-wrap gap-1">
+												{#each task.tags as tag (tag._id)}
+													<TagBadge
+														name={tag.name}
+														color={tag.color}
+														type={tag.type}
+														showPrefix={true}
+													/>
+												{/each}
+											</div>
+										{/if}
+										{#if taskComments && taskComments.length > 0}
+											<div
+												class="mt-1 flex flex-col gap-1 border-l-2 border-border pl-2"
+											>
+												{#each taskComments as comment (comment._id)}
+													<div class="text-xs">
+														<span class="text-primary">
+															{comment.authorName}:
+														</span>
+														<span class="text-fg-dark">
+															{comment.content}
+														</span>
+													</div>
+												{/each}
+											</div>
+										{/if}
+									</div>
+								</div>
+							{/each}
+						</div>
+					{/if}
 				</div>
 			{/if}
 		</div>
-	{/if}
+	</div>
+
+	<!-- Chat sidebar + toggle -->
+	<div class="relative flex shrink-0">
+		<!-- Toggle tab on the left edge of the sidebar -->
+		<button
+			type="button"
+			onclick={() => (chatOpen = !chatOpen)}
+			class="absolute bottom-4 z-10 cursor-pointer border border-border bg-surface-0 px-1.5 py-1 font-mono text-xs transition-colors {chatOpen
+				? '-left-7 text-primary hover:bg-surface-1'
+				: '-left-12 text-fg-muted hover:bg-surface-1 hover:text-primary'}"
+			title={chatOpen ? 'Hide chat' : 'Show chat'}
+		>
+			{chatOpen ? '<' : 'chat'}
+		</button>
+
+		{#if chatOpen}
+			<div class="flex w-80 flex-col border-l border-border bg-surface-0">
+				<div class="border-b border-border px-3 py-2">
+					<h3 class="font-mono text-xs font-bold text-fg-muted">chat</h3>
+				</div>
+
+				<!-- Messages -->
+				<div
+					bind:this={chatScrollEl}
+					class="flex flex-1 flex-col gap-2 overflow-y-auto p-3"
+				>
+					{#if chatMessages.isLoading}
+						<p class="py-4 text-center font-mono text-xs text-fg-muted">
+							loading...
+						</p>
+					{:else if !chatMessages.data || chatMessages.data.length === 0}
+						<p class="py-4 text-center font-mono text-xs text-fg-muted">
+							no messages yet
+						</p>
+					{:else}
+						{#each chatMessages.data as msg (msg._id)}
+							<div class="flex flex-col gap-0.5">
+								<div class="flex items-baseline gap-2">
+									<span
+										class="font-mono text-xs font-bold {msg.authorType ===
+										'owner'
+											? 'text-green'
+											: 'text-primary'}"
+									>
+										{msg.authorName}
+										{#if msg.authorType === 'owner'}
+											<span class="font-normal text-green/60">(you)</span>
+										{/if}
+									</span>
+									<span class="font-mono text-[10px] text-fg-muted">
+										{formatChatTime(msg.createdAt)}
+									</span>
+								</div>
+								<p class="font-mono text-xs text-fg-dark">
+									{msg.content}
+								</p>
+							</div>
+						{/each}
+					{/if}
+				</div>
+
+				<!-- Send message -->
+				<form
+					class="flex gap-2 border-t border-border p-3"
+					onsubmit={(e) => {
+						e.preventDefault();
+						sendChatMessage();
+					}}
+				>
+					<input
+						type="text"
+						bind:value={newChatMessage}
+						placeholder="message..."
+						class="flex-1 border border-border bg-bg px-2 py-1 font-mono text-xs text-fg outline-none focus:border-primary"
+					/>
+					<button
+						type="submit"
+						disabled={!newChatMessage.trim() || isSendingChat}
+						class="cursor-pointer border border-primary px-2 py-1 font-mono text-xs text-primary transition-colors hover:bg-primary hover:text-bg-dark disabled:cursor-not-allowed disabled:opacity-50"
+					>
+						{isSendingChat ? '...' : '>'}
+					</button>
+				</form>
+			</div>
+		{/if}
+	</div>
 </div>
 
 <!-- Share dialog (shown after password regeneration) -->
