@@ -85,8 +85,15 @@
 		shortcut: string;
 	}
 
+	// ── Inbox unread count ─────────────────────────────────────────
+	const unreadQuery = useQuery(api.notifications.unreadCount, () =>
+		auth.isAuthenticated ? {} : 'skip'
+	);
+	let unreadCount = $derived(unreadQuery.data ?? 0);
+
 	const nav: NavItem[] = [
 		{ href: '/app', label: 'tasks', icon: '#', shortcut: 'g t' },
+		{ href: '/app/inbox', label: 'inbox', icon: '!', shortcut: 'g i' },
 		{ href: '/app/sessions', label: 'sessions', icon: '~', shortcut: 'g s' },
 		{ href: '/app/reports', label: 'reports', icon: '$', shortcut: 'g r' },
 		{ href: '/app/tags', label: 'tags', icon: '+', shortcut: 'g a' },
@@ -237,6 +244,7 @@
 
 			const routes: Record<string, string> = {
 				t: '/app',
+				i: '/app/inbox',
 				s: '/app/sessions',
 				r: '/app/reports',
 				a: '/app/tags',
@@ -308,7 +316,11 @@
 							title="{item.label} ({item.shortcut})"
 						>
 							<span class="opacity-60">{item.icon}</span>
-							{item.label}
+							{item.label}{#if item.label === 'inbox' && unreadCount > 0}<span
+									class="ml-1 text-cyan"
+								>
+									[{unreadCount}]
+								</span>{/if}
 							<span class="ml-1 text-fg-muted opacity-50">
 								{item.shortcut}
 							</span>
@@ -394,7 +406,11 @@
 							>
 								<span>
 									<span class="opacity-60">{item.icon}</span>
-									{item.label}
+									{item.label}{#if item.label === 'inbox' && unreadCount > 0}<span
+											class="ml-1 text-cyan"
+										>
+											[{unreadCount}]
+										</span>{/if}
 								</span>
 								<span class="text-fg-muted opacity-50">{item.shortcut}</span>
 							</a>
@@ -522,6 +538,16 @@
 										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
 									>
 										g t
+									</kbd>
+								</div>
+								<div class="flex items-center justify-between">
+									<span class="font-mono text-sm text-fg-dark">
+										go to inbox
+									</span>
+									<kbd
+										class="border border-border bg-surface-2 px-2 py-0.5 font-mono text-xs text-primary"
+									>
+										g i
 									</kbd>
 								</div>
 								<div class="flex items-center justify-between">

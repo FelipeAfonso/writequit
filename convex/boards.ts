@@ -6,6 +6,7 @@ import { getCurrentUser, getCurrentUserOrThrow } from './users.js';
 import { parseTask } from '../src/lib/parser/index.js';
 import { getOrCreateTag } from './tags.js';
 import { getActiveSession } from './sessions.js';
+import { createNotification } from './notifications.js';
 
 // ── Constants ──────────────────────────────────────────────────────
 
@@ -515,6 +516,15 @@ export const remove = mutation({
 			await ctx.db.delete(message._id);
 		}
 
+		// Delete all notifications for this board
+		const notifications = await ctx.db
+			.query('notifications')
+			.withIndex('by_boardId', (q) => q.eq('boardId', args.id))
+			.collect();
+		for (const notification of notifications) {
+			await ctx.db.delete(notification._id);
+		}
+
 		await ctx.db.delete(args.id);
 	}
 });
@@ -615,7 +625,7 @@ export const publicAddComment = mutation({
 		const content = args.content.trim();
 		if (content.length === 0) throw new Error('Comment cannot be empty');
 
-		await ctx.db.insert('boardComments', {
+		const commentId = await ctx.db.insert('boardComments', {
 			boardId: board._id,
 			taskId: args.taskId,
 			authorName,
@@ -626,6 +636,21 @@ export const publicAddComment = mutation({
 		// Increment the denormalized comment counter on the task
 		await ctx.db.patch(args.taskId, {
 			boardCommentCount: (task.boardCommentCount ?? 0) + 1
+		});
+
+		// Emit notification to the board owner
+		const preview =
+			content.length > 80 ? content.slice(0, 77) + '...' : content;
+		await createNotification(ctx, {
+			userId: board.userId,
+			type: 'comment',
+			boardId: board._id,
+			taskId: args.taskId,
+			boardCommentId: commentId,
+			boardName: board.name,
+			taskTitle: task.title,
+			actorName: authorName,
+			summary: `${authorName} commented on "${task.title}": ${preview}`
 		});
 	}
 });
@@ -645,7 +670,9 @@ export const publicSetPriority = mutation({
 		/** The new priority tag ID to set (must be type "priority"). */
 		priorityTagId: v.id('tags'),
 		/** The old priority tag ID to remove (if any). */
-		oldPriorityTagId: v.optional(v.id('tags'))
+		oldPriorityTagId: v.optional(v.id('tags')),
+		/** Display name of the collaborator changing priority. */
+		authorName: v.optional(v.string())
 	},
 	handler: async (ctx, args) => {
 		const board = await validateBoardAccess(ctx, args.slug, args.password);
@@ -697,6 +724,19 @@ export const publicSetPriority = mutation({
 			dueDate: parsed.dueDate ?? undefined,
 			tagIds,
 			updatedAt: Date.now()
+		});
+
+		// Emit notification to the board owner
+		const actor = args.authorName?.trim() || 'A collaborator';
+		await createNotification(ctx, {
+			userId: board.userId,
+			type: 'priority_change',
+			boardId: board._id,
+			taskId: args.taskId,
+			boardName: board.name,
+			taskTitle: task.title,
+			actorName: actor,
+			summary: `${actor} changed priority of "${task.title}" to ${newTag.name}`
 		});
 	}
 });
@@ -884,12 +924,25 @@ export const publicSendMessage = mutation({
 		const content = args.content.trim();
 		if (content.length === 0) throw new Error('Message cannot be empty');
 
-		await ctx.db.insert('boardMessages', {
+		const messageId = await ctx.db.insert('boardMessages', {
 			boardId: board._id,
 			authorType: 'collaborator',
 			authorName,
 			content,
 			createdAt: Date.now()
+		});
+
+		// Emit notification to the board owner
+		const preview =
+			content.length > 80 ? content.slice(0, 77) + '...' : content;
+		await createNotification(ctx, {
+			userId: board.userId,
+			type: 'chat',
+			boardId: board._id,
+			boardMessageId: messageId,
+			boardName: board.name,
+			actorName: authorName,
+			summary: `${authorName} messaged on "${board.name}": ${preview}`
 		});
 	}
 });
