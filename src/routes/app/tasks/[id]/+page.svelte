@@ -176,7 +176,7 @@
 
 		if (e.key === 'Backspace') {
 			e.preventDefault();
-			history.back();
+			goto('/app');
 		}
 
 		if (e.key === 'i' && isEditing && editor) {

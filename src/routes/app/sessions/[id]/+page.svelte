@@ -381,7 +381,7 @@
 
 		if (e.key === 'Backspace') {
 			e.preventDefault();
-			history.back();
+			goto('/app/sessions');
 		}
 	}
 </script>
