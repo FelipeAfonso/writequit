@@ -12,6 +12,7 @@
 	import { PRELOADED_ACTIVE_SESSION_CTX } from '$lib/utils/preload';
 	import StatusLine from '$lib/components/StatusLine.svelte';
 	import Tutorial from '$lib/components/Tutorial.svelte';
+	import AvatarMenu from '$lib/components/AvatarMenu.svelte';
 
 	const isLocal = import.meta.env.DEV;
 	const isDevConvex = PUBLIC_CONVEX_URL.includes(
@@ -93,10 +94,8 @@
 
 	const nav: NavItem[] = [
 		{ href: '/app', label: 'tasks', icon: '#', shortcut: 'g t' },
-		{ href: '/app/inbox', label: 'inbox', icon: '!', shortcut: 'g i' },
 		{ href: '/app/sessions', label: 'sessions', icon: '~', shortcut: 'g s' },
 		{ href: '/app/reports', label: 'reports', icon: '$', shortcut: 'g r' },
-		{ href: '/app/tags', label: 'tags', icon: '+', shortcut: 'g a' },
 		{ href: '/app/boards', label: 'boards', icon: '&', shortcut: 'g b' }
 	];
 
@@ -316,39 +315,19 @@
 							title="{item.label} ({item.shortcut})"
 						>
 							<span class="opacity-60">{item.icon}</span>
-							{item.label}{#if item.label === 'inbox' && unreadCount > 0}<span
-									class="ml-1 text-cyan"
-								>
-									[{unreadCount}]
-								</span>{/if}
+							{item.label}
 							<span class="ml-1 text-fg-muted opacity-50">
 								{item.shortcut}
 							</span>
 						</a>
 					{/each}
 				</nav>
-				<a
-					href="/app/user"
-					class="cursor-pointer border px-2 py-1 font-mono text-xs transition-colors"
-					class:border-primary={isActive('/app/user')}
-					class:text-primary={isActive('/app/user')}
-					class:bg-surface-2={isActive('/app/user')}
-					class:border-transparent={!isActive('/app/user')}
-					class:text-fg-muted={!isActive('/app/user')}
-					class:hover:text-fg-dark={!isActive('/app/user')}
-					class:hover:border-border={!isActive('/app/user')}
-					title="user settings (g u)"
-				>
-					<span class="opacity-60">@</span>
-					user
-					<span class="ml-1 text-fg-muted opacity-50">g u</span>
-				</a>
-				<button
-					onclick={() => signOut()}
-					class="cursor-pointer border border-transparent px-2 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-red hover:text-red"
-				>
-					:q!
-				</button>
+				<AvatarMenu
+					{unreadCount}
+					{isAdminUser}
+					{isActive}
+					signOut={() => signOut()}
+				/>
 			</div>
 
 			<!-- Mobile hamburger (visible on sm and below) -->
@@ -406,17 +385,51 @@
 							>
 								<span>
 									<span class="opacity-60">{item.icon}</span>
-									{item.label}{#if item.label === 'inbox' && unreadCount > 0}<span
-											class="ml-1 text-cyan"
-										>
-											[{unreadCount}]
-										</span>{/if}
+									{item.label}
 								</span>
 								<span class="text-fg-muted opacity-50">{item.shortcut}</span>
 							</a>
 						{/each}
 
 						<div class="my-2 border-t border-border"></div>
+
+						<a
+							href="/app/inbox"
+							class="flex items-center justify-between border px-3 py-2 font-mono text-xs transition-colors"
+							class:border-primary={isActive('/app/inbox')}
+							class:text-primary={isActive('/app/inbox')}
+							class:bg-surface-2={isActive('/app/inbox')}
+							class:border-transparent={!isActive('/app/inbox')}
+							class:text-fg-muted={!isActive('/app/inbox')}
+							class:hover:text-fg-dark={!isActive('/app/inbox')}
+							class:hover:border-border={!isActive('/app/inbox')}
+						>
+							<span>
+								<span class="opacity-60">!</span>
+								inbox{#if unreadCount > 0}<span class="ml-1 text-cyan">
+										[{unreadCount}]
+									</span>{/if}
+							</span>
+							<span class="text-fg-muted opacity-50">g i</span>
+						</a>
+
+						<a
+							href="/app/tags"
+							class="flex items-center justify-between border px-3 py-2 font-mono text-xs transition-colors"
+							class:border-primary={isActive('/app/tags')}
+							class:text-primary={isActive('/app/tags')}
+							class:bg-surface-2={isActive('/app/tags')}
+							class:border-transparent={!isActive('/app/tags')}
+							class:text-fg-muted={!isActive('/app/tags')}
+							class:hover:text-fg-dark={!isActive('/app/tags')}
+							class:hover:border-border={!isActive('/app/tags')}
+						>
+							<span>
+								<span class="opacity-60">+</span>
+								tags
+							</span>
+							<span class="text-fg-muted opacity-50">g a</span>
+						</a>
 
 						<a
 							href="/app/user"
@@ -464,6 +477,7 @@
 							class="w-full cursor-pointer border border-transparent px-3 py-2 text-left font-mono text-xs text-fg-muted transition-colors hover:border-red hover:text-red"
 						>
 							:q!
+							<span class="ml-1 opacity-70">sign out</span>
 						</button>
 					</div>
 				</div>
