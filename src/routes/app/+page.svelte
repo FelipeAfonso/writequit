@@ -382,9 +382,6 @@
 				: isAutoLoadingForTags
 					? 'filtering...'
 					: 'No tasks yet. Type above to dump a task.'}
-			ontaskclick={(id) => {
-				window.location.href = `/app/tasks/${id}`;
-			}}
 			onstatuschange={handleStatusChange}
 			onfilterprev={() => cycleFilter(-1)}
 			onfilternext={() => cycleFilter(1)}
@@ -402,7 +399,7 @@
 			}}
 			ondelete={handleDeleteTask}
 			onedit={(id) => {
-				window.location.href = `/app/tasks/${id}?edit=1`;
+				goto(`/app/tasks/${id}?edit=1`);
 			}}
 			paginationStatus={isSearching
 				? 'Exhausted'

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { untrack, tick } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { isEditableTarget } from '$lib/utils/keys';
 	import type { PaginationStatus } from '$lib/stores/usePaginatedQuery.svelte';
 	import TaskCard from './TaskCard.svelte';
@@ -28,8 +29,8 @@
 		tagsMap: Map<string, Tag>;
 		/** Empty state message. */
 		emptyMessage?: string;
-		/** Called when a task is clicked. */
-		ontaskclick?: (id: string) => void;
+		/** Returns the href for a given task ID. */
+		taskHref?: (id: string) => string;
 		/** Called when a task's status toggle is clicked. */
 		onstatuschange?: (id: string) => void;
 		/** Called on h/ArrowLeft — cycle filter left. */
@@ -56,7 +57,7 @@
 		tasks,
 		tagsMap,
 		emptyMessage = 'No tasks found.',
-		ontaskclick,
+		taskHref = (id) => `/app/tasks/${id}`,
 		onstatuschange,
 		onfilterprev,
 		onfilternext,
@@ -286,7 +287,7 @@
 			case 'Enter':
 				if (selectedIndex >= 0 && tasks[selectedIndex]) {
 					e.preventDefault();
-					ontaskclick?.(tasks[selectedIndex]._id);
+					goto(taskHref(tasks[selectedIndex]._id));
 				}
 				break;
 
@@ -341,6 +342,7 @@
 		{#each tasks as task, i (task._id)}
 			<TaskCard
 				id={task._id}
+				href={taskHref(task._id)}
 				title={task.title}
 				status={task.status}
 				dueDate={task.dueDate}
@@ -349,7 +351,6 @@
 				selected={i === selectedIndex}
 				boardCommentCount={task.boardCommentCount}
 				boardCommentSeenCount={task.boardCommentSeenCount}
-				onclick={ontaskclick}
 				{onstatuschange}
 			/>
 		{/each}
