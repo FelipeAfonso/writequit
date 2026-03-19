@@ -16,6 +16,7 @@
 
 	interface Props {
 		id: string;
+		href: string;
 		title: string;
 		status: 'inbox' | 'active' | 'done';
 		dueDate?: number;
@@ -27,14 +28,13 @@
 		boardCommentCount?: number;
 		/** Last-seen comment count (for unseen badge). */
 		boardCommentSeenCount?: number;
-		/** Called when the task card is clicked (navigate to detail). */
-		onclick?: (id: string) => void;
 		/** Called when the status checkbox area is clicked. */
 		onstatuschange?: (id: string) => void;
 	}
 
 	let {
 		id,
+		href,
 		title,
 		status,
 		dueDate,
@@ -43,7 +43,6 @@
 		selected = false,
 		boardCommentCount = 0,
 		boardCommentSeenCount = 0,
-		onclick,
 		onstatuschange
 	}: Props = $props();
 
@@ -62,20 +61,17 @@
 
 	/** Cycle to the next status. */
 	function handleStatusClick(e: Event) {
+		e.preventDefault();
 		e.stopPropagation();
 		onstatuschange?.(id);
 	}
 </script>
 
-<div
-	class="group flex w-full cursor-pointer items-start gap-3 border px-3 py-2.5 text-left font-mono transition-colors {selected
+<a
+	{href}
+	class="group flex w-full items-start gap-3 border px-3 py-2.5 font-mono no-underline transition-colors {selected
 		? 'border-primary bg-surface-1'
 		: 'border-border bg-surface-0 hover:border-border-highlight hover:bg-surface-1'}"
-	onclick={() => onclick?.(id)}
-	onkeydown={(e) => {
-		if (e.key === 'Enter' || e.key === ' ') onclick?.(id);
-	}}
-	role="button"
 	tabindex={selected ? 0 : -1}
 >
 	<!-- Status toggle area -->
@@ -155,4 +151,4 @@
 	>
 		{formatShortDate(createdAt, timezone)}
 	</span>
-</div>
+</a>
