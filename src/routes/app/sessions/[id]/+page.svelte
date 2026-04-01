@@ -16,6 +16,7 @@
 		TIMEZONE_CTX,
 		type TimezoneGetter
 	} from '$lib/utils/datetime';
+	import { parseISODate } from '$lib/parser/dueDate';
 	import TagBadge from '$lib/components/tags/TagBadge.svelte';
 	import TaskStatusBadge from '$lib/components/tasks/TaskStatusBadge.svelte';
 
@@ -50,10 +51,18 @@
 
 	// ── Inline editing ──
 
-	type EditField = 'description' | 'startTime' | 'endTime' | 'tags';
+	type EditField =
+		| 'date'
+		| 'description'
+		| 'startTime'
+		| 'endDate'
+		| 'endTime'
+		| 'tags';
 	const FIELD_ORDER: EditField[] = [
+		'date',
 		'description',
 		'startTime',
+		'endDate',
 		'endTime',
 		'tags'
 	];
@@ -62,24 +71,32 @@
 	let activeField = $state<EditField | null>(null);
 
 	// Draft values for each field
+	let draftDate = $state('');
 	let draftDescription = $state('');
 	let draftStartTime = $state('');
+	let draftEndDate = $state('');
 	let draftEndTime = $state('');
 	let draftTags = $state('');
 
 	// Input refs for focusing
+	let dateInput: HTMLInputElement | undefined = $state();
 	let descriptionInput: HTMLInputElement | undefined = $state();
 	let startTimeInput: HTMLInputElement | undefined = $state();
+	let endDateInput: HTMLInputElement | undefined = $state();
 	let endTimeInput: HTMLInputElement | undefined = $state();
 	let tagsInput: HTMLInputElement | undefined = $state();
 
 	/** Get the input element for a given field. */
 	function getInputRef(field: EditField): HTMLInputElement | undefined {
 		switch (field) {
+			case 'date':
+				return dateInput;
 			case 'description':
 				return descriptionInput;
 			case 'startTime':
 				return startTimeInput;
+			case 'endDate':
+				return endDateInput;
 			case 'endTime':
 				return endTimeInput;
 			case 'tags':
@@ -90,7 +107,7 @@
 	/** Get the available editable fields (endTime excluded for running sessions). */
 	let editableFields = $derived.by(() => {
 		if (isRunning) {
-			return FIELD_ORDER.filter((f) => f !== 'endTime');
+			return FIELD_ORDER.filter((f) => f !== 'endDate' && f !== 'endTime');
 		}
 		return FIELD_ORDER;
 	});
@@ -99,8 +116,10 @@
 	function populateDrafts() {
 		if (!session.data) return;
 		const s = session.data;
+		draftDate = formatDate(s.startTime, timezone);
 		draftDescription = s.description ?? '';
 		draftStartTime = formatTime(s.startTime, timezone);
+		draftEndDate = s.endTime ? formatDate(s.endTime, timezone) : '';
 		draftEndTime = s.endTime ? formatTime(s.endTime, timezone) : '';
 		draftTags = s.tags
 			? s.tags.map((t: { name: string }) => `+${t.name}`).join(' ')
@@ -147,6 +166,57 @@
 
 		try {
 			switch (field) {
+				case 'date': {
+					const newMidnight = parseISODate(draftDate, timezone);
+					if (newMidnight === null) {
+						draftDate = formatDate(session.data.startTime, timezone);
+						break;
+					}
+					const currentMidnight = getLocalMidnight(
+						session.data.startTime,
+						timezone
+					);
+					if (newMidnight === currentMidnight) break;
+
+					const startMins = parseHHMM(
+						formatTime(session.data.startTime, timezone)
+					);
+					if (startMins === null) break;
+					const newStart = buildTimestamp(newMidnight, startMins);
+
+					await client.mutation(api.sessions.update, {
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						id: sessionId as any,
+						startTime: newStart
+					});
+					break;
+				}
+				case 'endDate': {
+					if (!session.data.endTime) break;
+					const newMidnight = parseISODate(draftEndDate, timezone);
+					if (newMidnight === null) {
+						draftEndDate = formatDate(session.data.endTime, timezone);
+						break;
+					}
+					const currentMidnight = getLocalMidnight(
+						session.data.endTime,
+						timezone
+					);
+					if (newMidnight === currentMidnight) break;
+
+					const endMins = parseHHMM(
+						formatTime(session.data.endTime, timezone)
+					);
+					if (endMins === null) break;
+					const newEnd = buildTimestamp(newMidnight, endMins);
+
+					await client.mutation(api.sessions.update, {
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						id: sessionId as any,
+						endTime: newEnd
+					});
+					break;
+				}
 				case 'description': {
 					const desc = draftDescription.trim() || undefined;
 					if (desc !== (session.data.description ?? undefined)) {
@@ -494,10 +564,40 @@
 			<div
 				class="flex flex-wrap items-center gap-3 border-b border-border pb-3"
 			>
-				<!-- Date (read-only) -->
-				<span class="font-mono text-xs text-fg-muted">
-					{formatDate(s.startTime, timezone)}
-				</span>
+				<!-- Date: inline editable -->
+				{#if isEditing && activeField === 'date'}
+					<input
+						bind:this={dateInput}
+						bind:value={draftDate}
+						type="date"
+						class="w-36 border border-primary bg-bg-dark px-1 py-0.5 font-mono text-xs text-fg-dark outline-none"
+						onkeydown={(e) => handleFieldKeydown('date', e)}
+						onblur={() => {
+							saveField('date');
+						}}
+					/>
+				{:else}
+					<button
+						type="button"
+						class="font-mono text-xs transition-colors"
+						class:text-fg-muted={!isEditing}
+						class:text-primary={isEditing}
+						class:cursor-pointer={isEditing}
+						class:cursor-default={!isEditing}
+						disabled={!isEditing}
+						onclick={() => {
+							if (isEditing) {
+								activeField = 'date';
+								setTimeout(() => dateInput?.focus(), 0);
+							}
+						}}
+					>
+						{formatDate(s.startTime, timezone)}
+						{#if isEditing}
+							<span class="ml-1 text-fg-gutter">[edit]</span>
+						{/if}
+					</button>
+				{/if}
 
 				<!-- Start time: inline editable -->
 				{#if isEditing && activeField === 'startTime'}
@@ -534,39 +634,88 @@
 
 				<span class="font-mono text-sm text-fg-muted">-</span>
 
-				<!-- End time: inline editable (only for completed sessions) -->
+				<!-- End date + time: inline editable (only for completed sessions) -->
 				{#if isRunning}
 					<span class="font-mono text-sm text-fg-muted">...</span>
-				{:else if isEditing && activeField === 'endTime'}
-					<input
-						bind:this={endTimeInput}
-						bind:value={draftEndTime}
-						type="text"
-						class="w-16 border border-primary bg-bg-dark px-1 py-0.5 text-center font-mono text-sm text-fg-dark outline-none"
-						placeholder="HH:MM"
-						onkeydown={(e) => handleFieldKeydown('endTime', e)}
-						onblur={() => {
-							saveField('endTime');
-						}}
-					/>
 				{:else}
-					<button
-						type="button"
-						class="font-mono text-sm transition-colors"
-						class:text-fg-dark={!isEditing}
-						class:text-primary={isEditing}
-						class:cursor-pointer={isEditing}
-						class:cursor-default={!isEditing}
-						disabled={!isEditing}
-						onclick={() => {
-							if (isEditing) {
-								activeField = 'endTime';
-								setTimeout(() => endTimeInput?.focus(), 0);
-							}
-						}}
-					>
-						{s.endTime ? formatTime(s.endTime, timezone) : '...'}
-					</button>
+					<!-- End date (shown when different from start date, or when editing) -->
+					{#if isEditing && activeField === 'endDate'}
+						<input
+							bind:this={endDateInput}
+							bind:value={draftEndDate}
+							type="date"
+							class="w-36 border border-primary bg-bg-dark px-1 py-0.5 font-mono text-xs text-fg-dark outline-none"
+							onkeydown={(e) => handleFieldKeydown('endDate', e)}
+							onblur={() => {
+								saveField('endDate');
+							}}
+						/>
+					{:else if s.endTime && formatDate(s.endTime, timezone) !== formatDate(s.startTime, timezone)}
+						<button
+							type="button"
+							class="font-mono text-xs transition-colors"
+							class:text-fg-muted={!isEditing}
+							class:text-primary={isEditing}
+							class:cursor-pointer={isEditing}
+							class:cursor-default={!isEditing}
+							disabled={!isEditing}
+							onclick={() => {
+								if (isEditing) {
+									activeField = 'endDate';
+									setTimeout(() => endDateInput?.focus(), 0);
+								}
+							}}
+						>
+							{formatDate(s.endTime, timezone)}
+							{#if isEditing}
+								<span class="ml-1 text-fg-gutter">[edit]</span>
+							{/if}
+						</button>
+					{:else if isEditing}
+						<button
+							type="button"
+							class="cursor-pointer font-mono text-xs text-fg-gutter transition-colors hover:text-primary"
+							onclick={() => {
+								activeField = 'endDate';
+								setTimeout(() => endDateInput?.focus(), 0);
+							}}
+						>
+							+date
+						</button>
+					{/if}
+
+					<!-- End time -->
+					{#if isEditing && activeField === 'endTime'}
+						<input
+							bind:this={endTimeInput}
+							bind:value={draftEndTime}
+							type="text"
+							class="w-16 border border-primary bg-bg-dark px-1 py-0.5 text-center font-mono text-sm text-fg-dark outline-none"
+							placeholder="HH:MM"
+							onkeydown={(e) => handleFieldKeydown('endTime', e)}
+							onblur={() => {
+								saveField('endTime');
+							}}
+						/>
+					{:else}
+						<button
+							type="button"
+							class="font-mono text-sm transition-colors"
+							class:text-fg-dark={!isEditing}
+							class:text-primary={isEditing}
+							class:cursor-pointer={isEditing}
+							class:cursor-default={!isEditing}
+							disabled={!isEditing}
+							onclick={() => {
+								if (isEditing) {
+									activeField = 'endTime';
+									setTimeout(() => endTimeInput?.focus(), 0);
+								}
+							}}
+						>
+							{s.endTime ? formatTime(s.endTime, timezone) : '...'}
+						</button>
+					{/if}
 				{/if}
 
 				<!-- Duration -->
