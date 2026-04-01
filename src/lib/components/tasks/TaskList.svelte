@@ -19,6 +19,7 @@
 		dueDate?: number;
 		tagIds: string[];
 		createdAt: number;
+		completedAt?: number;
 		boardCommentCount?: number;
 		boardCommentSeenCount?: number;
 	}
