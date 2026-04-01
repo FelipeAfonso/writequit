@@ -46,7 +46,7 @@
 	let pendingKey = $state('');
 	let pendingTimer: ReturnType<typeof setTimeout> | undefined;
 
-	let rowEls: HTMLDivElement[] = $state([]);
+	let rowEls: HTMLAnchorElement[] = $state([]);
 
 	function scrollSelectedIntoView() {
 		rowEls[selectedIndex]?.scrollIntoView({ block: 'nearest' });
@@ -346,18 +346,14 @@
 	{:else if boards.data}
 		<div class="flex flex-col gap-px">
 			{#each boards.data as board, i (board._id)}
-				<div
+				<a
 					bind:this={rowEls[i]}
-					class="flex cursor-pointer items-center gap-4 border px-3 py-2.5 font-mono transition-colors"
+					href="/app/boards/{board._id}"
+					class="flex items-center gap-4 border px-3 py-2.5 font-mono no-underline transition-colors"
 					class:border-primary={i === selectedIndex}
 					class:bg-surface-1={i === selectedIndex}
 					class:border-border={i !== selectedIndex}
 					class:bg-surface-0={i !== selectedIndex}
-					onclick={() => goto(`/app/boards/${board._id}`)}
-					onkeydown={(e) => {
-						if (e.key === 'Enter') goto(`/app/boards/${board._id}`);
-					}}
-					role="button"
 					tabindex={i === selectedIndex ? 0 : -1}
 				>
 					<!-- Board name -->
@@ -394,13 +390,14 @@
 						type="button"
 						class="shrink-0 cursor-pointer border border-border px-1.5 py-0.5 text-xs text-fg-muted transition-colors hover:border-red hover:text-red"
 						onclick={(e) => {
+							e.preventDefault();
 							e.stopPropagation();
 							requestDelete(board._id);
 						}}
 					>
 						:d
 					</button>
-				</div>
+				</a>
 			{/each}
 		</div>
 	{/if}

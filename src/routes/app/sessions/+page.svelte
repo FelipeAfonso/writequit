@@ -57,7 +57,9 @@
 	}));
 
 	// Active session query
-	const activeSession = useQuery(api.sessions.active, {});
+	const activeSession = useQuery(api.sessions.active, {}, () => ({
+		initialData: data.preloaded?.activeSession
+	}));
 
 	let sortedTags = $derived(allTags.data ? sortTags(allTags.data) : []);
 
@@ -558,9 +560,7 @@
 							<SessionCard
 								{session}
 								selected={selectedIdx === flatIdx}
-								onclick={() => {
-									goto(`/app/sessions/${session._id}`);
-								}}
+								href="/app/sessions/{session._id}"
 							/>
 							{#if deleteConfirmId === session._id}
 								<div

@@ -67,8 +67,45 @@ export const list = query({
 			tasks = tasks.filter((t) => t.tagIds.includes(args.tagId!));
 		}
 
-		// Sort: newest first
-		tasks.sort((a, b) => b.createdAt - a.createdAt);
+		// Resolve all referenced tags so we can sort by priority tag
+		const tagIdSet = new Set(tasks.flatMap((t) => t.tagIds));
+		const tagMap = new Map<string, { name: string; type?: string }>();
+		for (const tagId of tagIdSet) {
+			const tag = await ctx.db.get(tagId);
+			if (tag && tag.name) tagMap.set(tagId as string, { name: tag.name, type: tag.type });
+		}
+
+		function getPriorityOrder(tagIds: string[]): number {
+			for (const id of tagIds) {
+				const tag = tagMap.get(id);
+				if (tag?.type === 'priority') {
+					const num = parseInt(tag.name.replace(/\D/g, ''), 10);
+					if (!isNaN(num)) return num;
+				}
+			}
+			return Infinity;
+		}
+
+		// Sort: active/inbox by priority tag (p0 first), done by completion date.
+		// Active always before inbox.
+		tasks.sort((a, b) => {
+			const statusDiff = statusPriorityFor(a.status) - statusPriorityFor(b.status);
+			if (statusDiff !== 0) return statusDiff;
+
+			if (a.status === 'done') {
+				return (b.completedAt ?? b.createdAt) - (a.completedAt ?? a.createdAt);
+			}
+
+			// Priority tag: p0 < p1 < p2 < p3, no tag last
+			const priDiff = getPriorityOrder(a.tagIds as any) - getPriorityOrder(b.tagIds as any);
+			if (priDiff !== 0) return priDiff;
+
+			const aDue = a.dueDate ?? Infinity;
+			const bDue = b.dueDate ?? Infinity;
+			if (aDue !== bDue) return aDue - bDue;
+
+			return b.createdAt - a.createdAt;
+		});
 
 		return tasks;
 	}

@@ -152,6 +152,58 @@
 		);
 	});
 
+	const STATUS_ORDER: Record<string, number> = { active: 0, inbox: 1, done: 2 };
+
+	/** Extract numeric priority from a task's priority tag (p0→0, p1→1, …). */
+	function getPriorityOrder(tagIds: string[]): number {
+		for (const id of tagIds) {
+			const tag = tagsMap.get(id);
+			if (tag?.type === 'priority') {
+				const num = parseInt(tag.name.replace(/\D/g, ''), 10);
+				if (!isNaN(num)) return num;
+			}
+		}
+		return Infinity; // no priority tag → sort last
+	}
+
+	/**
+	 * Sort tasks: active/inbox by priority tag (p0 first, then p1 …),
+	 * done tasks by completion date (most recent first). Active tasks
+	 * always appear above inbox.
+	 */
+	let sortedTasks = $derived.by(() => {
+		return [...filteredTasks].sort(
+			(
+				a: { status: string; tagIds: string[]; dueDate?: number; createdAt: number; completedAt?: number },
+				b: { status: string; tagIds: string[]; dueDate?: number; createdAt: number; completedAt?: number }
+			) => {
+				// Primary: status group (active < inbox < done)
+				const statusDiff =
+					(STATUS_ORDER[a.status] ?? 9) - (STATUS_ORDER[b.status] ?? 9);
+				if (statusDiff !== 0) return statusDiff;
+
+				// Done tasks: most recently completed first
+				if (a.status === 'done') {
+					return (
+						(b.completedAt ?? b.createdAt) - (a.completedAt ?? a.createdAt)
+					);
+				}
+
+				// Active / inbox: sort by priority tag (p0 < p1 < p2 < p3)
+				const priDiff = getPriorityOrder(a.tagIds) - getPriorityOrder(b.tagIds);
+				if (priDiff !== 0) return priDiff;
+
+				// Secondary: earliest due-date first, no due-date last
+				const aDue = a.dueDate ?? Infinity;
+				const bDue = b.dueDate ?? Infinity;
+				if (aDue !== bDue) return aDue - bDue;
+
+				// Tiebreaker: newest first
+				return b.createdAt - a.createdAt;
+			}
+		);
+	});
+
 	// ── Auto-load for tag filtering ──────────────────────────────────
 	// When tag filters are active and the visible (filtered) results are
 	// fewer than a full page, automatically load more pages until we have
@@ -375,7 +427,7 @@
 		</div>
 	{:else}
 		<TaskList
-			tasks={filteredTasks}
+			tasks={sortedTasks}
 			{tagsMap}
 			emptyMessage={isSearching
 				? `no tasks matching "${searchQuery}"`
