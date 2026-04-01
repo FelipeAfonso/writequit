@@ -7,14 +7,18 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 	if (!client) return { preloaded: {}, boardId: params.id };
 
 	try {
-		const [board, tags] = await Promise.all([
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			client.query(api.boards.get, { id: params.id as any }),
-			client.query(api.tags.list)
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const boardId = params.id as any;
+		const [board, tags, tasks, comments, messages] = await Promise.all([
+			client.query(api.boards.get, { id: boardId }),
+			client.query(api.tags.list),
+			client.query(api.boards.getTasks, { id: boardId }),
+			client.query(api.boards.getComments, { boardId }),
+			client.query(api.boards.getMessages, { boardId })
 		]);
 
 		return {
-			preloaded: { board, tags },
+			preloaded: { board, tags, tasks, comments, messages },
 			boardId: params.id
 		};
 	} catch {

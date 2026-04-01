@@ -1,11 +1,14 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
 	import { isEditableTarget } from '$lib/utils/keys';
 
+	let { data } = $props();
+
 	const client = useConvexClient();
-	const notifications = useQuery(api.notifications.list, {});
+	const notifications = useQuery(api.notifications.list, {}, () => ({
+		initialData: data.preloaded?.notifications
+	}));
 
 	let markingAll = $state(false);
 
@@ -21,28 +24,29 @@
 
 	type Notification = NonNullable<typeof notifications.data>[number];
 
-	async function handleClick(notification: Notification) {
-		// Mark as read
-		if (!notification.isRead) {
-			try {
-				await client.mutation(api.notifications.markRead, {
-					id: notification._id
-				});
-			} catch (err) {
-				console.error('Failed to mark read:', err);
-			}
-		}
-
-		// Navigate to relevant page
+	function notificationHref(notification: Notification): string | undefined {
 		if (
 			notification.type === 'comment' ||
 			notification.type === 'priority_change'
 		) {
 			if (notification.taskId) {
-				goto(`/app/tasks/${notification.taskId}`);
+				return `/app/tasks/${notification.taskId}`;
 			}
 		} else if (notification.type === 'chat') {
-			goto(`/app/boards/${notification.boardId}`);
+			return `/app/boards/${notification.boardId}`;
+		}
+		return undefined;
+	}
+
+	function markAsRead(notification: Notification) {
+		if (!notification.isRead) {
+			client
+				.mutation(api.notifications.markRead, {
+					id: notification._id
+				})
+				.catch((err: unknown) => {
+					console.error('Failed to mark read:', err);
+				});
 		}
 	}
 
@@ -136,9 +140,14 @@
 	{:else}
 		<div class="flex flex-col">
 			{#each notifications.data as notification (notification._id)}
-				<button
-					onclick={() => handleClick(notification)}
-					class="group flex w-full cursor-pointer items-start gap-3 border-b border-border px-3 py-3 text-left font-mono transition-colors hover:bg-surface-1"
+				{@const href = notificationHref(notification)}
+				<a
+					href={href ?? '#'}
+					onclick={(e) => {
+						if (!href) e.preventDefault();
+						markAsRead(notification);
+					}}
+					class="group flex w-full items-start gap-3 border-b border-border px-3 py-3 font-mono no-underline transition-colors hover:bg-surface-1"
 					class:opacity-50={notification.isRead}
 				>
 					<!-- Unread marker -->
@@ -168,7 +177,7 @@
 					>
 						{notification.summary}
 					</span>
-				</button>
+				</a>
 			{/each}
 		</div>
 	{/if}
