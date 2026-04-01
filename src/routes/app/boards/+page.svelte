@@ -46,7 +46,7 @@
 	let pendingKey = $state('');
 	let pendingTimer: ReturnType<typeof setTimeout> | undefined;
 
-	let rowEls: HTMLAnchorElement[] = $state([]);
+	let rowEls: HTMLElement[] = $state([]);
 
 	function scrollSelectedIntoView() {
 		rowEls[selectedIndex]?.scrollIntoView({ block: 'nearest' });
@@ -346,18 +346,20 @@
 	{:else if boards.data}
 		<div class="flex flex-col gap-px">
 			{#each boards.data as board, i (board._id)}
-				<a
+				<div
 					bind:this={rowEls[i]}
-					href="/app/boards/{board._id}"
-					class="flex items-center gap-4 border px-3 py-2.5 font-mono no-underline transition-colors"
+					class="flex items-center gap-4 border px-3 py-2.5 font-mono transition-colors"
 					class:border-primary={i === selectedIndex}
 					class:bg-surface-1={i === selectedIndex}
 					class:border-border={i !== selectedIndex}
 					class:bg-surface-0={i !== selectedIndex}
-					tabindex={i === selectedIndex ? 0 : -1}
 				>
-					<!-- Board name -->
-					<div class="flex min-w-0 flex-1 flex-col gap-1">
+					<!-- Board link (content area) -->
+					<a
+						href="/app/boards/{board._id}"
+						class="flex min-w-0 flex-1 flex-col gap-1 no-underline"
+						tabindex={i === selectedIndex ? 0 : -1}
+					>
 						<div class="flex items-baseline gap-2">
 							<span class="text-sm text-fg">{board.name}</span>
 							{#if !board.isActive}
@@ -383,21 +385,17 @@
 								{/each}
 							{/if}
 						</div>
-					</div>
+					</a>
 
-					<!-- Delete button -->
+					<!-- Delete button (sibling, not nested in anchor) -->
 					<button
 						type="button"
 						class="shrink-0 cursor-pointer border border-border px-1.5 py-0.5 text-xs text-fg-muted transition-colors hover:border-red hover:text-red"
-						onclick={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							requestDelete(board._id);
-						}}
+						onclick={() => requestDelete(board._id)}
 					>
 						:d
 					</button>
-				</a>
+				</div>
 			{/each}
 		</div>
 	{/if}
