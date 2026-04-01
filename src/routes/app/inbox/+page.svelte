@@ -141,15 +141,8 @@
 		<div class="flex flex-col">
 			{#each notifications.data as notification (notification._id)}
 				{@const href = notificationHref(notification)}
-				<a
-					href={href ?? '#'}
-					onclick={(e) => {
-						if (!href) e.preventDefault();
-						markAsRead(notification);
-					}}
-					class="group flex w-full items-start gap-3 border-b border-border px-3 py-3 font-mono no-underline transition-colors hover:bg-surface-1"
-					class:opacity-50={notification.isRead}
-				>
+
+				{#snippet notificationContent()}
 					<!-- Unread marker -->
 					<span class="mt-0.5 w-2 shrink-0 text-xs leading-none">
 						{#if !notification.isRead}
@@ -177,7 +170,27 @@
 					>
 						{notification.summary}
 					</span>
-				</a>
+				{/snippet}
+
+				{#if href}
+					<a
+						{href}
+						onclick={() => markAsRead(notification)}
+						class="group flex w-full items-start gap-3 border-b border-border px-3 py-3 font-mono no-underline transition-colors hover:bg-surface-1"
+						class:opacity-50={notification.isRead}
+					>
+						{@render notificationContent()}
+					</a>
+				{:else}
+					<button
+						type="button"
+						onclick={() => markAsRead(notification)}
+						class="group flex w-full cursor-default items-start gap-3 border-b border-border px-3 py-3 text-left font-mono transition-colors hover:bg-surface-1"
+						class:opacity-50={notification.isRead}
+					>
+						{@render notificationContent()}
+					</button>
+				{/if}
 			{/each}
 		</div>
 	{/if}

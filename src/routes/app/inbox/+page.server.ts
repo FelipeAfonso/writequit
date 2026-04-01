@@ -12,7 +12,8 @@ export const load: PageServerLoad = async ({ cookies }) => {
 		return {
 			preloaded: { notifications }
 		};
-	} catch {
+	} catch (err) {
+		console.error('Notifications preload failed:', err);
 		return { preloaded: {} };
 	}
 };
