@@ -2,11 +2,12 @@ import { query, mutation, internalMutation } from './_generated/server';
 import { v } from 'convex/values';
 import { paginationOptsValidator } from 'convex/server';
 import { parseTask } from '../src/lib/parser/index.js';
+import { compareTasks } from '../src/lib/utils/taskSort.js';
 import { getOrCreateTag } from './tags.js';
 import { autoLinkTask } from './sessions.js';
 import { getCurrentUser, getCurrentUserOrThrow } from './users.js';
-import type { MutationCtx } from './_generated/server';
-import type { Id } from './_generated/dataModel';
+import type { MutationCtx, QueryCtx } from './_generated/server';
+import type { Id, Doc } from './_generated/dataModel';
 
 /** Map a task status to its numeric sort priority (lower = higher priority). */
 const STATUS_PRIORITY: Record<string, number> = {
@@ -17,6 +18,27 @@ const STATUS_PRIORITY: Record<string, number> = {
 
 function statusPriorityFor(status: string): number {
 	return STATUS_PRIORITY[status] ?? 9;
+}
+
+/**
+ * Resolve all referenced tags for a set of tasks into a lookup map,
+ * then sort the tasks using the shared comparator.
+ */
+async function sortTasksByPriority(
+	ctx: QueryCtx,
+	tasks: Doc<'tasks'>[]
+): Promise<Doc<'tasks'>[]> {
+	const allTagIds: Id<'tags'>[] = tasks.flatMap((t) => t.tagIds);
+	const tagIdSet = new Set(allTagIds);
+	const tagMap = new Map<string, { name: string; type?: string }>();
+	for (const tagId of tagIdSet) {
+		const tag = await ctx.db.get(tagId);
+		if (tag?.name) tagMap.set(tagId, { name: tag.name, type: tag.type });
+	}
+
+	return [...tasks].sort((a, b) =>
+		compareTasks(a, b, (id) => tagMap.get(id))
+	);
 }
 
 /** Look up the user's timezone from their settings, defaulting to UTC. */
@@ -67,10 +89,7 @@ export const list = query({
 			tasks = tasks.filter((t) => t.tagIds.includes(args.tagId!));
 		}
 
-		// Sort: newest first
-		tasks.sort((a, b) => b.createdAt - a.createdAt);
-
-		return tasks;
+		return await sortTasksByPriority(ctx, tasks);
 	}
 });
 
@@ -80,10 +99,10 @@ export const list = query({
  * Supports the same status filter as `list`. Tag and search filtering
  * are applied client-side across loaded pages.
  *
- * When a specific status is selected, results are ordered newest-first
- * (descending _creationTime). When showing all statuses, results are
- * sorted by status priority (active > inbox > done), then newest-first
- * within each group, using the `by_userId_statusPriority` index.
+ * Pagination uses database indexes for cursor stability, then each page
+ * is re-sorted with the shared comparator (priority tag, due date,
+ * completedAt for done tasks). The client also applies a final sort
+ * across all loaded pages for cross-page correctness.
  */
 export const listPaginated = query({
 	args: {
@@ -99,25 +118,27 @@ export const listPaginated = query({
 		}
 		const userId = user._id;
 
+		let result;
+
 		if (args.status !== undefined) {
-			// Single-status filter: use status+userId index, newest first
-			return await ctx.db
+			result = await ctx.db
 				.query('tasks')
 				.withIndex('by_status_userId', (idx) =>
 					idx.eq('status', args.status!).eq('userId', userId)
 				)
 				.order('desc')
 				.paginate(args.paginationOpts);
+		} else {
+			result = await ctx.db
+				.query('tasks')
+				.withIndex('by_userId_statusPriority', (idx) => idx.eq('userId', userId))
+				.order('asc')
+				.paginate(args.paginationOpts);
 		}
 
-		// All statuses: sort by statusPriority (asc) so active < inbox < done,
-		// then by _creationTime (asc) within each group as the index tiebreaker.
-		// This gives us status-grouped results straight from the index.
-		return await ctx.db
-			.query('tasks')
-			.withIndex('by_userId_statusPriority', (idx) => idx.eq('userId', userId))
-			.order('asc')
-			.paginate(args.paginationOpts);
+		// Re-sort within the page using the shared comparator
+		result.page = await sortTasksByPriority(ctx, result.page);
+		return result;
 	}
 });
 

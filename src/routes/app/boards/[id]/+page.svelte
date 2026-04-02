@@ -24,13 +24,21 @@
 		() => ({ initialData: data.preloaded?.board })
 	);
 
-	const tasks = useQuery(api.boards.getTasks, () => ({ id: boardId }));
-	const comments = useQuery(api.boards.getComments, () => ({
-		boardId
-	}));
-	const chatMessages = useQuery(api.boards.getMessages, () => ({
-		boardId
-	}));
+	const tasks = useQuery(
+		api.boards.getTasks,
+		() => ({ id: boardId }),
+		() => ({ initialData: data.preloaded?.tasks })
+	);
+	const comments = useQuery(
+		api.boards.getComments,
+		() => ({ boardId }),
+		() => ({ initialData: data.preloaded?.comments })
+	);
+	const chatMessages = useQuery(
+		api.boards.getMessages,
+		() => ({ boardId }),
+		() => ({ initialData: data.preloaded?.messages })
+	);
 
 	const allTags = useQuery(api.tags.list, {}, () => ({
 		initialData: data.preloaded?.tags

@@ -5,6 +5,7 @@
 	import { api } from '$convex/_generated/api';
 	import { isEditableTarget } from '$lib/utils/keys';
 	import { sortTags } from '$lib/utils/tags';
+	import { compareTasks } from '$lib/utils/taskSort';
 	import { settings } from '$lib/stores/settings.svelte';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
 	import { usePaginatedQuery } from '$lib/stores/usePaginatedQuery.svelte';
@@ -149,6 +150,22 @@
 		if (activeTagIds.size === 0) return baseResults;
 		return baseResults.filter((t: { tagIds: string[] }) =>
 			[...activeTagIds].every((id) => t.tagIds.includes(id))
+		);
+	});
+
+	/** Tag lookup callback for the shared sort comparator. */
+	function getTag(id: string) {
+		return tagsMap.get(id);
+	}
+
+	/**
+	 * Sort tasks: active/inbox by priority tag (p0 first, then p1 …),
+	 * done tasks by completion date (most recent first). Active tasks
+	 * always appear above inbox.  Uses the shared comparator from taskSort.
+	 */
+	let sortedTasks = $derived.by(() => {
+		return [...filteredTasks].sort((a: any, b: any) =>
+			compareTasks(a, b, getTag)
 		);
 	});
 
@@ -375,7 +392,7 @@
 		</div>
 	{:else}
 		<TaskList
-			tasks={filteredTasks}
+			tasks={sortedTasks}
 			{tagsMap}
 			emptyMessage={isSearching
 				? `no tasks matching "${searchQuery}"`
