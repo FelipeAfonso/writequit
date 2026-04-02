@@ -25,11 +25,11 @@
 
 	interface Props {
 		session: SessionData;
+		href: string;
 		selected?: boolean;
-		onclick?: () => void;
 	}
 
-	let { session, selected = false, onclick }: Props = $props();
+	let { session, href, selected = false }: Props = $props();
 
 	const getTz = getContext<TimezoneGetter>(TIMEZONE_CTX);
 	let timezone = $derived(getTz());
@@ -49,14 +49,13 @@
 	let isRunning = $derived(!session.endTime);
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-<div
-	class="flex cursor-pointer items-center gap-3 border px-3 py-2 font-mono text-sm transition-colors"
+<a
+	{href}
+	class="flex items-center gap-3 border px-3 py-2 font-mono text-sm no-underline transition-colors"
 	class:border-primary={selected}
 	class:bg-surface-2={selected}
 	class:border-border={!selected}
 	class:hover:border-border-highlight={!selected}
-	onclick={() => onclick?.()}
 >
 	<!-- Time range -->
 	<span class="shrink-0 text-fg-muted">
@@ -94,4 +93,4 @@
 			{session.taskIds.length} task{session.taskIds.length !== 1 ? 's' : ''}
 		</span>
 	{/if}
-</div>
+</a>

@@ -28,10 +28,11 @@ export {
 	extractDueDate,
 	parseISODate,
 	parseRelativeDate,
+	parseDate,
 	localMidnight
 } from './dueDate.js';
 export { stripMetadata } from './strip.js';
-export { parseTimeLog } from './timeRange.js';
+export { parseTimeLog, parseTrack, extractDate } from './timeRange.js';
 export type { ParsedTimeLog } from './timeRange.js';
 
 import type { ParsedTask } from './types.js';

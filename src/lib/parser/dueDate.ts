@@ -238,6 +238,28 @@ function nextDayOfWeek(
 }
 
 /**
+ * Parse a date string into a midnight timestamp in the given timezone.
+ *
+ * Tries ISO date first (`YYYY-MM-DD`), then relative keywords
+ * (`today`, `yesterday`, `tomorrow`, day names).
+ *
+ * Returns `null` if the value doesn't match any known format.
+ *
+ * @param value The date string to parse.
+ * @param tz    IANA timezone string.
+ * @param now   Optional current time in ms for deterministic testing.
+ */
+export function parseDate(
+	value: string,
+	tz: string,
+	now?: number
+): number | null {
+	const isoResult = parseISODate(value, tz);
+	if (isoResult !== null) return isoResult;
+	return parseRelativeDate(value, now ?? Date.now(), tz);
+}
+
+/**
  * Get midnight in the user's timezone for a given timestamp.
  *
  * This is a re-export for convenience — the actual implementation

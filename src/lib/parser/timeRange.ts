@@ -24,7 +24,7 @@
  */
 
 import { isDigit } from './scanner.js';
-import { parseISODate, parseRelativeDate } from './dueDate.js';
+import { parseISODate, parseRelativeDate, parseDate } from './dueDate.js';
 import { getLocalMidnight } from '../utils/datetime.js';
 import { extractTags } from './tags.js';
 
@@ -383,4 +383,108 @@ export function extractOffset(args: string): {
 		.trim();
 
 	return { offsetMs: ms, remaining };
+}
+
+// ── Date flag parser ─────────────────────────────────────────────
+
+/**
+ * Extract `-d` or `--date` flag and its value from an args string.
+ *
+ * Returns the midnight timestamp for the parsed date and the remaining
+ * args string (with the flag and value removed).
+ *
+ * Returns `{ midnight: 0, remaining: args }` if no date flag found.
+ * Returns `null` if the flag is present but the value is missing/invalid.
+ *
+ * @param args The argument string to parse.
+ * @param tz   IANA timezone string for interpreting the date.
+ * @param now  Optional current time in ms for deterministic testing.
+ */
+export function extractDate(
+	args: string,
+	tz: string,
+	now?: number
+): { midnight: number; remaining: string } | null {
+	const tokens = args.split(/\s+/);
+	const flagIdx = tokens.findIndex((t) => t === '-d' || t === '--date');
+
+	if (flagIdx === -1) return { midnight: 0, remaining: args };
+
+	const valueToken = tokens[flagIdx + 1];
+	if (!valueToken) return null;
+
+	const midnight = parseDate(valueToken.toLowerCase(), tz, now);
+	if (midnight === null) return null;
+
+	// Remove the flag and its value from tokens
+	const remaining = [...tokens.slice(0, flagIdx), ...tokens.slice(flagIdx + 2)]
+		.join(' ')
+		.trim();
+
+	return { midnight, remaining };
+}
+
+// ── Track parser ─────────────────────────────────────────────────
+
+/**
+ * Parse a `:track` command argument string into structured data.
+ *
+ * Syntax:
+ *   :track <start-date> <start-time> <end-date> <end-time> [+tags...] ["description"]
+ *
+ * Dates support ISO (`2026-03-28`) and relative keywords (`yesterday`, `today`, etc.).
+ * Times support 24-hour (`14:00`) and 12-hour (`2pm`, `2:00pm`) formats.
+ *
+ * Examples:
+ *   :track yesterday 09:00 yesterday 17:00 +work "feature dev"
+ *   :track 2026-03-28 22:00 2026-03-29 02:00 +project "overnight"
+ *   :track today 8am today 12pm +meeting
+ *
+ * Returns `null` if the input can't be parsed.
+ *
+ * @param input The argument string after `:track `.
+ * @param tz    IANA timezone string.
+ * @param now   Optional current time in ms for deterministic testing.
+ */
+export function parseTrack(
+	input: string,
+	tz: string,
+	now?: number
+): ParsedTimeLog | null {
+	const trimmed = input.trim();
+	if (trimmed.length === 0) return null;
+
+	// Extract description first (removes it from further parsing)
+	const { text: remaining, description } = extractDescription(trimmed);
+
+	// Extract tags
+	const tags = extractTags(remaining);
+
+	// Get non-tag tokens: should be exactly 4 (startDate startTime endDate endTime)
+	const tokens = remaining
+		.split(/\s+/)
+		.filter((t) => t.length > 0 && !t.startsWith('+'));
+
+	if (tokens.length !== 4) return null;
+
+	const [startDateStr, startTimeStr, endDateStr, endTimeStr] = tokens;
+
+	const startMidnight = parseDate(startDateStr.toLowerCase(), tz, now);
+	if (startMidnight === null) return null;
+
+	const startMins = parseTimeToMinutes(startTimeStr);
+	if (startMins === null) return null;
+
+	const endMidnight = parseDate(endDateStr.toLowerCase(), tz, now);
+	if (endMidnight === null) return null;
+
+	const endMins = parseTimeToMinutes(endTimeStr);
+	if (endMins === null) return null;
+
+	const startTime = startMidnight + startMins * 60_000;
+	const endTime = endMidnight + endMins * 60_000;
+
+	if (endTime <= startTime) return null;
+
+	return { startTime, endTime, tags, description };
 }
