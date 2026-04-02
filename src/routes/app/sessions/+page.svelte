@@ -16,6 +16,7 @@
 		getDateRangeBounds,
 		getLocalMidnight,
 		buildTimestamp,
+		formatDate,
 		TIMEZONE_CTX,
 		type TimezoneGetter
 	} from '$lib/utils/datetime';
@@ -191,10 +192,13 @@
 			if (midnight !== null) {
 				const now = Date.now();
 				const todayMidnight = getLocalMidnight(now, timezone);
-				const minutesSinceMidnight = Math.floor(
-					(now - todayMidnight) / 60_000
-				);
-				startTime = buildTimestamp(midnight, minutesSinceMidnight);
+				// Only set startTime if the selected date is not in the future
+				if (midnight <= todayMidnight) {
+					const minutesSinceMidnight = Math.floor(
+						(now - todayMidnight) / 60_000
+					);
+					startTime = buildTimestamp(midnight, minutesSinceMidnight);
+				}
 			}
 		}
 
@@ -472,6 +476,7 @@
 					<input
 						type="date"
 						bind:value={startDate}
+						max={formatDate(Date.now(), timezone)}
 						class="w-36 border border-border bg-bg px-2 py-1.5 font-mono text-sm text-fg-muted focus:border-primary focus:text-fg focus:outline-none"
 						title="Leave empty for today"
 					/>

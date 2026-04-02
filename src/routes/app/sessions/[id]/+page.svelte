@@ -184,6 +184,12 @@
 					if (startMins === null) break;
 					const newStart = buildTimestamp(newMidnight, startMins);
 
+					// Guard against invalid interval: newStart must be before endTime
+					if (session.data.endTime && newStart >= session.data.endTime) {
+						draftDate = formatDate(session.data.startTime, timezone);
+						break;
+					}
+
 					await client.mutation(api.sessions.update, {
 						// eslint-disable-next-line @typescript-eslint/no-explicit-any
 						id: sessionId as any,
@@ -209,6 +215,12 @@
 					);
 					if (endMins === null) break;
 					const newEnd = buildTimestamp(newMidnight, endMins);
+
+					// Guard against invalid interval: newEnd must be after startTime
+					if (newEnd <= session.data.startTime) {
+						draftEndDate = formatDate(session.data.endTime, timezone);
+						break;
+					}
 
 					await client.mutation(api.sessions.update, {
 						// eslint-disable-next-line @typescript-eslint/no-explicit-any
