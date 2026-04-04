@@ -15,9 +15,7 @@
 	import AvatarMenu from '$lib/components/AvatarMenu.svelte';
 
 	const isLocal = import.meta.env.DEV;
-	const isDevConvex = PUBLIC_CONVEX_URL.includes(
-		'acrobatic-canary-350.convex.cloud'
-	);
+	const isDevConvex = PUBLIC_CONVEX_URL !== import.meta.env.VITE_PROD_CONVEX_URL;
 	const envBadge: 'dev-local' | 'local-prod' | 'dev-cloud' | null = isLocal
 		? isDevConvex
 			? 'dev-local'
