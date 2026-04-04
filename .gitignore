@@ -25,3 +25,6 @@ vite.config.ts.timestamp-*
 
 prod-snapshot.zip
 prod-snapshot
+
+# Keys (generated locally)
+keys.mjs
