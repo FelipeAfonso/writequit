@@ -7,7 +7,7 @@
  */
 
 import { goto } from '$app/navigation';
-import { parseTimeLog, extractOffset } from '$lib/parser/timeRange';
+import { parseTimeLog, parseTrack, extractOffset } from '$lib/parser/timeRange';
 import { extractTags } from '$lib/parser/tags';
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -293,6 +293,32 @@ export const commands: Command[] = [
 				await ctx.stopTimer();
 			} catch (err) {
 				return err instanceof Error ? err.message : 'failed to stop timer';
+			}
+		}
+	},
+	{
+		name: 'track',
+		aliases: ['track'],
+		description: 'register a past session',
+		args: 'required',
+		argsPlaceholder: '<start-date> <start-time> <end-date> <end-time> [+tag] ["desc"]',
+		async execute(args, ctx) {
+			if (!ctx.logSession) return 'session logging not available';
+
+			const parsed = parseTrack(args, ctx.getTimezone());
+			if (parsed === null) {
+				return 'invalid format — use: <date> <time> <date> <time> [+tag] ["desc"]';
+			}
+
+			try {
+				await ctx.logSession({
+					startTime: parsed.startTime,
+					endTime: parsed.endTime,
+					description: parsed.description,
+					tags: parsed.tags
+				});
+			} catch (err) {
+				return err instanceof Error ? err.message : 'failed to track session';
 			}
 		}
 	},

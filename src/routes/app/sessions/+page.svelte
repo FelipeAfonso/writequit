@@ -14,9 +14,13 @@
 		formatDateHeader,
 		formatDuration,
 		getDateRangeBounds,
+		getLocalMidnight,
+		buildTimestamp,
+		formatDate,
 		TIMEZONE_CTX,
 		type TimezoneGetter
 	} from '$lib/utils/datetime';
+	import { parseISODate } from '$lib/parser/dueDate';
 
 	let { data } = $props();
 
@@ -155,6 +159,7 @@
 	// ── Quick-start form state ──
 	let descriptionInput: HTMLInputElement | undefined = $state();
 	let startDescription = $state('');
+	let startDate = $state('');
 	let startTagIds = $state<string[]>([]);
 	let startTagSet = $derived(new SvelteSet(startTagIds));
 	let isStarting = $state(false);
@@ -180,13 +185,32 @@
 			.map((id) => sortedTags.find((t) => t._id === id)?.name)
 			.filter((n): n is string => !!n);
 
+		// Compute startTime if a past date is selected
+		let startTime: number | undefined;
+		if (startDate) {
+			const midnight = parseISODate(startDate, timezone);
+			if (midnight !== null) {
+				const now = Date.now();
+				const todayMidnight = getLocalMidnight(now, timezone);
+				// Only set startTime if the selected date is not in the future
+				if (midnight <= todayMidnight) {
+					const minutesSinceMidnight = Math.floor(
+						(now - todayMidnight) / 60_000
+					);
+					startTime = buildTimestamp(midnight, minutesSinceMidnight);
+				}
+			}
+		}
+
 		try {
 			await client.mutation(api.sessions.start, {
 				description: startDescription.trim() || undefined,
-				tags: tagNames
+				tags: tagNames,
+				startTime
 			});
 			// Reset form
 			startDescription = '';
+			startDate = '';
 			startTagIds = [];
 		} catch {
 			// Handled by Convex error reporting
@@ -449,6 +473,13 @@
 					</span>
 				</div>
 				<div class="flex gap-2">
+					<input
+						type="date"
+						bind:value={startDate}
+						max={formatDate(Date.now(), timezone)}
+						class="w-36 border border-border bg-bg px-2 py-1.5 font-mono text-sm text-fg-muted focus:border-primary focus:text-fg focus:outline-none"
+						title="Leave empty for today"
+					/>
 					<input
 						bind:this={descriptionInput}
 						bind:value={startDescription}
