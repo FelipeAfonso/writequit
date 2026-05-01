@@ -313,7 +313,7 @@
 		}));
 
 		for (const ci of customLineItems) {
-			if (!ci.label.trim() || ci.unitPrice <= 0) continue;
+			if (!ci.label.trim()) continue;
 			const qty = ci.quantity || 1;
 			items.push({
 				label: ci.label.trim(),
@@ -514,6 +514,16 @@
 		invCurrency = inv.currency;
 		invPaymentTerms = inv.paymentTerms ?? '';
 		invNotes = inv.notes ?? '';
+
+		// Carry over custom (non-session) line items. Session items have
+		// `hours` set; custom items are identified by `hours === undefined`.
+		customLineItems = inv.lineItems
+			.filter((li) => li.hours === undefined)
+			.map((li) => ({
+				label: li.label,
+				quantity: li.quantity ?? 1,
+				unitPrice: li.unitPrice ?? li.amount
+			}));
 
 		showInvoiceForm = true;
 		invoiceError = '';
@@ -1237,7 +1247,6 @@
 										<input
 											type="number"
 											bind:value={item.unitPrice}
-											min="0"
 											step="0.01"
 											class="w-20 border-none bg-transparent p-0 text-right font-mono text-sm text-fg-muted focus:ring-0"
 										/>
