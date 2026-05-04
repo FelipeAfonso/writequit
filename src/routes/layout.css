@@ -122,21 +122,6 @@ body {
 	background: var(--color-fg-muted);
 }
 
-/* Environment badge pulse */
-@keyframes env-pulse {
-	0%,
-	100% {
-		opacity: 1;
-	}
-	50% {
-		opacity: 0.4;
-	}
-}
-
-.animate-env-pulse {
-	animation: env-pulse 3s ease-in-out infinite;
-}
-
 /* Blinking cursor */
 @keyframes blink {
 	0%,
