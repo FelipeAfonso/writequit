@@ -5,7 +5,6 @@
 	import { useAuthState, useAuthActions } from '$lib/auth';
 	import { useQuery, useConvexClient } from 'convex-svelte';
 	import { api } from '$convex/_generated/api';
-	import { PUBLIC_CONVEX_URL } from '$env/static/public';
 	import { isEditableTarget } from '$lib/utils/keys';
 	import { detectTimezone, TIMEZONE_CTX } from '$lib/utils/datetime';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
@@ -13,16 +12,6 @@
 	import StatusLine from '$lib/components/StatusLine.svelte';
 	import Tutorial from '$lib/components/Tutorial.svelte';
 	import AvatarMenu from '$lib/components/AvatarMenu.svelte';
-
-	const isLocal = import.meta.env.DEV;
-	const isDevConvex = PUBLIC_CONVEX_URL !== import.meta.env.VITE_PROD_CONVEX_URL;
-	const envBadge: 'dev-local' | 'local-prod' | 'dev-cloud' | null = isLocal
-		? isDevConvex
-			? 'dev-local'
-			: 'local-prod'
-		: isDevConvex
-			? 'dev-cloud'
-			: null;
 
 	let { data, children } = $props();
 
@@ -282,18 +271,6 @@
 		>
 			<div class="flex items-center gap-2">
 				<a href="/app" class="font-mono text-sm font-bold text-green">:wq</a>
-				{#if envBadge}
-					<span
-						class="animate-env-pulse border px-1.5 py-0.5 font-mono text-[10px] leading-none
-						{envBadge === 'dev-local'
-							? 'border-orange/50 text-orange'
-							: envBadge === 'local-prod'
-								? 'border-red/50 text-red'
-								: 'border-cyan/50 text-cyan'}"
-					>
-						{envBadge}
-					</span>
-				{/if}
 			</div>
 
 			<!-- Desktop nav (hidden on sm and below) -->
