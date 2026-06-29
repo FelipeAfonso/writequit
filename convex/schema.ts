@@ -8,8 +8,12 @@ export default defineSchema({
 		name: v.optional(v.string()),
 		email: v.optional(v.string()),
 		image: v.optional(v.string()),
-		/** WorkOS user ID (subject claim from JWT), e.g. "user_01XXX..." */
-		externalId: v.string(),
+		/**
+		 * WorkOS user ID (subject claim from JWT), e.g. "user_01XXX...".
+		 * Optional to tolerate legacy/imported docs created before this field
+		 * existed; `users.store` backfills it by email on the next login.
+		 */
+		externalId: v.optional(v.string()),
 		/** User role for authorization. Set directly in the DB. */
 		role: v.optional(v.union(v.literal('admin'), v.literal('user')))
 	})
