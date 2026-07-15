@@ -222,9 +222,9 @@ export async function setStatusCore(
 		updatedAt: now
 	};
 
-	if (status === 'done') {
+	if (status === 'done' && existing.status !== 'done') {
 		patch.completedAt = now;
-	} else if (existing.status === 'done') {
+	} else if (status !== 'done' && existing.status === 'done') {
 		// Moving away from done — clear completedAt
 		patch.completedAt = undefined;
 	}

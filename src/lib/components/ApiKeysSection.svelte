@@ -18,6 +18,7 @@
 	let newKey = $state<{ key: string; name: string } | null>(null);
 
 	async function createKey() {
+		if (creating) return;
 		const name = nameValue.trim();
 		if (name.length === 0) {
 			createError = 'name cannot be empty';
@@ -38,14 +39,16 @@
 
 	// ── Revoke flow ────────────────────────────────────────────────
 	let confirmingRevoke = $state<Id<'apiKeys'> | null>(null);
+	let revokeError = $state('');
 
 	async function revokeKey(id: Id<'apiKeys'>) {
+		revokeError = '';
 		try {
 			await client.mutation(api.apiKeys.revoke, { id });
-		} catch (err) {
-			console.error('Failed to revoke key:', err);
-		} finally {
 			confirmingRevoke = null;
+		} catch (err) {
+			// Keep the confirmation open so the user can retry
+			revokeError = err instanceof Error ? err.message : 'failed to revoke';
 		}
 	}
 
@@ -106,6 +109,7 @@
 			bind:value={nameValue}
 			class={inputClass}
 			placeholder="key name, e.g. claude.ai"
+			disabled={creating}
 			onkeydown={(e) => {
 				if (e.key === 'Enter') createKey();
 			}}
@@ -223,27 +227,38 @@
 					</div>
 					{#if !key.revoked}
 						{#if confirmingRevoke === key._id}
-							<div class="flex shrink-0 gap-2">
-								<button
-									type="button"
-									class="cursor-pointer border border-red px-3 py-1 font-mono text-xs text-red transition-colors hover:bg-red hover:text-bg-dark"
-									onclick={() => revokeKey(key._id)}
-								>
-									:revoke!
-								</button>
-								<button
-									type="button"
-									class="cursor-pointer border border-border px-3 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border-highlight hover:text-fg-dark"
-									onclick={() => (confirmingRevoke = null)}
-								>
-									:q cancel
-								</button>
+							<div class="flex shrink-0 flex-col items-end gap-1">
+								<div class="flex gap-2">
+									<button
+										type="button"
+										class="cursor-pointer border border-red px-3 py-1 font-mono text-xs text-red transition-colors hover:bg-red hover:text-bg-dark"
+										onclick={() => revokeKey(key._id)}
+									>
+										:revoke!
+									</button>
+									<button
+										type="button"
+										class="cursor-pointer border border-border px-3 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-border-highlight hover:text-fg-dark"
+										onclick={() => {
+											confirmingRevoke = null;
+											revokeError = '';
+										}}
+									>
+										:q cancel
+									</button>
+								</div>
+								{#if revokeError}
+									<span class="font-mono text-xs text-red">{revokeError}</span>
+								{/if}
 							</div>
 						{:else}
 							<button
 								type="button"
 								class="shrink-0 cursor-pointer border border-border px-3 py-1 font-mono text-xs text-fg-muted transition-colors hover:border-red hover:text-red"
-								onclick={() => (confirmingRevoke = key._id)}
+								onclick={() => {
+									confirmingRevoke = key._id;
+									revokeError = '';
+								}}
 							>
 								:revoke
 							</button>

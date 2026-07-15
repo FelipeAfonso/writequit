@@ -18,7 +18,8 @@ import type { Id } from './_generated/dataModel';
 
 // ── Protocol constants ─────────────────────────────────────────────
 
-const SUPPORTED_PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26', '2024-11-05'];
+// Streamable HTTP transport versions only — 2024-11-05 predates it
+const SUPPORTED_PROTOCOL_VERSIONS = ['2025-06-18', '2025-03-26'];
 const LATEST_PROTOCOL_VERSION = SUPPORTED_PROTOCOL_VERSIONS[0];
 const SERVER_INFO = { name: 'writequit', version: '1.0.0' };
 
@@ -82,14 +83,52 @@ const STATUS_SCHEMA = {
 		"Task status: 'inbox' = captured but not started, 'active' = in progress, 'done' = completed."
 };
 
-/**
- * Tool args arrive as untyped JSON; Convex validators re-check them.
- * These casts narrow for the compiler — a malformed id fails validation
- * inside runQuery/runMutation and surfaces as an isError tool result.
- */
-const asTaskId = (value: unknown) => value as Id<'tasks'>;
-const asStatus = (value: unknown) =>
-	value as 'inbox' | 'active' | 'done' | undefined;
+// ── Tool argument validation ───────────────────────────────────────
+// The advertised JSON Schema is not enforced by the transport, so args
+// are re-checked at runtime — coercing malformed values could silently
+// overwrite task content. Throws surface as isError tool results.
+
+const TASK_STATUSES = ['inbox', 'active', 'done'] as const;
+type ToolTaskStatus = (typeof TASK_STATUSES)[number];
+
+function requireString(args: ToolArgs, key: string): string {
+	const value = args[key];
+	if (typeof value !== 'string' || value.trim().length === 0) {
+		throw new Error(`Argument "${key}" must be a non-empty string`);
+	}
+	return value;
+}
+
+/** Convex re-validates the id format inside the internal function. */
+function requireTaskId(args: ToolArgs): Id<'tasks'> {
+	return requireString(args, 'id') as Id<'tasks'>;
+}
+
+function requireStatus(args: ToolArgs): ToolTaskStatus {
+	const value = args.status;
+	if (
+		typeof value !== 'string' ||
+		!TASK_STATUSES.includes(value as ToolTaskStatus)
+	) {
+		throw new Error(
+			`Argument "status" must be one of: ${TASK_STATUSES.join(', ')}`
+		);
+	}
+	return value as ToolTaskStatus;
+}
+
+function optionalStatus(args: ToolArgs): ToolTaskStatus | undefined {
+	return args.status === undefined ? undefined : requireStatus(args);
+}
+
+function optionalLimit(args: ToolArgs): number | undefined {
+	const value = args.limit;
+	if (value === undefined) return undefined;
+	if (typeof value !== 'number' || !Number.isFinite(value)) {
+		throw new Error('Argument "limit" must be a number');
+	}
+	return value;
+}
 
 const TOOLS: ToolDef[] = [
 	{
@@ -109,8 +148,8 @@ const TOOLS: ToolDef[] = [
 		run: (ctx, userId, args) =>
 			ctx.runQuery(internal.tasks.listForUser, {
 				userId,
-				status: asStatus(args.status),
-				limit: typeof args.limit === 'number' ? args.limit : undefined
+				status: optionalStatus(args),
+				limit: optionalLimit(args)
 			})
 	},
 	{
@@ -128,8 +167,8 @@ const TOOLS: ToolDef[] = [
 		run: (ctx, userId, args) =>
 			ctx.runQuery(internal.tasks.searchForUser, {
 				userId,
-				query: String(args.query ?? ''),
-				status: asStatus(args.status)
+				query: requireString(args, 'query'),
+				status: optionalStatus(args)
 			})
 	},
 	{
@@ -146,7 +185,7 @@ const TOOLS: ToolDef[] = [
 		run: async (ctx, userId, args) => {
 			const task = await ctx.runQuery(internal.tasks.getForUser, {
 				userId,
-				id: asTaskId(args.id)
+				id: requireTaskId(args)
 			});
 			if (task === null) throw new Error('Task not found');
 			return task;
@@ -170,7 +209,7 @@ const TOOLS: ToolDef[] = [
 		run: (ctx, userId, args) =>
 			ctx.runMutation(internal.tasks.createForUser, {
 				userId,
-				rawContent: String(args.content ?? '')
+				rawContent: requireString(args, 'content')
 			})
 	},
 	{
@@ -191,8 +230,8 @@ const TOOLS: ToolDef[] = [
 		run: (ctx, userId, args) =>
 			ctx.runMutation(internal.tasks.updateForUser, {
 				userId,
-				id: asTaskId(args.id),
-				rawContent: String(args.content ?? '')
+				id: requireTaskId(args),
+				rawContent: requireString(args, 'content')
 			})
 	},
 	{
@@ -210,8 +249,8 @@ const TOOLS: ToolDef[] = [
 		run: (ctx, userId, args) =>
 			ctx.runMutation(internal.tasks.setStatusForUser, {
 				userId,
-				id: asTaskId(args.id),
-				status: asStatus(args.status) ?? 'inbox'
+				id: requireTaskId(args),
+				status: requireStatus(args)
 			})
 	}
 ];
@@ -315,6 +354,19 @@ export const mcpHandler = httpAction(async (ctx, request) => {
 		);
 	}
 
+	// Spec: an invalid/unsupported MCP-Protocol-Version header gets a 400.
+	// An absent header is fine (the dispatch below is version-independent).
+	const versionHeader = request.headers.get('MCP-Protocol-Version');
+	if (
+		versionHeader !== null &&
+		!SUPPORTED_PROTOCOL_VERSIONS.includes(versionHeader)
+	) {
+		return jsonResponse(
+			{ error: `Unsupported MCP-Protocol-Version: ${versionHeader}` },
+			400
+		);
+	}
+
 	let message: unknown;
 	try {
 		message = await request.json();
@@ -330,15 +382,27 @@ export const mcpHandler = httpAction(async (ctx, request) => {
 		return rpcError(null, -32600, 'Invalid request');
 	}
 
-	const { id, method, params } = message as {
-		id?: JsonRpcId;
-		method?: string;
+	const raw = message as Record<string, unknown>;
+
+	// Notifications omit `id` entirely — acknowledged and ignored
+	if (!('id' in raw)) {
+		return new Response(null, { status: 202, headers: CORS_HEADERS });
+	}
+
+	const { jsonrpc, id, method, params } = raw as {
+		jsonrpc?: unknown;
+		id?: unknown;
+		method?: unknown;
 		params?: Record<string, unknown>;
 	};
 
-	// Notifications (no id) are acknowledged and ignored
-	if (id === undefined || id === null) {
-		return new Response(null, { status: 202, headers: CORS_HEADERS });
+	// Envelope validation — note MCP forbids `id: null` on requests
+	if (
+		jsonrpc !== '2.0' ||
+		(typeof id !== 'string' && typeof id !== 'number') ||
+		typeof method !== 'string'
+	) {
+		return rpcError(null, -32600, 'Invalid request');
 	}
 
 	switch (method) {
