@@ -290,5 +290,28 @@ export default defineSchema({
 		/** Message content (plain text). */
 		content: v.string(),
 		createdAt: v.number()
-	}).index('by_boardId', ['boardId'])
+	}).index('by_boardId', ['boardId']),
+
+	// ── API keys (agent access via the MCP endpoint) ────────────────
+
+	apiKeys: defineTable({
+		/** Owner — references the users table. */
+		userId: v.id('users'),
+		/**
+		 * Hex SHA-256 of the full key. Unsalted so it can be looked up by
+		 * hash — safe because keys are high-entropy random tokens.
+		 */
+		keyHash: v.string(),
+		/** First chars of the key for display, e.g. "wq_a1b2c3d4". */
+		prefix: v.string(),
+		/** User-supplied label, e.g. "claude.ai". */
+		name: v.string(),
+		createdAt: v.number(),
+		/** Last time the key authenticated an MCP request (throttled). */
+		lastUsedAt: v.optional(v.number()),
+		/** Set when the user revokes the key (soft-revoke, kept for history). */
+		revokedAt: v.optional(v.number())
+	})
+		.index('by_keyHash', ['keyHash'])
+		.index('by_userId', ['userId'])
 });

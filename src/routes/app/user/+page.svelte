@@ -7,6 +7,7 @@
 		detectTimezone
 	} from '$lib/utils/datetime';
 	import { commandPalette } from '$lib/stores/commandPalette.svelte';
+	import ApiKeysSection from '$lib/components/ApiKeysSection.svelte';
 
 	let { data } = $props();
 
@@ -420,6 +421,9 @@
 			</div>
 		{/if}
 	</section>
+
+	<!-- ─── Agent access section ─────────────────────────────────── -->
+	<ApiKeysSection />
 
 	<!-- ─── Tutorial section ─────────────────────────────────────── -->
 	<section class="flex flex-col gap-4">
