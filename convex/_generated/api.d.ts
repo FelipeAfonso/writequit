@@ -9,10 +9,12 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as apiKeys from "../apiKeys.js";
 import type * as boards from "../boards.js";
 import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as invoices from "../invoices.js";
+import type * as mcp from "../mcp.js";
 import type * as notifications from "../notifications.js";
 import type * as sessions from "../sessions.js";
 import type * as tags from "../tags.js";
@@ -27,10 +29,12 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  apiKeys: typeof apiKeys;
   boards: typeof boards;
   crons: typeof crons;
   http: typeof http;
   invoices: typeof invoices;
+  mcp: typeof mcp;
   notifications: typeof notifications;
   sessions: typeof sessions;
   tags: typeof tags;
