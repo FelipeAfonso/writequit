@@ -1,19 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { useAuthActions } from '$lib/auth';
-	import { PUBLIC_CONVEX_URL } from '$env/static/public';
 
 	let { data } = $props();
-
-	const isLocal = import.meta.env.DEV;
-	const isDevConvex = PUBLIC_CONVEX_URL !== import.meta.env.VITE_PROD_CONVEX_URL;
-	const envBadge: 'dev-local' | 'local-prod' | 'dev-cloud' | null = isLocal
-		? isDevConvex
-			? 'dev-local'
-			: 'local-prod'
-		: isDevConvex
-			? 'dev-cloud'
-			: null;
 
 	const { signIn } = useAuthActions();
 
@@ -40,9 +29,15 @@
 			'Built-in time tracking',
 			'Invoice generation with PDF export',
 			'Inline tag system',
-			'Project and client reports'
+			'Project and client reports',
+			'Shared password-protected client boards',
+			'Live client chat and per-task comments'
 		],
-		screenshot: 'https://writequit.dev/screenshot.png',
+		screenshot: [
+			'https://writequit.dev/screenshots/01-tasks-board.webp',
+			'https://writequit.dev/screenshots/14-board-detail.webp',
+			'https://writequit.dev/screenshots/11-reports-invoices.webp'
+		],
 		author: {
 			'@type': 'Organization',
 			name: 'writequit',
@@ -123,7 +118,7 @@
 				name: 'What is the difference between writequit and Jira or Asana?',
 				acceptedAnswer: {
 					'@type': 'Answer',
-					text: 'Jira and Asana are team project management tools built for managers. writequit is built for individual freelance developers who need a single interface for tasks, time tracking, and invoicing. There are no boards, sprints, or team features. You type commands, track time, and generate invoices from one keyboard-driven UI.'
+					text: 'Jira and Asana are team project management tools built for managers. writequit is built for individual freelance developers who need a single interface for tasks, time tracking, and invoicing. There are no sprints, Gantt charts, or manager dashboards. The only board is a shared client board: a read-only, password-protected view you send to a client, with a live chat panel. You type commands, track time, and generate invoices from one keyboard-driven UI.'
 				}
 			},
 			{
@@ -140,6 +135,14 @@
 				acceptedAnswer: {
 					'@type': 'Answer',
 					text: 'Tags are inline, typed directly into your task text. Use +tagname to add a tag (like +frontend or +urgent) and @clientname to assign a client. There are no dropdowns or separate tag management screens. Tags are parsed automatically and can be used to filter your task list instantly.'
+				}
+			},
+			{
+				'@type': 'Question',
+				name: 'Can I share my work with clients in writequit?',
+				acceptedAnswer: {
+					'@type': 'Answer',
+					text: 'Yes. writequit lets you create shared client boards: pick the tasks a client should see, protect the board with a password, and send them a single URL. Clients view task status without an account or a paid seat, leave comments on individual tasks, and message you in a live chat panel built into the board. It is a lightweight client portal that lives next to your tasks.'
 				}
 			}
 		]
@@ -313,7 +316,7 @@
 	</title>
 	<meta
 		name="description"
-		content="writequit is a task manager, time tracker, and invoice generator for freelance developers. Vim keybindings, markdown tasks, terminal UI. Track time, bill clients, ship work."
+		content="writequit is a task manager, time tracker, and invoice generator for freelance developers. Vim keybindings, markdown tasks, terminal UI. Track time, bill clients, and share password-protected client boards with live chat."
 	/>
 	<link rel="canonical" href="https://writequit.dev/" />
 
@@ -327,7 +330,7 @@
 	/>
 	<meta
 		property="og:description"
-		content="Vim keybindings. Markdown tasks. Terminal aesthetics. A task manager, time tracker, and invoice generator that gets out of your way."
+		content="Vim keybindings. Markdown tasks. Terminal aesthetics. Tasks, time tracking, invoices — plus shared client boards with live chat. A tool, not a lifestyle."
 	/>
 	<meta property="og:site_name" content="writequit" />
 	<meta property="og:image" content="https://writequit.dev/ogbanner.webp" />
@@ -347,7 +350,7 @@
 	/>
 	<meta
 		name="twitter:description"
-		content="Vim keybindings. Markdown tasks. Terminal aesthetics. A task manager, time tracker, and invoice generator that gets out of your way."
+		content="Vim keybindings. Markdown tasks. Terminal aesthetics. Tasks, time tracking, invoices — plus shared client boards with live chat. A tool, not a lifestyle."
 	/>
 	<meta name="twitter:image" content="https://writequit.dev/ogbanner.webp" />
 	<meta
@@ -362,7 +365,7 @@
 	/>
 	<meta
 		name="keywords"
-		content="freelance task manager, time tracker for developers, developer invoice tool, vim task manager, terminal task manager, freelance time tracking, developer productivity, freelance invoicing software, markdown task manager, keyboard-driven project management"
+		content="freelance task manager, time tracker for developers, developer invoice tool, vim task manager, terminal task manager, freelance time tracking, developer productivity, freelance invoicing software, markdown task manager, keyboard-driven project management, shared client board, client portal for freelancers"
 	/>
 
 	<!-- JSON-LD: SoftwareApplication -->
@@ -408,6 +411,32 @@
 		rel="stylesheet"
 	/>
 </svelte:head>
+
+{#snippet shot(src: string, alt: string, label: string, eager = false)}
+	<figure class="terminal-window shot-frame">
+		<div class="terminal-inner">
+			<div class="flex items-center gap-2 border-b border-border px-3 py-1.5">
+				<span class="flex gap-1" aria-hidden="true">
+					<span class="size-1.5 rounded-full bg-red/60"></span>
+					<span class="size-1.5 rounded-full bg-warning/60"></span>
+					<span class="size-1.5 rounded-full bg-green/60"></span>
+				</span>
+				<span class="font-mono text-[0.5rem] text-fg-muted">{label}</span>
+			</div>
+			<img
+				{src}
+				{alt}
+				width="2048"
+				height="1536"
+				loading={eager ? 'eager' : 'lazy'}
+				decoding="async"
+				fetchpriority={eager ? 'high' : 'auto'}
+				class="block h-auto w-full"
+			/>
+			<div class="shot-overlay" aria-hidden="true"></div>
+		</div>
+	</figure>
+{/snippet}
 
 <div
 	class="relative min-h-screen overflow-x-hidden font-[JetBrains_Mono,monospace] text-[#b4befe]"
@@ -458,18 +487,6 @@
 					<span class="text-base font-bold -tracking-wide text-primary">
 						:wq
 					</span>
-					{#if envBadge}
-						<span
-							class="animate-env-pulse border px-1.5 py-0.5 font-mono text-[10px] leading-none
-							{envBadge === 'dev-local'
-								? 'border-orange/50 text-orange'
-								: envBadge === 'local-prod'
-									? 'border-red/50 text-red'
-									: 'border-cyan/50 text-cyan'}"
-						>
-							{envBadge}
-						</span>
-					{/if}
 				</a>
 				<nav aria-label="Primary navigation">
 					<div class="flex items-center gap-2 text-[0.55rem]">
@@ -539,6 +556,19 @@
 					</div>
 				</section>
 
+				<!-- Hero proof shot — eager, above the fold after boot -->
+				<section
+					class="animate-fade-in mx-auto max-w-4xl px-8 pb-4 max-sm:px-5"
+					style="animation-delay: 0.4s;"
+				>
+					{@render shot(
+						'/screenshots/01-tasks-board.webp',
+						'writequit main task board: markdown task editor, status filters, colored tag chips, task cards, and a running-timer status bar',
+						':wq — tasks',
+						true
+					)}
+				</section>
+
 				<!-- Feature grid -->
 				<section
 					class="animate-fade-in mx-auto max-w-5xl px-8 py-12 max-sm:px-5"
@@ -588,11 +618,12 @@
 								[$]
 							</div>
 							<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
-								Invoice generation
+								Invoices &amp; reports
 							</h3>
 							<p class="feature-desc">
-								select sessions, set rate, <code>:invoice</code>
-								. PDF in your downloads. done.
+								select sessions, set a rate, <code>:invoice</code>
+								&mdash; PDF in your downloads. plus breakdowns by project, tag, or
+								client.
 							</p>
 						</div>
 						<div class="feature-card">
@@ -623,175 +654,165 @@
 						</div>
 						<div class="feature-card">
 							<div class="mb-3 text-[0.8rem] font-semibold text-primary">
-								[%]
+								[&amp;]
 							</div>
 							<h3 class="mb-2 text-[0.7rem] font-semibold text-[#cdd6f4]">
-								Reports that matter
+								Shared client boards
 							</h3>
 							<p class="feature-desc">
-								breakdowns by project, tag, or client. export to PDF. that's it.
+								share a board by url. password it. clients see task status and a
+								<code>live chat</code>
+								&mdash; no account, no seat. comment per task.
 							</p>
 						</div>
 					</div>
 				</section>
 
-				<!-- Terminal demo -->
+				<!-- Product tour — real screenshots -->
 				<section
-					class="animate-fade-in mx-auto max-w-3xl px-8 py-12 max-sm:px-5"
+					class="animate-fade-in mx-auto max-w-5xl px-8 py-12 max-sm:px-5"
 					style="animation-delay: 0.7s;"
-					aria-label="Live demo preview"
+					aria-label="Product tour"
 				>
 					<h2
-						class="mb-6 text-[0.6rem] tracking-[0.15em] text-[#6e7a96] uppercase"
+						class="mb-8 text-[0.6rem] tracking-[0.15em] text-[#6e7a96] uppercase"
 					>
 						see it in action
 					</h2>
-					<div
-						class="terminal-window"
-						role="img"
-						aria-label="Screenshot of writequit task list interface showing vim-style navigation, inline tags, and task status filters"
-					>
-						<div class="terminal-inner">
-							<!-- Title bar -->
-							<div
-								class="flex items-center justify-between border-b border-border px-3 py-1.5"
-							>
-								<span class="font-mono text-[0.5rem] text-fg-muted">
-									:wq - tasks
-								</span>
+
+					<div class="flex flex-col gap-16">
+						<!-- Row 1 — live task parsing -->
+						<div class="shot-row">
+							<div class="shot-copy">
+								<h3 class="mb-3 text-[0.7rem] font-semibold text-[#cdd6f4]">
+									type a task, it parses itself.
+								</h3>
+								<p class="feature-desc">
+									<code>+tags</code>
+									,
+									<code>due:friday</code>
+									, clients &mdash; highlighted live as you type. no forms, no dropdowns.
+									just a line of text.
+								</p>
 							</div>
+							{@render shot(
+								'/screenshots/02-task-editor-typing.webp',
+								'writequit task editor parsing +tags and due:friday inline as the user types',
+								':wq — tasks'
+							)}
+						</div>
 
-							<!-- Demo content matching real app -->
-							<div
-								class="flex flex-col gap-3 bg-bg p-4 font-mono"
-								style="font-size: 0.6rem;"
-							>
-								<!-- Page header -->
-								<div class="flex items-baseline gap-2">
-									<span class="font-bold text-fg">
-										<span class="text-fg-muted">#</span>
-										tasks
-									</span>
-									<span class="text-fg-muted">5 tasks</span>
-								</div>
-
-								<!-- Editor area -->
-								<div class="border border-border bg-bg-dark px-2 py-1.5">
-									<span class="text-fg-muted">
-										Build landing page +frontend @acme due:friday
-										<span
-											class="cursor-inline text-primary"
-											class:blink={showCursor}
-										>
-											█
-										</span>
-									</span>
-								</div>
-
-								<!-- Filter row -->
-								<div class="flex items-center gap-1">
-									<span
-										class="border border-primary bg-surface-2 px-1.5 py-0.5 text-primary"
-									>
-										[~] all
-									</span>
-									<span
-										class="border border-border px-1.5 py-0.5 text-fg-muted"
-									>
-										[&gt;] inbox
-									</span>
-									<span
-										class="border border-border px-1.5 py-0.5 text-fg-muted"
-									>
-										[*] active
-									</span>
-									<span
-										class="border border-border px-1.5 py-0.5 text-fg-muted"
-									>
-										[x] done
-									</span>
-								</div>
-
-								<!-- Task cards -->
-								<div class="flex flex-col gap-1">
-									<!-- Done task -->
-									<div
-										class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
-									>
-										<span class="text-green">[x]</span>
-										<span class="flex-1 text-fg-muted line-through">
-											Set up CI/CD pipeline
-										</span>
-										<span
-											class="border border-border-highlight bg-surface-2 px-1 text-teal"
-										>
-											+devops
-										</span>
-									</div>
-									<!-- Done task -->
-									<div
-										class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
-									>
-										<span class="text-green">[x]</span>
-										<span class="flex-1 text-fg-muted line-through">
-											Fix auth token refresh bug
-										</span>
-										<span
-											class="border border-border-highlight bg-surface-2 px-1 text-teal"
-										>
-											+backend
-										</span>
-									</div>
-									<!-- Active/selected task -->
-									<div
-										class="flex items-start gap-2 border border-primary bg-surface-1 px-2 py-1.5"
-									>
-										<span class="text-blue">[*]</span>
-										<span class="flex-1 text-fg">Build landing page</span>
-										<span
-											class="border border-border-highlight bg-surface-2 px-1 text-teal"
-										>
-											+frontend
-										</span>
-										<span class="text-warning">due:fri</span>
-									</div>
-									<!-- Inbox task -->
-									<div
-										class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
-									>
-										<span class="text-fg-muted">[&nbsp;]</span>
-										<span class="flex-1 text-fg">Write API documentation</span>
-										<span
-											class="border border-border-highlight bg-surface-2 px-1 text-teal"
-										>
-											+docs
-										</span>
-									</div>
-									<!-- Inbox task -->
-									<div
-										class="flex items-start gap-2 border border-border bg-surface-0 px-2 py-1.5"
-									>
-										<span class="text-fg-muted">[&nbsp;]</span>
-										<span class="flex-1 text-fg">
-											Invoice Acme Corp - December
-										</span>
-										<span
-											class="border border-border-highlight bg-surface-2 px-1 text-orange"
-										>
-											@acme
-										</span>
-									</div>
-								</div>
-
-								<!-- Status bar -->
-								<div
-									class="flex items-center justify-between border-t border-border pt-2"
-								>
-									<span class="font-bold text-green">-- NORMAL --</span>
-									<span class="text-fg-muted">3/5</span>
-								</div>
+						<!-- Row 2 — time tracking -->
+						<div class="shot-row shot-row--reverse">
+							<div class="shot-copy">
+								<h3 class="mb-3 text-[0.7rem] font-semibold text-[#cdd6f4]">
+									time tracks itself.
+								</h3>
+								<p class="feature-desc">
+									<code>:track</code>
+									to start,
+									<code>:stop</code>
+									to stop. every session links back to its task and project. the running
+									timer lives in your status bar.
+								</p>
 							</div>
-							<div class="crt-overlay"></div>
+							{@render shot(
+								'/screenshots/08-sessions.webp',
+								'writequit time-tracking sessions list with an active running timer and sessions grouped by day',
+								':wq — sessions'
+							)}
+						</div>
+
+						<!-- New feature — shared client boards (your view + client view) -->
+						<h3
+							class="mt-2 text-[0.6rem] tracking-[0.15em] text-primary uppercase"
+						>
+							new &middot; shared client boards
+						</h3>
+
+						<!-- Row 3 — board detail (freelancer view) -->
+						<div class="shot-row">
+							<div class="shot-copy">
+								<h3 class="mb-3 text-[0.7rem] font-semibold text-[#cdd6f4]">
+									share a board with your client.
+								</h3>
+								<p class="feature-desc">
+									one password-protected url. they see the tasks you choose
+									&mdash; and a
+									<code>live chat</code>
+									panel, right next to the work.
+								</p>
+							</div>
+							{@render shot(
+								'/screenshots/14-board-detail.webp',
+								'writequit shared client board settings: share URL, password, filtered tasks, and a live chat panel with a client',
+								':wq — boards'
+							)}
+						</div>
+
+						<!-- Row 4 — public board (client view) -->
+						<div class="shot-row shot-row--reverse">
+							<div class="shot-copy">
+								<h3 class="mb-3 text-[0.7rem] font-semibold text-[#cdd6f4]">
+									what your client sees.
+								</h3>
+								<p class="feature-desc">
+									no account, no app to install. just the board, the status of
+									every task, and a chat thread with you. comment per task,
+									reply in seconds.
+								</p>
+							</div>
+							{@render shot(
+								'/screenshots/20-public-board-unlocked.webp',
+								"the client's view of a writequit shared board — task status with a live chat thread, no account required",
+								'board — acme corp'
+							)}
+						</div>
+
+						<!-- Row 5 — invoices -->
+						<div class="shot-row">
+							<div class="shot-copy">
+								<h3 class="mb-3 text-[0.7rem] font-semibold text-[#cdd6f4]">
+									invoices from tracked hours.
+								</h3>
+								<p class="feature-desc">
+									pick a date range, pull the sessions, set a rate.
+									<code>:invoice</code>
+									&rarr; a PDF in your downloads. dark or light, plus a one-click
+									follow-up.
+								</p>
+							</div>
+							{@render shot(
+								'/screenshots/11-reports-invoices.webp',
+								'writequit reports view listing two draft invoices with dark, light, download, and follow-up actions',
+								':wq — reports'
+							)}
+						</div>
+
+						<!-- Row 6 — command palette -->
+						<div class="shot-row shot-row--reverse">
+							<div class="shot-copy">
+								<h3 class="mb-3 text-[0.7rem] font-semibold text-[#cdd6f4]">
+									everything is a command.
+								</h3>
+								<p class="feature-desc">
+									<code>:</code>
+									opens the palette.
+									<code>tasks</code>
+									,
+									<code>search</code>
+									,
+									<code>wq</code>
+									,
+									<code>q!</code>
+									&mdash; the same muscle memory you already have.
+								</p>
+							</div>
+							{@render shot(
+								'/screenshots/03-command-palette.webp',
+								'writequit vim-style command palette listing :tasks, :tags, :search, :wq, :q and other commands',
+								':wq — :'
+							)}
 						</div>
 					</div>
 				</section>
@@ -923,7 +944,8 @@
 								Most project tools are built for managers, not makers. writequit
 								is built for developers who want to track tasks, log time, and
 								send invoices from one keyboard-driven interface. No Kanban
-								boards, no Gantt charts, no sprint ceremonies.
+								swimlanes, no Gantt charts, no sprint ceremonies &mdash; the
+								only board is the one you share with a client.
 							</p>
 						</div>
 						<div>
@@ -934,9 +956,12 @@
 								Jira and Asana are team project management tools built for
 								managers. writequit is built for individual freelance developers
 								who need a single interface for tasks, time tracking, and
-								invoicing. There are no boards, sprints, or team features. You
-								type commands, track time, and generate invoices from one
-								keyboard-driven UI.
+								invoicing. There are no sprints, Gantt charts, or manager
+								dashboards. The one board you'll find is a shared
+								<em>client</em>
+								board &mdash; a read-only, password-protected view you send to a client,
+								with live chat. You type commands, track time, and bill from one keyboard-driven
+								UI.
 							</p>
 						</div>
 						<div>
@@ -967,6 +992,17 @@
 								to assign a client. There are no dropdowns or separate tag screens.
 								Tags are parsed automatically and can be used to filter your task
 								list.
+							</p>
+						</div>
+						<div>
+							<h3 class="mb-2 text-[0.65rem] font-semibold text-primary">
+								Can I share my work with clients?
+							</h3>
+							<p class="text-[0.55rem] leading-[1.9] text-[#6e7a96]">
+								Yes. Create a shared board, pick which tasks the client sees,
+								set a password, and send one URL. Clients view status, comment
+								on tasks, and chat with you live &mdash; no account, no seat. A
+								client portal that lives next to your work.
 							</p>
 						</div>
 					</div>
@@ -1202,44 +1238,50 @@
 		overflow: hidden;
 	}
 
-	/* CRT scanlines */
-	.crt-overlay {
+	/* --- Real-screenshot frame (reuses .terminal-window/.terminal-inner) --- */
+	.shot-frame {
+		margin: 0;
+	}
+
+	/* Subtle glass over real screenshots — vignette only, keeps the UI legible.
+	   The global .scanlines overlay already supplies CRT texture page-wide. */
+	.shot-overlay {
 		position: absolute;
 		inset: 0;
 		pointer-events: none;
 		z-index: 10;
-		background: repeating-linear-gradient(
-			0deg,
-			transparent,
-			transparent 2px,
-			rgba(0, 0, 0, 0.15) 2px,
-			rgba(0, 0, 0, 0.15) 4px
+		background: radial-gradient(
+			ellipse 75% 70% at 50% 50%,
+			transparent 60%,
+			rgba(0, 0, 0, 0.18) 100%
 		);
 	}
 
-	/* Phosphor glow — bleeds color outward slightly */
-	.crt-overlay::before {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background: radial-gradient(
-			ellipse 80% 60% at 50% 50%,
-			rgba(122, 162, 247, 0.04) 0%,
-			transparent 70%
-		);
-		filter: blur(6px);
+	/* --- Alternating product-tour rows (copy ⇄ screenshot) --- */
+	.shot-row {
+		display: grid;
+		grid-template-columns: 0.85fr 1.15fr;
+		gap: 2.5rem;
+		align-items: center;
 	}
 
-	/* Vignette — darkens edges like curved CRT glass */
-	.crt-overlay::after {
-		content: '';
-		position: absolute;
-		inset: 0;
-		background: radial-gradient(
-			ellipse 70% 65% at 50% 50%,
-			transparent 50%,
-			rgba(0, 0, 0, 0.45) 100%
-		);
+	.shot-row--reverse .shot-copy {
+		order: 2;
+	}
+
+	.shot-copy {
+		min-width: 0;
+	}
+
+	@media (max-width: 768px) {
+		.shot-row {
+			grid-template-columns: 1fr;
+			gap: 1rem;
+		}
+
+		.shot-row--reverse .shot-copy {
+			order: 0;
+		}
 	}
 
 	/* --- Boot cursor toggle (conditional class:blink) --- */
@@ -1249,15 +1291,6 @@
 	}
 
 	.cursor.blink {
-		opacity: 1;
-	}
-
-	.cursor-inline {
-		opacity: 0;
-		transition: opacity 0.05s;
-	}
-
-	.cursor-inline.blink {
 		opacity: 1;
 	}
 

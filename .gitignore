@@ -28,3 +28,4 @@ prod-snapshot
 
 # Keys (generated locally)
 keys.mjs
+.env*
